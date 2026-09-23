@@ -4,7 +4,7 @@ use macroquad::prelude::*;
 use serde::Serialize;
 use std::fs::OpenOptions;
 use std::io::Write;
-use std::sync::mpsc::{channel, Receiver, TryRecvError};
+use std::sync::mpsc::{channel, Receiver};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
@@ -19,8 +19,8 @@ struct Contact {
 #[derive(Default)]
 struct TouchState {
     contacts: Vec<Contact>,
-    energy: f32,   // recent touch intensity 0..1, decays
-    warmth: f32,   // smoothed x 0..1 (left=cold right=warm)
+    energy: f32, // recent touch intensity 0..1, decays
+    warmth: f32, // smoothed x 0..1 (left=cold right=warm)
     last: Option<Instant>,
     device: String,
 }
@@ -32,34 +32,79 @@ fn input_dir() -> std::path::PathBuf {
 }
 
 fn is_touch_device(path: &std::path::Path) -> bool {
-    if let Ok(mut d) = evdev::Device::open(path) {
-        use evdev::AttributeSet;
-        let props: std::collections::HashSet<evdev::InputProperty> = d.properties().collect();
-        if props.contains(&evdev::InputProperty::INPUT_PROP_DIRECT) {
+    if let Ok(d) = evdev::Device::open(path) {
+        if d.properties().contains(evdev::PropType::DIRECT) {
             return true;
-        }        let abs = d.supported_absolute_axes();
-        let has_x = abs.contains(&evdev::AbsoluteAxisType::ABS_MT_POSITION_X)
-            || abs.contains(&evdev::AbsoluteAxisType::ABS_X);
+        }
+        let has_x = d
+            .supported_absolute_axes()
+            .map(|abs| {
+                abs.contains(evdev::AbsoluteAxisType::ABS_MT_POSITION_X)
+                    || abs.contains(evdev::AbsoluteAxisType::ABS_X)
+            })
+            .unwrap_or(false);
         let has_touch = d
             .supported_keys()
-            .map(|k| k.contains(&evdev::Key::BTN_TOUCH))
+            .map(|k| k.contains(evdev::Key::BTN_TOUCH))
             .unwrap_or(false);
         return has_x && has_touch;
     }
     false
 }
 
+#[derive(Clone, Copy)]
+struct AxisWin {
+    xmin: i32,
+    xmax: i32,
+    ymin: i32,
+    ymax: i32,
+}
+
+fn axis_window(d: &evdev::Device) -> AxisWin {
+    let mut w = AxisWin {
+        xmin: 0,
+        xmax: 4096,
+        ymin: 0,
+        ymax: 4096,
+    };
+    if let Ok(state) = d.get_abs_state() {
+        let ix = if d
+            .supported_absolute_axes()
+            .map(|a| a.contains(evdev::AbsoluteAxisType::ABS_MT_POSITION_X))
+            .unwrap_or(false)
+        {
+            evdev::AbsoluteAxisType::ABS_MT_POSITION_X
+        } else {
+            evdev::AbsoluteAxisType::ABS_X
+        };
+        let iy = if d
+            .supported_absolute_axes()
+            .map(|a| a.contains(evdev::AbsoluteAxisType::ABS_MT_POSITION_Y))
+            .unwrap_or(false)
+        {
+            evdev::AbsoluteAxisType::ABS_MT_POSITION_Y
+        } else {
+            evdev::AbsoluteAxisType::ABS_Y
+        };
+        let ax = state[ix.0 as usize];
+        let ay = state[iy.0 as usize];
+        if ax.maximum > ax.minimum {
+            w.xmin = ax.minimum;
+            w.xmax = ax.maximum;
+        }
+        if ay.maximum > ay.minimum {
+            w.ymin = ay.minimum;
+            w.ymax = ay.maximum;
+        }
+    }
+    w
+}
+
 fn spawn_reader(path: std::path::PathBuf, st: Arc<Mutex<TouchState>>) {
     std::thread::spawn(move || loop {
         if let Ok(mut d) = evdev::Device::open(&path) {
             let name = d.name().unwrap_or("touch").to_string();
-            let mut prev: Vec<(f32, f32)> = vec![];
-            let mut win = d.abs_position(evdev::AbsoluteAxisType::ABS_MT_POSITION_X)
-                .or_else(|| d.abs_position(evdev::AbsoluteAxisType::ABS_X));
-            let mut win_y = d.abs_position(evdev::AbsoluteAxisType::ABS_MT_POSITION_Y)
-                .or_else(|| d.abs_position(evdev::AbsoluteAxisType::ABS_Y));
-            if win.is_none() { win = Some((0, 4096)); }
-            if win_y.is_none() { win_y = Some((0, 4096)); }
+            let win = axis_window(&d);
             {
                 let mut s = st.lock().unwrap();
                 s.device = name.clone();
@@ -67,59 +112,71 @@ fn spawn_reader(path: std::path::PathBuf, st: Arc<Mutex<TouchState>>) {
             let mut slots: std::collections::BTreeMap<i32, (i32, i32)> = Default::default();
             let mut slot = 0i32;
             let mut legacy: Option<(i32, i32)> = None;
+            let mut prev: Vec<(f32, f32)> = vec![];
             while let Ok(events) = d.fetch_events() {
+                let mut moved = false;
                 for ev in events {
-                    use evdev::{EventSummary, AbsoluteAxisType};
-                    if let EventSummary::AbsoluteAxis(_, axis, v) = ev.summary() {
+                    use evdev::{AbsoluteAxisType, InputEventKind};
+                    if let InputEventKind::AbsAxis(axis) = ev.kind() {
+                        let v = ev.value();
                         match axis {
-                            AbsoluteAxisType::ABS_MT_SLOT => slot = v as i32,
+                            AbsoluteAxisType::ABS_MT_SLOT => slot = v,
                             AbsoluteAxisType::ABS_MT_POSITION_X => {
-                                let e = slots.entry(slot).or_insert((0, 0));
-                                e.0 = v;
+                                slots.entry(slot).or_insert((0, 0)).0 = v;
+                                moved = true;
                             }
                             AbsoluteAxisType::ABS_MT_POSITION_Y => {
-                                let e = slots.entry(slot).or_insert((0, 0));
-                                e.1 = v;
+                                slots.entry(slot).or_insert((0, 0)).1 = v;
+                                moved = true;
                             }
                             AbsoluteAxisType::ABS_X => {
                                 legacy = Some((v, legacy.map(|p| p.1).unwrap_or(0)));
+                                moved = true;
                             }
                             AbsoluteAxisType::ABS_Y => {
-                                legacy = Some((legacy.map(|p| p.0).unwrap_or(0), v));
+                                legacy = Some((v, legacy.map(|p| p.0).unwrap_or(0)));
+                                moved = true;
                             }
                             _ => {}
                         }
-                        let (xmin, xmax) = win.unwrap((0, 4096));
-                        let (ymin, ymax) = win_y.unwrap((0, 4096));
-                        let pts: Vec<(f32, f32)> = if !slots.is_empty() {
-                            slots.values()
-                                .map(|(x, y)| {
-                                    (((x - xmin) as f32 / (xmax - xmin) as f32).clamp(0., 1.),
-                                     ((y - ymin) as f32 / (ymax - ymin) as f32).clamp(0., 1.))
-                                })
-                                .collect()
-                        } else if let Some((x, y)) = legacy {
-                            vec![(((x - xmin) as f32 / (xmax - xmin) as f32).clamp(0., 1.),
-                                  ((y - ymin) as f32 / (ymax - ymin) as f32).clamp(0., 1.))]
-                        } else {
-                            vec![]
-                        };
-                        if !pts.is_empty() {
-                            let mut s = st.lock().unwrap();
-                            let mut speed = 0f32;
-                            for (i, (x, y)) in pts.iter().enumerate() {
-                                if let Some((px, py)) = prev.get(i) {
-                                    speed += ((x - px).powi(2) + (y - py).powi(2)).sqrt();
-                                }
+                    }
+                }
+                if moved {
+                    let pts: Vec<(f32, f32)> = if !slots.is_empty() {
+                        slots
+                            .values()
+                            .map(|(x, y)| {
+                                (
+                                    ((x - win.xmin) as f32 / (win.xmax - win.xmin) as f32)
+                                        .clamp(0., 1.),
+                                    ((y - win.ymin) as f32 / (win.ymax - win.ymin) as f32)
+                                        .clamp(0., 1.),
+                                )
+                            })
+                            .collect()
+                    } else if let Some((x, y)) = legacy {
+                        vec![(
+                            ((x - win.xmin) as f32 / (win.xmax - win.xmin) as f32).clamp(0., 1.),
+                            ((y - win.ymin) as f32 / (win.ymax - win.ymin) as f32).clamp(0., 1.),
+                        )]
+                    } else {
+                        vec![]
+                    };
+                    if !pts.is_empty() {
+                        let mut s = st.lock().unwrap();
+                        let mut speed = 0f32;
+                        for (i, (x, y)) in pts.iter().enumerate() {
+                            if let Some((px, py)) = prev.get(i) {
+                                speed += ((x - px).powi(2) + (y - py).powi(2)).sqrt();
                             }
-                            prev = pts.clone();
-                            s.contacts = pts.iter().map(|(x, y)| Contact { x: *x, y: *y }).collect();
-                            s.warmth = s.warmth * 0.9
-                                + pts.iter().map(|p| p.0).sum::<f32>() / pts.len() as f32 * 0.1;
-                            let n = pts.len() as f32;
-                            s.energy = (s.energy + (speed * 8.0 + 0.15) * (0.5 + n * 0.3)).min(1.0);
-                            s.last = Some(Instant::now());
                         }
+                        prev = pts.clone();
+                        s.contacts = pts.iter().map(|(x, y)| Contact { x: *x, y: *y }).collect();
+                        s.warmth = s.warmth * 0.9
+                            + pts.iter().map(|p| p.0).sum::<f32>() / pts.len() as f32 * 0.1;
+                        let n = pts.len() as f32;
+                        s.energy = (s.energy + (speed * 8.0 + 0.15) * (0.5 + n * 0.3)).min(1.0);
+                        s.last = Some(Instant::now());
                     }
                 }
             }
@@ -133,7 +190,9 @@ fn start_touch_monitor(st: Arc<Mutex<TouchState>>) {
         if let Ok(rd) = std::fs::read_dir(input_dir()) {
             for e in rd.flatten() {
                 let p = e.path();
-                if p.file_name().map(|n| n.to_string_lossy().starts_with("event")).unwrap_or(false)
+                if p.file_name()
+                    .map(|n| n.to_string_lossy().starts_with("event"))
+                    .unwrap_or(false)
                     && is_touch_device(&p)
                 {
                     spawn_reader(p, st.clone());
@@ -153,7 +212,10 @@ struct LlmHealth {
     model: String,
 }
 
-fn start_llm(model: String, mood_rx: Receiver<(f32, f32)>) -> (Receiver<char>, Arc<Mutex<LlmHealth>>) {
+fn start_llm(
+    model: String,
+    mood_rx: Receiver<(f32, f32)>,
+) -> (Receiver<char>, Arc<Mutex<LlmHealth>>) {
     let (tx, rx) = channel();
     let health = Arc::new(Mutex::new(LlmHealth {
         ok: false,
@@ -165,8 +227,7 @@ fn start_llm(model: String, mood_rx: Receiver<(f32, f32)>) -> (Receiver<char>, A
     std::thread::spawn(move || {
         let host = std::env::var("OLLAMA_HOST").unwrap_or_else(|_| "127.0.0.1:11434".into());
         let agent = ureq::AgentBuilder::new()
-            .timeoutConnect(Duration::from_secs(5))
-            .timeoutRead(Duration::from_secs(120))
+            .timeout(Duration::from_secs(120))
             .build();
         let mut last_mood = (0.5f32, 0.5f32);
         loop {
@@ -175,9 +236,17 @@ fn start_llm(model: String, mood_rx: Receiver<(f32, f32)>) -> (Receiver<char>, A
             }
             let (warmth, energy) = last_mood;
             let mood_zh = if energy > 0.6 {
-                if warmth > 0.55 { "炽烈、奔涌" } else { "凛冽、激荡" }
+                if warmth > 0.55 {
+                    "炽烈、奔涌"
+                } else {
+                    "凛冽、激荡"
+                }
             } else if energy > 0.3 {
-                if warmth > 0.55 { "温暖、流动" } else { "清冷、微澜" }
+                if warmth > 0.55 {
+                    "温暖、流动"
+                } else {
+                    "清冷、微澜"
+                }
             } else if warmth > 0.55 {
                 "静谧、温柔"
             } else {
@@ -196,12 +265,15 @@ fn start_llm(model: String, mood_rx: Receiver<(f32, f32)>) -> (Receiver<char>, A
             let t0 = Instant::now();
             let mut ntok = 0u32;
             let mut got = String::new();
-            let req = agent.post(&format!("http://{host}/api/generate")).send_json(body);
+            let req = agent
+                .post(&format!("http://{host}/api/generate"))
+                .send_json(body);
             match req {
                 Ok(resp) => {
                     let reader = resp.into_reader();
                     use std::io::BufRead;
-                    for line in std::io::BufReader::new(reader).lines().flatten() {
+                    for line in std::io::BufReader::new(reader).lines() {
+                        let Ok(line) = line else { break };
                         if let Ok(v) = serde_json::from_str::<serde_json::Value>(&line) {
                             if let Some(s) = v.get("response").and_then(|x| x.as_str()) {
                                 got.push_str(s);
@@ -236,15 +308,31 @@ fn start_llm(model: String, mood_rx: Receiver<(f32, f32)>) -> (Receiver<char>, A
 // ---------- fallback ambient feed (never dark) -------------------------
 
 const POOLS: &[(&str, &str)] = &[
-    ("静", "雾 月 夜 潮 呼吸 微光 深处 沉睡 鲸落 尘埃 影 钟摆 雨前 纸页 苔"),
-    ("动", "风 焰 河 奔 裂帛 星陨 心跳 浪尖 闪电 迁徙 鼓 惊鸟 火 渡口 弦"),
-    ("冷", "雪 蓝 冰 星 霜 铁 墨 深空 孤 井 石英 冬 海沟 玻璃 月背"),
-    ("暖", "灯 橘 麦 陶 体温 琥珀 黄昏 花信 茧 炊烟 蜜 绒 烛 岸 掌心"),
+    (
+        "静",
+        "雾 月 夜 潮 呼吸 微光 深处 沉睡 鲸落 尘埃 影 钟摆 雨前 纸页 苔",
+    ),
+    (
+        "动",
+        "风 焰 河 奔 裂帛 星陨 心跳 浪尖 闪电 迁徙 鼓 惊鸟 火 渡口 弦",
+    ),
+    (
+        "冷",
+        "雪 蓝 冰 星 霜 铁 墨 深空 孤 井 石英 冬 海沟 玻璃 月背",
+    ),
+    (
+        "暖",
+        "灯 橘 麦 陶 体温 琥珀 黄昏 花信 茧 炊烟 蜜 绒 烛 岸 掌心",
+    ),
 ];
 
 fn local_char(warmth: f32, energy: f32, n: u64) -> char {
-    let bank = if n % 3 == 0 {
-        if energy > 0.5 { POOLS[1].1 } else { POOLS[0].1 }
+    let bank = if n.is_multiple_of(3) {
+        if energy > 0.5 {
+            POOLS[1].1
+        } else {
+            POOLS[0].1
+        }
     } else if warmth > 0.5 {
         POOLS[3].1
     } else {
@@ -286,8 +374,12 @@ fn hsl_to_rgb(h: f32, s: f32, l: f32) -> Color {
     let x = c * (1. - (((h / 60.) % 2.) - 1.).abs());
     let m = l - c / 2.;
     let (r, g, b) = match h as u32 / 60 {
-        0 => (c, x, 0.), 1 => (x, c, 0.), 2 => (0., c, x),
-        3 => (0., x, c), 4 => (x, 0., c), _ => (c, 0., x),
+        0 => (c, x, 0.),
+        1 => (x, c, 0.),
+        2 => (0., c, x),
+        3 => (0., x, c),
+        4 => (x, 0., c),
+        _ => (c, 0., x),
     };
     Color::new(r + m, g + m, b + m, 1.)
 }
@@ -348,10 +440,14 @@ async fn main() {
     let state_dir = std::env::var("INKFLOW_STATE_DIR").unwrap_or_else(|_| "state".into());
     std::fs::create_dir_all(&state_dir).ok();
     let tel_path = format!("{state_dir}/telemetry.jsonl");
+    let shot_path = format!("{state_dir}/screen.png");
+    let mut last_shot = Instant::now();
 
     let font_path = std::env::var("INKFLOW_FONT")
         .unwrap_or_else(|_| "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc".into());
-    let font = std::fs::read(&font_path).ok().and_then(|b| load_ttf_font_from_bytes(&b).ok());
+    let font = std::fs::read(&font_path)
+        .ok()
+        .and_then(|b| load_ttf_font_from_bytes(&b).ok());
 
     let touch: Arc<Mutex<TouchState>> = Arc::new(Mutex::new(TouchState::default()));
     start_touch_monitor(touch.clone());
@@ -366,7 +462,6 @@ async fn main() {
     let mut spawn_acc = 0f32;
     let mut last_tel = Instant::now();
     let start = Instant::now();
-    let mut llm_starved_for = 0f32;
 
     loop {
         let dt = get_frame_time().clamp(0.001, 0.05);
@@ -386,7 +481,7 @@ async fn main() {
         let t = start.elapsed().as_secs_f32();
         let idle = ((t * 0.13).sin() * 0.5 + 0.5) * 0.25;
         let energy = energy.max(idle);
-        let warmth = (warmth * 0.99 + 0.5 * 0.01).max(0.2).min(0.8);
+        let warmth = (warmth * 0.99 + 0.5 * 0.01).clamp(0.2, 0.8);
 
         // mouse = fallback/pointer touch (also test path)
         let (mx, my) = mouse_position();
@@ -395,55 +490,57 @@ async fn main() {
         let eff_warmth = if mouse_down { mx / sw } else { warmth };
         let eff_energy = if mouse_down { energy.max(0.55) } else { energy };
 
-        if tick % 60 == 0 {
+        if tick.is_multiple_of(60) {
             let _ = mood_tx.send((eff_warmth, eff_energy));
         }
 
         // pull LLM chars
         let mut llm_char: Option<char> = None;
-        loop {
-            match llm_chars.try_recv() {
-                Ok(c) => {
-                    llm_starved_for = 0.;
-                    llm_char = Some(c);
-                    break;
-                }
-                Err(TryRecvError::Empty) => {
-                    llm_starved_for += dt;
-                    break;
-                }
-                Err(TryRecvError::Disconnected) => break,
-            }
+        if let Ok(c) = llm_chars.try_recv() {
+            llm_char = Some(c);
         }
 
         // spawn glyphs
-        spawn_acc += dt * (1.5 + eff_energy * 9.0);
+        spawn_acc += dt * (3.0 + eff_energy * 11.0);
         while spawn_acc >= 1.0 {
             spawn_acc -= 1.0;
             let from_llm = llm_char.is_some();
-            let ch = llm_char.take().unwrap_or_else(|| local_char(eff_warmth, eff_energy, tick + glyphs.len() as u64));
+            let ch = llm_char
+                .take()
+                .unwrap_or_else(|| local_char(eff_warmth, eff_energy, tick + glyphs.len() as u64));
             if ch.is_whitespace() {
                 continue;
             }
             let (x, y, vx, vy) = if mouse_down {
-                (mx + (rand_fast(tick) - 0.5) * 60.,
-                 my + (rand_fast(tick.wrapping_add(7)) - 0.5) * 60.,
-                 (rand_fast(tick.wrapping_add(3)) - 0.5) * 30.,
-                 -20. - eff_energy * 60.)
+                (
+                    mx + (rand_fast(tick) - 0.5) * 60.,
+                    my + (rand_fast(tick.wrapping_add(7)) - 0.5) * 60.,
+                    (rand_fast(tick.wrapping_add(3)) - 0.5) * 30.,
+                    -40. - eff_energy * 120.,
+                )
             } else {
-                (rand_fast(tick.wrapping_add(11)) * sw,
-                 sh + 20.,
-                 (rand_fast(tick.wrapping_add(5)) - 0.5) * (10. + eff_energy * 40.),
-                 -(12. + eff_energy * 70.))
+                let speed = 55. + eff_energy * 130.;
+                (
+                    rand_fast(tick.wrapping_add(11)) * sw,
+                    sh + 20.,
+                    (rand_fast(tick.wrapping_add(5)) - 0.5) * (10. + eff_energy * 40.),
+                    -speed,
+                )
             };
-            let max_life = 6. + rand_fast(tick.wrapping_add(13)) * 6.;
+            // life matches actual screen-crossing time so glyphs stay visible
+            let speed = vy.abs();
+            let max_life = (sh + 40.) / speed + 1.5;
             glyphs.push(Glyph {
-                ch, x, y, vx, vy,
+                ch,
+                x,
+                y,
+                vx,
+                vy,
                 life: max_life,
                 max_life,
-                size: (if from_llm { 26. } else { 20. }) + eff_energy * 14.,
+                size: (if from_llm { 34. } else { 28. }) + eff_energy * 16.,
             });
-            if glyphs.len() > 220 {
+            if glyphs.len() > 260 {
                 glyphs.remove(0);
             }
         }
@@ -463,7 +560,8 @@ async fn main() {
                 let ang = rand_fast(tick.wrapping_add(k as u64 * 31)) * std::f32::consts::TAU;
                 let sp = 20. + eff_energy * 90.;
                 particles.push(Particle {
-                    x: px, y: py,
+                    x: px,
+                    y: py,
                     vx: ang.cos() * sp,
                     vy: ang.sin() * sp - 20.,
                     life: 1.5 + rand_fast(tick.wrapping_add(99)) * 2.,
@@ -473,13 +571,15 @@ async fn main() {
             }
         }
         // ambient drifting particles
-        if particles.len() < 90 && tick % 8 == 0 {
+        if particles.len() < 90 && tick.is_multiple_of(8) {
             particles.push(Particle {
                 x: rand_fast(tick.wrapping_add(41)) * sw,
                 y: sh + 4.,
                 vx: (rand_fast(tick.wrapping_add(43)) - 0.5) * 12.,
                 vy: -8. - eff_energy * 20.,
-                life: 4., max_life: 6., r: 1. + rand_fast(tick.wrapping_add(47)) * 2.,
+                life: 4.,
+                max_life: 6.,
+                r: 1. + rand_fast(tick.wrapping_add(47)) * 2.,
             });
         }
         if particles.len() > 260 {
@@ -506,17 +606,21 @@ async fn main() {
         for g in glyphs.iter_mut() {
             g.x += g.vx * dt;
             g.y += g.vy * dt;
+            // gentle horizontal breath so the stream feels like a slow wind, not a straight rain
+            g.x += (t * 0.55 + g.y * 0.012).sin() * 6.0 * dt;
             g.life -= dt;
-            let a = ((g.life / g.max_life) as f32).clamp(0., 1.);
-            let mut c = hsl_to_rgb(hue, 0.55, 0.72);
-            c.a = a * 0.9;
+            let a = (g.life / g.max_life).clamp(0., 1.);
+            // ease: hold bright, fade only near end of life
+            let aeased = a * a * (3. - 2. * a);
+            let mut c = hsl_to_rgb(hue, 0.45, 0.85);
+            c.a = 0.35 + aeased * 0.65;
             let params = TextParams {
                 font: font.as_ref(),
                 font_size: g.size as u16,
                 color: c,
                 ..Default::default()
             };
-            draw_text_ex(&g.ch.to_string(), g.x, g.y, params);
+            draw_text_ex(g.ch.to_string(), g.x, g.y, params);
         }
         glyphs.retain(|g| g.life > 0. && g.y > -40.);
 
@@ -526,19 +630,65 @@ async fn main() {
         if last_tel.elapsed().as_secs() >= 10 {
             last_tel = Instant::now();
             let h = llm_health.lock().unwrap();
-            append_jsonl(&tel_path, &Telemetry {
-                ts: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(),
-                fps: get_fps(),
-                warmth: eff_warmth,
-                energy: eff_energy,
-                contacts: if mouse_down { 1 } else { contacts },
-                touch_device: if mouse_down { "mouse".into() } else { dev.clone() },
-                llm_ok: h.ok,
-                llm_toks_per_s: (h.toks_per_s * 100.).round() / 100.,
-                llm_model: h.model.clone(),
-                llm_last: h.last_text.clone(),
-                glyphs: glyphs.len(),
-                particles: particles.len(),
+            append_jsonl(
+                &tel_path,
+                &Telemetry {
+                    ts: SystemTime::now()
+                        .duration_since(UNIX_EPOCH)
+                        .unwrap()
+                        .as_secs(),
+                    fps: get_fps() as f32,
+                    warmth: eff_warmth,
+                    energy: eff_energy,
+                    contacts: if mouse_down { 1 } else { contacts },
+                    touch_device: if mouse_down {
+                        "mouse".into()
+                    } else {
+                        dev.clone()
+                    },
+                    llm_ok: h.ok,
+                    llm_toks_per_s: (h.toks_per_s * 100.).round() / 100.,
+                    llm_model: h.model.clone(),
+                    llm_last: h.last_text.clone(),
+                    glyphs: glyphs.len(),
+                    particles: particles.len(),
+                },
+            );
+        }
+
+        // in-app frame grab for AI vision feedback (xwd unreliable under GNOME/XWayland)
+        if last_shot.elapsed().as_secs() >= 60 {
+            last_shot = Instant::now();
+            let sp = shot_path.clone();
+            let data = get_screen_data(); // must be on main thread (GL context)
+            let w = data.width as usize;
+            let h = data.height as usize;
+            let raw = data.bytes;
+            std::thread::spawn(move || {
+                let step = 2;
+                let nw = w / step;
+                let nh = h / step;
+                let mut buf: Vec<u8> = Vec::with_capacity(nw * nh * 3);
+                for y in 0..nh {
+                    for x in 0..nw {
+                        let i = ((y * step) * w + (x * step)) * 4;
+                        if i + 2 < raw.len() {
+                            buf.push(raw[i]);
+                            buf.push(raw[i + 1]);
+                            buf.push(raw[i + 2]);
+                        }
+                    }
+                }
+                let tmp = format!("{sp}.tmp.ppm");
+                if let Ok(mut f) = std::fs::File::create(&tmp) {
+                    use std::io::Write as _;
+                    let _ = writeln!(f, "P6\n{nw} {nh}\n255");
+                    let _ = f.write_all(&buf);
+                }
+                let _ = std::process::Command::new("ffmpeg")
+                    .args(["-y", "-loglevel", "error", "-i", &tmp, &sp])
+                    .status();
+                let _ = std::fs::remove_file(&tmp);
             });
         }
 
@@ -547,6 +697,8 @@ async fn main() {
 }
 
 fn rand_fast(seed: u64) -> f32 {
-    let x = seed.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+    let x = seed
+        .wrapping_mul(6364136223846793005)
+        .wrapping_add(1442695040888963407);
     ((x >> 33) as f32) / (1u64 << 31) as f32
 }

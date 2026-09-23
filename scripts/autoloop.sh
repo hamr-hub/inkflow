@@ -22,11 +22,8 @@ if ! flock -n 9; then echo "skip: locked" >> "$LOG"; exit 0; fi
 # ensure the piece itself is running
 systemctl --user is-active --quiet inkflow.service || systemctl --user start inkflow.service
 
-# screenshot for visual feedback (root window, X:0)
+# screenshot is produced in-app every 60s (state/screen.png) — no xwd needed
 SHOT=state/screen.png
-if command -v convert >/dev/null; then
-  xwd -display :0 -root -silent | convert xwd:- -resize 960x "$SHOT" 2>>"$LOG"
-fi
 
 # tail telemetry for context
 tail -n 12 state/telemetry.jsonl > state/tel_tail.txt 2>/dev/null || true
