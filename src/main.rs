@@ -608,6 +608,27 @@ async fn main() {
 
         // draw
         clear_background(Color::new(0.012, 0.012, 0.02, 1.));
+        // soft nebula: two slow-drifting radial washes in complementary hues add
+        // atmospheric depth to the void without ever competing with the glyphs.
+        // Each is faked as 3 concentric circles with decreasing alpha, drifting on
+        // its own Lissajous at a ~150-250s period, breathing the same warm/cool
+        // axis as the foreground so colour and atmosphere stay in lock-step.
+        let neb_a_alpha = 0.07 + 0.04 * (t * 0.05).sin();
+        let neb_b_alpha = 0.05 + 0.035 * (t * 0.04 + 1.7).cos();
+        let na_x = sw * (0.5 + 0.28 * (t * 0.018).sin());
+        let na_y = sh * (0.5 + 0.20 * (t * 0.013).cos());
+        for i in 0..3i32 {
+            let mut c = hsl_to_rgb((hue + 0.5).rem_euclid(1.0), 0.55, 0.5);
+            c.a = neb_a_alpha * (1.0 - i as f32 * 0.4);
+            draw_circle(na_x, na_y, sw * (0.32 + 0.18 * i as f32), c);
+        }
+        let nb_x = sw * (0.5 + 0.28 * (t * 0.017).cos());
+        let nb_y = sh * (0.5 + 0.20 * (t * 0.022).sin());
+        for i in 0..3i32 {
+            let mut c = hsl_to_rgb(hue, 0.6, 0.45);
+            c.a = neb_b_alpha * (1.0 - i as f32 * 0.4);
+            draw_circle(nb_x, nb_y, sw * (0.28 + 0.15 * i as f32), c);
+        }
         for p in particles.iter_mut() {
             p.x += p.vx * dt;
             p.y += p.vy * dt;
