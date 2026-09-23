@@ -586,8 +586,10 @@ async fn main() {
             particles.drain(0..particles.len() - 260);
         }
 
-        // hue: cold blue 210deg .. warm amber 30deg
-        let hue = (0.58 - eff_warmth * 0.5).rem_euclid(1.0);
+        // hue: cold blue 210deg .. warm amber 30deg, plus a slow autonomous drift
+        // so the ambient palette breathes even when no touch is shaping it
+        let hue_drift = (t * 0.025).sin() * 0.18; // ~250s full cool↔warm sweep
+        let hue = (0.58 - eff_warmth * 0.5 + hue_drift).rem_euclid(1.0);
 
         // draw
         clear_background(Color::new(0.012, 0.012, 0.02, 1.));
