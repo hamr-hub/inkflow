@@ -635,7 +635,15 @@ async fn main() {
             p.vy -= 6. * dt;
             p.life -= dt;
             let a = (p.life / p.max_life).clamp(0., 1.);
-            let mut c = hsl_to_rgb(hue, 0.7, 0.6);
+            // per-spark hue: small position-tied offset plus a slow layer-wide
+            // phase drift so the particle field reads as different-temperature
+            // embers rather than uniform color, mirroring the per-glyph hue
+            // band already in place. Position factor is bounded so neighbouring
+            // sparks only shift a sliver; the time factor adds a ~125 s lean
+            // toward complementary so the whole layer breathes warm↔cool.
+            let p_hue = (hue + (p.x * 0.3 + p.y * 0.5).sin() * 0.06 + (t * 0.05).sin() * 0.08)
+                .rem_euclid(1.0);
+            let mut c = hsl_to_rgb(p_hue, 0.7, 0.6);
             c.a = a * 0.5;
             draw_circle(p.x, p.y, p.r, c);
         }
