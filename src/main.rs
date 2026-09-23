@@ -657,10 +657,16 @@ async fn main() {
             let birth_eased = birth * birth * (3. - 2. * birth);
             let mut c = hsl_to_rgb(hue, 0.45, 0.85);
             c.a = birth_eased * (0.30 + aeased * 0.65);
+            // subtle per-glyph tilt so the falling characters feel brush-set
+            // rather than mechanically typed. Two slow sines (one global,
+            // one tied to the glyph's own descent) keep adjacent characters
+            // out of phase so the stream reads as calligraphy, not a parade.
+            let rot = ((t * 0.32 + g.y * 0.011).sin()) * 0.045;
             let params = TextParams {
                 font: font.as_ref(),
                 font_size: g.size as u16,
                 color: c,
+                rotation: rot,
                 ..Default::default()
             };
             draw_text_ex(g.ch.to_string(), g.x, g.y, params);
