@@ -1,0 +1,18 @@
+[package]
+name = "inkflow"
+version = "0.1.0"
+edition = "2021"
+description = "Self-iterating generative ambience: local LLM text-stream + particles, shaped by touch."
+
+[dependencies]
+macroquad = "0.4"
+evdev = "0.12"
+ureq = { version = "2.12", features = ["json"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+anyhow = "1"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
