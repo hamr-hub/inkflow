@@ -301,6 +301,15 @@ fn start_llm(
                     h.ok = !got.is_empty();
                     h.toks_per_s = h.toks_per_s * 0.7 + tps * 0.3;
                     h.last_text = got.chars().take(80).collect();
+                    // ollama answered 200 OK but streamed nothing (model not
+                    // loaded, pull in progress, or streaming timed out
+                    // before any token). Without backoff we burn a request
+                    // every loop iteration; with backoff we yield politely
+                    // and let the local fallback keep the stream alive
+                    // until ollama has something to say again.
+                    if got.is_empty() {
+                        std::thread::sleep(Duration::from_secs(3));
+                    }
                 }
                 Err(_) => {
                     h2.lock().unwrap().ok = false;
