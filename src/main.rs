@@ -580,7 +580,17 @@ async fn main() {
                     -40. - eff_energy * 120.,
                 )
             } else {
-                let speed = 55. + eff_energy * 130.;
+                // per-glyph rise-speed variance: each character picks its own
+                // pace inside an 0.82..1.18 band so the stream reads as
+                // naturally uneven ascent rather than parallel columns of
+                // type rising in lock-step. Seed mixes tick with the
+                // current glyph index so two glyphs spawned on the same
+                // frame still get distinct speeds. Speed variance layers
+                // naturally over the existing per-glyph size, tilt, hue,
+                // halo, and birth fade — same calligraphy, looser cadence.
+                let speed_jitter = 0.82
+                    + rand_fast(tick.wrapping_add(131).wrapping_add(glyphs.len() as u64)) * 0.36;
+                let speed = (55. + eff_energy * 130.) * speed_jitter;
                 (
                     rand_fast(tick.wrapping_add(11)) * sw,
                     sh + 20.,
