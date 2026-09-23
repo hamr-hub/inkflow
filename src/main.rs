@@ -678,8 +678,15 @@ async fn main() {
             // its lifetime instead of cycling — keeps the unity of palette
             // while breaking the "one uniform ink" feel.
             let row_hue = (hue + (g.y * 0.003).sin() * 0.045).rem_euclid(1.0);
+            // screen-top fog: glyphs dissolve into the upper sky as they
+            // rise beyond ~18% of screen height, so the stream evaporates
+            // softly at the top edge instead of clipping it. Multiplies the
+            // existing fade so mid-screen glyphs keep their full presence;
+            // only the upper register softens, reading as ink dispersing
+            // into mist rather than a hard horizontal cutoff.
+            let top_fade = (g.y / (sh * 0.18)).clamp(0., 1.);
             let mut c = hsl_to_rgb(row_hue, 0.45, 0.85);
-            c.a = birth_eased * (0.30 + aeased * 0.65);
+            c.a = birth_eased * (0.30 + aeased * 0.65) * top_fade;
             // subtle per-glyph tilt so the falling characters feel brush-set
             // rather than mechanically typed. Two slow sines (one global,
             // one tied to the glyph's own descent) keep adjacent characters
@@ -694,7 +701,7 @@ async fn main() {
             let halo_age = 1.0 - a; // 0 at birth, 1 at death
             let halo_strength = (halo_age * (1.0 - halo_age) * 4.0).min(1.0);
             let mut halo = hsl_to_rgb(row_hue, 0.4, 0.45);
-            halo.a = halo_strength * 0.12;
+            halo.a = halo_strength * 0.12 * top_fade;
             draw_circle(g.x, g.y + g.size * 0.3, g.size * 0.7, halo);
             let params = TextParams {
                 font: font.as_ref(),
