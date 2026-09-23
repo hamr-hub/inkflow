@@ -670,6 +670,17 @@ async fn main() {
             // one tied to the glyph's own descent) keep adjacent characters
             // out of phase so the stream reads as calligraphy, not a parade.
             let rot = ((t * 0.32 + g.y * 0.011).sin()) * 0.045;
+            // soft ink halo: a faint radial wash that swells and fades across
+            // each glyph's lifetime, like wet ink soaking into rice paper.
+            // Drawn before the text so the character sits on top; alpha
+            // peaks ~12% at midlife and is dim at birth and death, so it
+            // complements the existing fade curves without ever competing
+            // with the foreground text.
+            let halo_age = 1.0 - a; // 0 at birth, 1 at death
+            let halo_strength = (halo_age * (1.0 - halo_age) * 4.0).min(1.0);
+            let mut halo = hsl_to_rgb(row_hue, 0.4, 0.45);
+            halo.a = halo_strength * 0.12;
+            draw_circle(g.x, g.y + g.size * 0.3, g.size * 0.7, halo);
             let params = TextParams {
                 font: font.as_ref(),
                 font_size: g.size as u16,
