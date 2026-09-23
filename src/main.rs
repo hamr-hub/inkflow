@@ -371,6 +371,11 @@ struct Glyph {
     life: f32,
     max_life: f32,
     size: f32,
+    // per-glyph phase for the subtle vertical waver below — drawn from
+    // spawn-time randomness so neighbouring characters waver out of phase
+    // and the stream reads as ink floating on rice paper rather than a
+    // calibrated straight rain.
+    phase: f32,
 }
 
 #[derive(Clone, Copy)]
@@ -617,6 +622,8 @@ async fn main() {
                 life: max_life,
                 max_life,
                 size: ((if from_llm { 34. } else { 28. }) + eff_energy * 16.) * size_jitter,
+                phase: rand_fast(tick.wrapping_add(197).wrapping_add(glyphs.len() as u64))
+                    * std::f32::consts::TAU,
             });
             if glyphs.len() > 260 {
                 glyphs.remove(0);
@@ -736,6 +743,14 @@ async fn main() {
             g.y += g.vy * dt;
             // gentle horizontal breath so the stream feels like a slow wind, not a straight rain
             g.x += (t * 0.55 + g.y * 0.012).sin() * 6.0 * dt;
+            // per-glyph vertical waver: each character drifts up/down on its
+            // own slow phase so the stream reads as ink floating on rice paper
+            // with its own grain rather than a calibrated straight rain.
+            // Amplitude kept small (~1.5 px/s peak, ≈5-10 px over the screen
+            // crossing) so it layers as texture on top of the existing wind
+            // breath, rise jitter, tilt, and birth fade — same calligraphy,
+            // looser micro-cadence.
+            g.y += ((t * 0.42 + g.phase).sin()) * 1.5 * dt;
             g.life -= dt;
             let a = (g.life / g.max_life).clamp(0., 1.);
             // ease: hold bright, fade only near end of life
