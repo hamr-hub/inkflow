@@ -475,14 +475,19 @@ async fn main() {
         tick += 1;
 
         // mood
+        let t = start.elapsed().as_secs_f32();
         let (energy, warmth, contacts, dev) = {
             let mut s = touch.lock().unwrap();
             s.energy *= 0.965f32.powf(dt * 60.);
-            // autonomous idle warmth drift — persist on s.warmth so the
-            // cool↔warm pull actually accumulates across frames when no
-            // touch is shaping it; otherwise each frame re-reads the stale
-            // s.warmth and the drift dies at the 0.2 clamp.
-            s.warmth = (s.warmth * 0.99 + 0.5 * 0.01).clamp(0.2, 0.8);
+            // autonomous idle warmth drift — drive the target along a slow
+            // sine so cool↔warm actually breathes when no touch is shaping it
+            // (the earlier formula EMA'd toward a constant 0.5 and pinned
+            // warmth there forever). Touch writes s.warmth directly in the
+            // evdev thread, so contact still pulls the bias off-axis; once
+            // the user lets go this gentle lerp relaxes back toward the
+            // wandering target.
+            let warm_target = 0.5 + 0.22 * (t * 0.045).sin();
+            s.warmth = (s.warmth * 0.985 + warm_target * 0.015).clamp(0.2, 0.8);
             let stale = s.last.map(|l| l.elapsed().as_secs() > 2).unwrap_or(true);
             if stale {
                 s.contacts.clear();
@@ -490,7 +495,6 @@ async fn main() {
             (s.energy, s.warmth, s.contacts.len(), s.device.clone())
         };
         // autonomous idle drift so the piece breathes alone
-        let t = start.elapsed().as_secs_f32();
         let idle = ((t * 0.13).sin() * 0.5 + 0.5) * 0.25;
         let energy = energy.max(idle);
 
