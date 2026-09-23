@@ -265,6 +265,10 @@ fn start_llm(
             let t0 = Instant::now();
             let mut ntok = 0u32;
             let mut got = String::new();
+            // Cap streaming time so a glacially slow ollama (e.g. 0.04 tok/s)
+            // can't hold the request thread hostage for half an hour; we
+            // abandon partial output and resend the prompt on the next loop.
+            let req_budget = Duration::from_secs(20);
             let req = agent
                 .post(&format!("http://{host}/api/generate"))
                 .send_json(body);
@@ -273,6 +277,9 @@ fn start_llm(
                     let reader = resp.into_reader();
                     use std::io::BufRead;
                     for line in std::io::BufReader::new(reader).lines() {
+                        if t0.elapsed() > req_budget {
+                            break;
+                        }
                         let Ok(line) = line else { break };
                         if let Ok(v) = serde_json::from_str::<serde_json::Value>(&line) {
                             if let Some(s) = v.get("response").and_then(|x| x.as_str()) {
