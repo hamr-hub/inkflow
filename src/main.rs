@@ -655,7 +655,15 @@ async fn main() {
             let elapsed = 1.0 - a;
             let birth = (elapsed / 0.07).clamp(0., 1.);
             let birth_eased = birth * birth * (3. - 2. * birth);
-            let mut c = hsl_to_rgb(hue, 0.45, 0.85);
+            // per-glyph hue band: each glyph gets a small hue offset tied
+            // to its own y-position so the stream reads as ink pigments of
+            // slightly different temperatures mixing as the text rises. The
+            // sine period (≈2095px) is much longer than the screen height
+            // so any single glyph only drifts through a small slice during
+            // its lifetime instead of cycling — keeps the unity of palette
+            // while breaking the "one uniform ink" feel.
+            let row_hue = (hue + (g.y * 0.003).sin() * 0.045).rem_euclid(1.0);
+            let mut c = hsl_to_rgb(row_hue, 0.45, 0.85);
             c.a = birth_eased * (0.30 + aeased * 0.65);
             // subtle per-glyph tilt so the falling characters feel brush-set
             // rather than mechanically typed. Two slow sines (one global,
