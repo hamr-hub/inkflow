@@ -751,6 +751,16 @@ async fn main() {
             // breath, rise jitter, tilt, and birth fade — same calligraphy,
             // looser micro-cadence.
             g.y += ((t * 0.42 + g.phase).sin()) * 1.5 * dt;
+            // per-glyph horizontal waver: mirror image of the vertical waver,
+            // so each character also drifts sideways on its own slow phase
+            // instead of being carried by the single global wind-breath. The
+            // period (0.31 vs the wind's 0.55 and the vertical's 0.42) and the
+            // 1.3× phase multiplier keep the two waver axes decorrelated, so
+            // neighbours wander in different directions and the stream reads
+            // as calligraphy with its own left/right grain. Amplitude kept
+            // smaller (~1.0 px/s peak, ≈3-7 px over the screen crossing) so
+            // upward ascent still reads as the dominant motion.
+            g.x += ((t * 0.31 + g.phase * 1.3).sin()) * 1.0 * dt;
             g.life -= dt;
             let a = (g.life / g.max_life).clamp(0., 1.);
             // ease: hold bright, fade only near end of life
