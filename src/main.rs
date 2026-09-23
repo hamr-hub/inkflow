@@ -478,6 +478,11 @@ async fn main() {
         let (energy, warmth, contacts, dev) = {
             let mut s = touch.lock().unwrap();
             s.energy *= 0.965f32.powf(dt * 60.);
+            // autonomous idle warmth drift — persist on s.warmth so the
+            // cool↔warm pull actually accumulates across frames when no
+            // touch is shaping it; otherwise each frame re-reads the stale
+            // s.warmth and the drift dies at the 0.2 clamp.
+            s.warmth = (s.warmth * 0.99 + 0.5 * 0.01).clamp(0.2, 0.8);
             let stale = s.last.map(|l| l.elapsed().as_secs() > 2).unwrap_or(true);
             if stale {
                 s.contacts.clear();
@@ -488,7 +493,6 @@ async fn main() {
         let t = start.elapsed().as_secs_f32();
         let idle = ((t * 0.13).sin() * 0.5 + 0.5) * 0.25;
         let energy = energy.max(idle);
-        let warmth = (warmth * 0.99 + 0.5 * 0.01).clamp(0.2, 0.8);
 
         // mouse = fallback/pointer touch (also test path)
         let (mx, my) = mouse_position();
