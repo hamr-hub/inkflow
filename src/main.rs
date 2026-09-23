@@ -614,8 +614,13 @@ async fn main() {
             let a = (g.life / g.max_life).clamp(0., 1.);
             // ease: hold bright, fade only near end of life
             let aeased = a * a * (3. - 2. * a);
+            // soft birth fade-in: glyphs materialize over the first ~7% of life
+            // so they ease into the stream instead of popping at full alpha.
+            let elapsed = 1.0 - a;
+            let birth = (elapsed / 0.07).clamp(0., 1.);
+            let birth_eased = birth * birth * (3. - 2. * birth);
             let mut c = hsl_to_rgb(hue, 0.45, 0.85);
-            c.a = 0.35 + aeased * 0.65;
+            c.a = birth_eased * (0.30 + aeased * 0.65);
             let params = TextParams {
                 font: font.as_ref(),
                 font_size: g.size as u16,
