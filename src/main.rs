@@ -375,6 +375,37 @@ struct Particle {
     r: f32,
 }
 
+// A single distant pinpoint in the void — fixed position, slow twinkle.
+// Each star owns its own phase + period so the field reads as a soft,
+// non-uniform shimmer rather than a single synchronised pulse. Base alpha
+// stays well below the nebula so they never compete with the foreground.
+#[derive(Clone, Copy)]
+struct Star {
+    x: f32,
+    y: f32,
+    r: f32,
+    base: f32,
+    phase: f32,
+    period: f32,
+}
+
+const STAR_COUNT: usize = 90;
+fn build_stars(sw: f32, sh: f32) -> Vec<Star> {
+    (0..STAR_COUNT)
+        .map(|i| Star {
+            // deterministic LCG positions so the field is stable across runs
+            x: rand_fast(i as u64 + 1) * sw,
+            // bias slightly toward upper sky where the void is widest
+            y: rand_fast(i as u64 + 1001).powf(1.4) * sh,
+            r: 0.7 + rand_fast(i as u64 + 2003) * 1.4,
+            base: 0.18 + rand_fast(i as u64 + 3001) * 0.22,
+            phase: rand_fast(i as u64 + 4001) * std::f32::consts::TAU,
+            // 4..14s twinkle period — long enough to feel ambient, not blinky
+            period: 4.0 + rand_fast(i as u64 + 5003) * 10.0,
+        })
+        .collect()
+}
+
 fn hsl_to_rgb(h: f32, s: f32, l: f32) -> Color {
     let h = (h * 360.0).rem_euclid(360.);
     let c = (1. - (2. * l - 1.).abs()) * s;
@@ -465,6 +496,9 @@ async fn main() {
 
     let mut glyphs: Vec<Glyph> = vec![];
     let mut particles: Vec<Particle> = vec![];
+    // Starfield can't be built until after the first frame surfaces real
+    // screen dimensions, so we lazy-init on the first loop iteration.
+    let mut stars: Vec<Star> = vec![];
     let mut tick: u64 = 0;
     let mut spawn_acc = 0f32;
     let mut last_tel = Instant::now();
@@ -473,6 +507,10 @@ async fn main() {
     loop {
         let dt = get_frame_time().clamp(0.001, 0.05);
         tick += 1;
+        let (sw, sh) = (screen_width(), screen_height());
+        if stars.is_empty() && sw > 0. && sh > 0. {
+            stars = build_stars(sw, sh);
+        }
 
         // mood
         let t = start.elapsed().as_secs_f32();
@@ -500,7 +538,6 @@ async fn main() {
 
         // mouse = fallback/pointer touch (also test path)
         let (mx, my) = mouse_position();
-        let (sw, sh) = (screen_width(), screen_height());
         let mouse_down = is_mouse_button_down(MouseButton::Left);
         let eff_warmth = if mouse_down { mx / sw } else { warmth };
         let eff_energy = if mouse_down { energy.max(0.55) } else { energy };
@@ -635,6 +672,18 @@ async fn main() {
             let mut c = hsl_to_rgb(hue, 0.6, 0.45);
             c.a = neb_b_alpha * (1.0 - i as f32 * 0.4);
             draw_circle(nb_x, nb_y, sw * (0.28 + 0.15 * i as f32), c);
+        }
+        // faint twinkling starfield: gives the void a soft open-sky depth
+        // without ever competing with the foreground text. Each star owns
+        // its own phase/period so the field shimmers asynchronously; base
+        // alpha stays below the nebula glow so stars remain a background
+        // register. Skipped when the field hasn't been seeded yet (first
+        // frame before screen dims arrive).
+        for s in stars.iter() {
+            let k = 0.5 + 0.5 * (t / s.period * std::f32::consts::TAU + s.phase).sin();
+            let mut c = Color::new(0.85, 0.88, 0.95, 1.);
+            c.a = s.base * (0.25 + 0.75 * k);
+            draw_circle(s.x, s.y, s.r, c);
         }
         for p in particles.iter_mut() {
             p.x += p.vx * dt;
