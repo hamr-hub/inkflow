@@ -545,6 +545,13 @@ async fn main() {
             // life matches actual screen-crossing time so glyphs stay visible
             let speed = vy.abs();
             let max_life = (sh + 40.) / speed + 1.5;
+            // per-glyph brush-pressure jitter: each character picks its own
+            // size inside an 0.88..1.12 band so the stream reads as varied
+            // brush strokes rather than mechanically uniform type. Seed
+            // mixes tick with the current glyph index so two glyphs spawned
+            // in the same frame still get distinct sizes.
+            let size_jitter =
+                0.88 + rand_fast(tick.wrapping_add(113).wrapping_add(glyphs.len() as u64)) * 0.24;
             glyphs.push(Glyph {
                 ch,
                 x,
@@ -553,7 +560,7 @@ async fn main() {
                 vy,
                 life: max_life,
                 max_life,
-                size: (if from_llm { 34. } else { 28. }) + eff_energy * 16.,
+                size: ((if from_llm { 34. } else { 28. }) + eff_energy * 16.) * size_jitter,
             });
             if glyphs.len() > 260 {
                 glyphs.remove(0);
