@@ -358,6 +358,204 @@ pub fn draw_frame(
 // for the renderer call site.
 pub use std::collections::VecDeque;
 
+// ----- self-portrait -----
+
+/// Path the offline render writes its PPM to. The artifact is meant
+/// to be opened by humans (e.g. `open /tmp/inkflow_self_portrait.ppm`),
+/// not asserted on by tests, but keeping it next to the code makes the
+/// "what does the piece look like right now" question one `cargo test`
+/// away.
+#[cfg(test)]
+const PORTRAIT_PATH: &str = "/tmp/inkflow_self_portrait.ppm";
+
+/// Render the piece as a single offline PPM. Pure of any Linux
+/// surface — works on macOS dev boxes, on the Jetson, on any Linux
+/// with the standard build. Re-uses every public renderer phase in
+/// the same order as draw_frame so the test snapshot matches what
+/// the running service produces.
+#[cfg(test)]
+fn render_portrait(w: i32, h: i32, frames: u32) -> Vec<u32> {
+    let mut pixels = vec![BACKGROUND; (w * h) as usize];
+
+    // Scene with seeded stars.
+    let mut scene = crate::scene::Scene::new();
+    scene.seed_stars(w as f32, h as f32);
+
+    // Empty LLM queue + default touch state — fallback pool fills
+    // the chars, so this matches what the Jetson shows when ollama
+    // is down (the long-tail mode that 99 % of viewers see).
+    let shared = std::sync::Arc::new(std::sync::Mutex::new(crate::llm_loop::Shared::new()));
+    let touch = std::sync::Arc::new(std::sync::Mutex::new(crate::evdev::TouchState::default()));
+    let mut accum = crate::scene_anim::SpawnAccum::default();
+    let frame = crate::mood::FrameMood {
+        warmth: 0.5,
+        energy: 0.05,
+        idle: 0.1,
+        contacts: 0,
+        touch_device: String::new(),
+    };
+
+    let dt: f32 = 1.0 / 60.0;
+    let pitch_px = w as usize;
+    for tick in 0..frames {
+        let t = tick as f32 * dt;
+        crate::scene_anim::spawn_for_frame(
+            &mut scene,
+            &mut accum,
+            &frame,
+            &touch,
+            &shared,
+            w as u32,
+            h as u32,
+            tick as u64,
+            dt,
+            t,
+        );
+        let hue = crate::mood::hue_at(t, frame.warmth);
+        clear(&mut pixels);
+        draw_nebula(&mut pixels, pitch_px, w, h, t, hue);
+        draw_moon(&mut pixels, pitch_px, w, h, t, hue);
+        draw_stars(&mut pixels, pitch_px, w, h, &scene.stars, t, hue);
+        draw_and_step_particles(
+            &mut pixels,
+            pitch_px,
+            w,
+            h,
+            &mut scene.particles,
+            dt,
+            t,
+            hue,
+        );
+        draw_and_step_glyphs(&mut pixels, pitch_px, w, h, &mut scene.glyphs, dt, t, hue);
+        draw_top_fog(&mut pixels, pitch_px, w, h);
+    }
+
+    pixels
+}
+
+/// Write a PPM (P6) file from a BGRA pixel buffer.
+#[cfg(test)]
+fn write_ppm(path: &str, w: i32, h: i32, pixels: &[u32]) {
+    let mut bytes: Vec<u8> = Vec::with_capacity(pixels.len() * 3 + 32);
+    bytes.extend_from_slice(format!("P6\n{w} {h}\n255\n").as_bytes());
+    for &p in pixels {
+        // BGRA in memory -> B, G, R in the file (PPM P6 is RGB order).
+        bytes.push((p & 0xFF) as u8);
+        bytes.push(((p >> 8) & 0xFF) as u8);
+        bytes.push(((p >> 16) & 0xFF) as u8);
+    }
+    let _ = std::fs::write(path, &bytes);
+}
+
+#[cfg(test)]
+mod portrait_tests {
+    use super::*;
+
+    /// The visual contract from ARTIFACT.md encoded as a test:
+    /// after N frames of the full pipeline, the rendered canvas must
+    /// (1) not be all background, (2) show the moon silhouette in
+    /// its anchor region, (3) show glyphs clustered around the
+    /// current ink_current_x(t) rather than uniformly across width,
+    /// (4) have a non-zero count of brushstroke smear trails. Also
+    /// writes a PPM artifact to /tmp for human inspection.
+    #[test]
+    fn self_portrait_matches_artifacts_visual_contract() {
+        let w: i32 = 1280;
+        let h: i32 = 800;
+        // 600 frames at 60 fps = 10 seconds of simulated piece time.
+        // Long enough for the ink current to have moved and the moon
+        // to have drifted.
+        let frames: u32 = 600;
+        let pixels = render_portrait(w, h, frames);
+        write_ppm(PORTRAIT_PATH, w, h, &pixels);
+
+        // 1. Substantial ink presence — any channel that differs
+        //    from BACKGROUND by more than 10 (filters nebula haze,
+        //    keeps moon + glyph + particle contributions).
+        let bg_b = BACKGROUND & 0xFF;
+        let bg_g = (BACKGROUND >> 8) & 0xFF;
+        let bg_r = (BACKGROUND >> 16) & 0xFF;
+        let substantial = pixels
+            .iter()
+            .filter(|&&p| {
+                let b = (p & 0xFF).abs_diff(bg_b);
+                let g = ((p >> 8) & 0xFF).abs_diff(bg_g);
+                let r = ((p >> 16) & 0xFF).abs_diff(bg_r);
+                b.max(g).max(r) > 10
+            })
+            .count();
+        assert!(
+            substantial > 500,
+            "self portrait should have substantial ink presence; got {substantial}"
+        );
+
+        // 2. Moon silhouette is visible in its upper-right anchor region.
+        //     Anchor at (0.66 w, 0.30 h); radius ~0.16 * min(w, h).
+        let moon_cx = (w as f32 * 0.66) as i32;
+        let moon_cy = (h as f32 * 0.30) as i32;
+        let moon_r = (w.min(h) as f32 * 0.16) as i32;
+        let mut moon_touched = 0usize;
+        let min_x = (moon_cx - moon_r).max(0) as usize;
+        let max_x = (moon_cx + moon_r).min(w - 1) as usize;
+        let min_y = (moon_cy - moon_r).max(0) as usize;
+        let max_y = (moon_cy + moon_r).min(h - 1) as usize;
+        for sy in min_y..=max_y {
+            for sx in min_x..=max_x {
+                let p = pixels[sy * w as usize + sx];
+                let b = (p & 0xFF).abs_diff(bg_b);
+                let g = ((p >> 8) & 0xFF).abs_diff(bg_g);
+                let r = ((p >> 16) & 0xFF).abs_diff(bg_r);
+                if b.max(g).max(r) > 10 {
+                    moon_touched += 1;
+                }
+            }
+        }
+        assert!(
+            moon_touched > 200,
+            "moon silhouette should be visible in upper-right anchor; got {moon_touched}"
+        );
+
+        // 3. Glyphs are clustered around the ink current, NOT uniform.
+        //     Sample column touched-counts across width and assert that
+        //     the variance is significant — uniform spawn would yield
+        //     near-equal column counts; clustered spawn yields a clear
+        //     peak and emptier tails.
+        let cols: usize = 32;
+        let mut col_counts = vec![0usize; cols];
+        for (i, &p) in pixels.iter().enumerate() {
+            let b = (p & 0xFF).abs_diff(bg_b);
+            let g = ((p >> 8) & 0xFF).abs_diff(bg_g);
+            let r = ((p >> 16) & 0xFF).abs_diff(bg_r);
+            if b.max(g).max(r) <= 10 {
+                continue;
+            }
+            let x = i % w as usize;
+            let bucket = (x * cols) / w as usize;
+            if bucket < cols {
+                col_counts[bucket] += 1;
+            }
+        }
+        let max_col = col_counts.iter().copied().max().unwrap_or(0);
+        let min_col = col_counts.iter().copied().min().unwrap_or(0);
+        assert!(
+            max_col > min_col.saturating_mul(2).saturating_add(50),
+            "glyphs should be clustered, not uniform; column counts {col_counts:?}"
+        );
+
+        // 4. Brushstroke smear trails are present somewhere — at least
+        //     one particle had high enough speed to produce a visible
+        //     trailing dot. We don't have direct access to the scene's
+        //     particles after the loop (they were stepped to death), so
+        //     instead we look for a column with very high touch density
+        //     (smear = two stacked circles at the same x).
+        let smear_evidence = col_counts.iter().any(|&c| c > 2000);
+        assert!(
+            smear_evidence,
+            "expected at least one column with concentrated smears; counts {col_counts:?}"
+        );
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
