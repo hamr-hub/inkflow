@@ -11,10 +11,10 @@ src/
 ├── mood.rs           — touch → (warmth, energy, idle) envelope
 ├── llm_loop.rs       — LLM worker thread + Shared queue
 ├── scene_anim.rs     — per-frame spawn logic (glyphs + particles) + ink_current_x(t)
-├── renderer.rs       — per-frame drawing (clear → nebula → moon → stars → particles → glyphs → fog)
+├── renderer.rs       — per-frame drawing (clear → nebula → moon → stars → particles → glyphs → fog) + self-portrait test
 ├── surface.rs        — Surface enum: DRM / fb0 / Headless unified API
 ├── screenshot.rs     — 60s PPM/PNG frame capture (off-thread)
-├── telemetry.rs      — JSONL writer + 2 MiB rotation
+├── telemetry.rs      — JSONL writer + 2 MiB rotation; carries aesthetic state (voice, ink_x, hue)
 ├── net_ollama.rs     — hand-rolled TCP + HTTP/1.1 + minimal JSON
 ├── evdev.rs          — touch hotplug + slot protocol
 ├── drm.rs            — DRM/KMS dumb-buffer, /dev/fb0 fallback, Headless
@@ -49,13 +49,18 @@ src/
         │       ├─ clear         (pixels.fill(BACKGROUND))
         │       ├─ nebula        (2 × 5 concentric circles, slow drift)
         │       ├─ moon          (single silhouette, complementary hue, anchors composition)
+        │       └─ (self-portrait: render_portrait() composes all phases into a PPM
+        │           under #[cfg(test)] for offline verification on any host)
         │       ├─ stars         (90 twinkles, per-star phase)
         │       ├─ particles     (step + draw, retain alive)
         │       ├─ glyphs        (step + draw, retain alive)
         │       └─ top_fog       (3px black bar at y=0)
         │
         ├─► telemetry::append (every 10s)
-        │       └─► /var/.../state/telemetry.jsonl (rotate at 2 MiB)
+        │       ├─► /var/.../state/telemetry.jsonl (rotate at 2 MiB)
+        │       ├─► perf fields:  fps, frame_min_us, frame_max_us, glyphs, particles
+        │       ├─► LLM fields:   llm_ok, llm_toks_per_s, llm_model, llm_last
+        │       └─► aesthetic:    voice (5-voice picker), ink_x (留白 column), hue
         │
         └─► screenshot::spawn_grab (every 60s)
                 └─► worker thread: PPM write + ffmpeg → PNG
