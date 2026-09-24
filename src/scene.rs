@@ -4,10 +4,14 @@
 //   - glyphs[] holds at most 260 floating CJK characters
 //   - particles[] holds at most 260 sparks
 //   - stars[] is rebuilt exactly once when screen dimensions arrive
-// No per-frame Vec::push beyond the cap; trimming is FIFO via front
-// drain to keep latency low and allocator quiet.
+//
+// glyphs / particles live in VecDeque so push is O(1) at the cap —
+// pop_front evicts the oldest in constant time and push_back appends
+// the new entry, so a saturated LLM stream never touches a memmove.
+// Stars stay in Vec because they're seeded once and iterated forever.
 
 use crate::font::Rgba;
+use std::collections::VecDeque;
 
 pub const GLYPH_CAP: usize = 260;
 pub const PARTICLE_CAP: usize = 260;
@@ -49,17 +53,20 @@ pub struct Star {
 }
 
 pub struct Scene {
-    pub glyphs: Vec<Glyph>,
-    pub particles: Vec<Particle>,
+    pub glyphs: VecDeque<Glyph>,
+    pub particles: VecDeque<Particle>,
     pub stars: Vec<Star>,
 }
 
 impl Scene {
     pub fn new() -> Self {
-        let mut g = Vec::with_capacity(GLYPH_CAP + 8);
-        let mut p = Vec::with_capacity(PARTICLE_CAP + 8);
-        g.resize(0, Glyph::sentinel());
-        p.resize(0, Particle::sentinel());
+        // VecDeque with a hard cap-equivalent capacity gives us O(1)
+        // push_back / pop_front. The set never grows past the cap, so
+        // we pre-size to GLYPH_CAP (not +slack) — push_back after the
+        // buffer is full would panic, but our push_* call sites always
+        // pop_front first when at cap, so the invariant holds.
+        let g: VecDeque<Glyph> = VecDeque::with_capacity(GLYPH_CAP);
+        let p: VecDeque<Particle> = VecDeque::with_capacity(PARTICLE_CAP);
         Self {
             glyphs: g,
             particles: p,
@@ -85,49 +92,28 @@ impl Scene {
     }
 
     pub fn push_glyph(&mut self, g: Glyph) {
+        // O(1) at cap: pop the oldest off the front, then append the new
+        // glyph at the back. Replaces the previous Vec::remove(0) which
+        // memmove'd every entry down by one (~36 B × 259 = ~9.3 KB) on
+        // every LLM-streamed char past the 260-entry cap.
         if self.glyphs.len() >= GLYPH_CAP {
-            self.glyphs.remove(0);
+            self.glyphs.pop_front();
         }
-        self.glyphs.push(g);
+        self.glyphs.push_back(g);
     }
 
     pub fn push_particle(&mut self, p: Particle) {
+        // Same O(1) drop-oldest pattern as push_glyph. The previous
+        // implementation drained the entire prefix down to fit, which
+        // under high-energy / multi-touch contact pressure can run on
+        // most frames; this is now constant work.
         if self.particles.len() >= PARTICLE_CAP {
-            self.particles
-                .drain(0..self.particles.len() - PARTICLE_CAP + 1);
+            self.particles.pop_front();
         }
-        self.particles.push(p);
+        self.particles.push_back(p);
     }
 }
 
-impl Glyph {
-    fn sentinel() -> Self {
-        Glyph {
-            ch: " ",
-            x: 0.,
-            y: 0.,
-            vx: 0.,
-            vy: 0.,
-            life: 0.,
-            max_life: 0.,
-            size: 0.,
-            phase: 0.,
-        }
-    }
-}
-impl Particle {
-    fn sentinel() -> Self {
-        Particle {
-            x: 0.,
-            y: 0.,
-            vx: 0.,
-            vy: 0.,
-            life: 0.,
-            max_life: 0.,
-            r: 0.,
-        }
-    }
-}
 impl Star {
     fn sentinel() -> Self {
         Star {
