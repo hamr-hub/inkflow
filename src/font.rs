@@ -144,8 +144,12 @@ pub fn draw_glyph(
             if cov == 0 {
                 continue;
             }
-            // blend with per-pixel coverage and the global alpha
-            let m = (cov as u32 * a) >> 8; // 0..=255
+            // blend with per-pixel coverage and the global alpha.
+            // cov is 4-bit (0..=15); multiply by 17 to expand to
+            // 0..=255 first so a full-coverage center-of-stroke
+            // pixel actually saturates at alpha, instead of capping
+            // at the 5 % blend that the previous math produced.
+            let m = (cov as u32 * 17 * a) >> 8; // 0..=255
             if m == 0 {
                 continue;
             }
