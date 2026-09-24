@@ -304,12 +304,23 @@ impl Composition {
             //   brush-weight gradient still holds (subtitle 0.10, upper-
             //   right 0.26, lower-left deepest), and the line stays
             //   clearly subordinate to the hero.
+            //   em_scale 0.30 → 0.32: size joins the brush-weight
+            //   gradient. The subtitle stays at 0.34 (closest to focal,
+            //   heaviest), the upper-right steps down to 0.32 (mid-weight,
+            //   slightly more delicate), and the lower-left drops to 0.28
+            //   (farthest, most delicate — the brush running thin as the
+            //   inscription closes on 《云深不知处》). Size now mirrors the
+            //   same hierarchy that already governs alpha (0.86/0.72/0.58),
+            //   shadow_mix (0.10/0.26/0.42), warmth tint, and inscribed
+            //   breath, so the four lines of 《寻隐者不遇》 read as one
+            //   inscription thinning across four axes — not four lines
+            //   pinned to one screen by coincidence.
             SlotDef {
                 role: SlotRole::Support,
                 x_frac: 0.80,
                 y_frac: 0.28,
                 align: Align::Right,
-                em_scale: 0.30,
+                em_scale: 0.32,
                 target_w_frac: 0.0,
                 max_chars: 5,
                 alpha: 0.72,
@@ -344,12 +355,19 @@ impl Composition {
             //   still leans furthest into shadow), but the viewer now
             //   sees a full quatrain on the page rather than two lines
             //   and two absences.
+            //   em_scale 0.30 → 0.28: the closing stroke is the most
+            //   delicate — the brush running thin as the inscription
+            //   dissolves into 云深不知处 (the clouds are deep, one
+            //   knows not where). Size now mirrors the same hierarchy
+            //   that already governs alpha, shadow_mix, warmth tint,
+            //   and inscribed breath: subtitle 0.34 > upper-right 0.32
+            //   > lower-left 0.28 — four axes, one brush.
             SlotDef {
                 role: SlotRole::Support,
                 x_frac: 0.18,
                 y_frac: 0.74,
                 align: Align::Left,
-                em_scale: 0.30,
+                em_scale: 0.28,
                 target_w_frac: 0.0,
                 max_chars: 5,
                 alpha: 0.58,
@@ -733,9 +751,21 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
     // Atmospheric breathing — adds a faint global luminance wave.
     let ambient = 0.02 * (scene.ambient_pulse.sin()) + pulse * 0.06;
 
+    // Soft horizon mist — a faint warm glow that grounds the inscription
+    // like distant mountains catching the last warm light at twilight.
+    // Bell-curve from v≈0.55 to v≈1.00 peaking around v≈0.78; the hero
+    // sits at v≈0.42 so this never touches the focal line. Amplitude
+    // stays ≤ 0.12 so it reads as atmospheric depth, not a horizon line
+    // (ART_DIRECTION §四 "高光只落在主句"). The warmth drives the mist
+    // tint so a touched-warm scene breathes amber, an idle-cool scene
+    // breathes dusk.
+    let horizon_color = mix(rgb(58, 38, 28), rgb(128, 86, 54), warmth);
+
     for y in 0..h {
         let v = y as f32 / (h_f - 1.0).max(1.0);
         let base = color::grad3(nebula_top, nebula_mid, nebula_bot, v);
+        // Parabolic bell: 0 at v=0.55, peaks ≈0.253 at v≈0.775, 0 at v=1.0.
+        let horizon_glow = ((v - 0.55) * (1.0 - v) * 5.0).clamp(0.0, 1.0);
         for x in 0..w {
             let dx = x as f32 - cx;
             let dy = y as f32 - cy;
@@ -752,6 +782,8 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
             let p = mix(p, color::bg::DEEP, vig_dark);
             // ambient luminance wave
             let p = blend_add_lin(p, color::star::WARM, ambient * (1.0 - vig_dark * 0.6));
+            // horizon mist — final atmospheric layer.
+            let p = blend_screen(p, horizon_color, horizon_glow * 0.12);
             fb[(y * w + x) as usize] = p;
         }
     }
