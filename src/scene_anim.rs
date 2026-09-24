@@ -46,6 +46,28 @@ pub(crate) fn voice_base_size(voice: &str) -> f32 {
     }
 }
 
+/// Per-voice hue offset (added at render time to the global hue,
+/// then rem_euclid-ed into [0, 1)). Each curatorial voice carries
+/// its own colour temperature so a viewer can identify the voice
+/// from the palette alone — 禅寂 chars lean cool, 豪放 chars lean
+/// warm, 苍茫 chars lean toward dusk violet. Combined with
+/// voice_base_size this gives each voice a real typographic
+/// identity, not just a name.
+///
+/// Values are bounded to ±0.20 because the renderer applies a row-
+/// hue jitter of ±0.045 on top; anything bigger starts to wash out
+/// the per-y variation that gives the stream its sense of motion.
+pub(crate) fn voice_hue_offset(voice: &str) -> f32 {
+    match voice {
+        "婉约" => -0.05, // warm (sunset)
+        "豪放" => -0.10, // deep warm
+        "禅寂" => 0.10,  // cool
+        "稚拙" => 0.05,  // spring warm
+        "苍茫" => 0.15,  // dusk violet
+        _ => 0.0,        // unknown voice → no offset
+    }
+}
+
 /// Spawn-rate accumulator. The frame loop accumulates `dt * base_rate`
 /// and pops whole glyphs each time the accumulator crosses 1.0.
 #[derive(Default)]
@@ -198,6 +220,10 @@ fn spawn_glyphs(
         let anchor_x = current * fb_w as f32;
         let x_jitter = (lcg(tick.wrapping_add(11)) - 0.5) * fb_w as f32 * 0.80;
         let x = (anchor_x + x_jitter).clamp(2.0, fb_w as f32 - 2.0);
+        // Hue offset comes from the same voice picker as the size —
+        // a single source of truth for what 'this voice looks like'.
+        // voice_hue_offset is cheap (a match on a &str).
+        let voice_hue = voice_hue_offset(voice);
         scene.push_glyph(Glyph {
             ch,
             x,
@@ -211,6 +237,7 @@ fn spawn_glyphs(
                 .wrapping_add(197)
                 .wrapping_add(scene.glyphs.len() as u64))
                 * core::f32::consts::TAU,
+            hue_bias: voice_hue,
         });
 
         // Ink burst at the spawn point — 4 small motes in a
@@ -342,6 +369,39 @@ mod tests {
             let s = voice_base_size(v);
             assert!((18.0..=50.0).contains(&s), "{v}={s} out of band");
         }
+    }
+
+    #[test]
+    fn voice_hue_offset_distinguishes_warm_from_cool() {
+        // Per ARTIFACT.md "禅寂 cool, 豪放 warm" — the hue offsets
+        // must split cleanly into negative (toward warm/red) and
+        // positive (toward cool/blue) buckets so the palette shift
+        // is visible when the voice changes.
+        assert!(voice_hue_offset("豪放") < 0.0, "豪放 must be warm");
+        assert!(voice_hue_offset("婉约") < 0.0, "婉约 must be warm");
+        assert!(voice_hue_offset("禅寂") > 0.0, "禅寂 must be cool");
+        assert!(voice_hue_offset("稚拙") > 0.0, "稚拙 must lean warm-spring");
+        assert!(voice_hue_offset("苍茫") > 0.0, "苍茫 must be cool/dusk");
+    }
+
+    #[test]
+    fn voice_hue_offset_magnitude_is_bounded() {
+        // The renderer adds a row-hue jitter of ±0.045 on top of
+        // the bias. Anything bigger starts to wash out the per-y
+        // variation that gives the stream motion. Pin the absolute
+        // offset to ≤ 0.20.
+        for v in ["婉约", "豪放", "禅寂", "稚拙", "苍茫"] {
+            let h = voice_hue_offset(v);
+            assert!(h.abs() <= 0.20, "{v} hue bias {h} too large");
+        }
+    }
+
+    #[test]
+    fn voice_hue_offset_unknown_falls_back_safely() {
+        // Unknown voices must not panic; falling back to no offset
+        // is the right conservative default (the glyph will then
+        // use only the row_hue jitter).
+        assert_eq!(voice_hue_offset("???"), 0.0);
     }
 
     #[test]

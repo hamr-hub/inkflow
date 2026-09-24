@@ -273,7 +273,11 @@ pub fn draw_and_step_glyphs(
         let elapsed = 1.0 - a;
         let birth = (elapsed / 0.07).clamp(0.0, 1.0);
         let birth_eased = birth * birth * (3.0 - 2.0 * birth);
-        let row_hue = (hue + (g.y * 0.003).sin() * 0.045).rem_euclid(1.0);
+        // Hue = global + per-y jitter + per-voice bias. The voice
+        // bias (set at spawn by scene_anim::voice_hue_offset) is what
+        // gives 禅寂 vs 豪放 characters different colour temperatures
+        // at the same wall-time hue.
+        let row_hue = (hue + g.hue_bias + (g.y * 0.003).sin() * 0.045).rem_euclid(1.0);
         // Tightened from 0.18 → 0.08 each so glyphs read as "fully
         // visible" across ~84% of the screen instead of 64%. The
         // top/bottom edges still fade to the fog without a hard line.

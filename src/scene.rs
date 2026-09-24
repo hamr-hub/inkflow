@@ -28,6 +28,12 @@ pub struct Glyph {
     pub max_life: f32,
     pub size: f32,
     pub phase: f32,
+    /// Per-voice hue offset (in 0..=1) added at render time to the
+    /// global hue. Lets each curatorial voice (婉约 / 豪放 / 禅寂 /
+    /// 稚拙 / 苍茫) carry its own colour temperature without
+    /// re-tuning the mood vector — 禅寂 chars lean cool, 豪放
+    /// chars lean warm. See `scene_anim::voice_hue_offset`.
+    pub hue_bias: f32,
 }
 
 #[derive(Clone, Copy)]
@@ -179,6 +185,7 @@ mod tests {
                 max_life: 1.0,
                 size: 1.0,
                 phase: 0.0,
+                hue_bias: 0.0,
             });
             // Use `i` to silence "unused" — we don't actually need it.
             let _ = i;
