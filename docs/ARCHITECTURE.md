@@ -10,7 +10,7 @@ src/
 ├── fallback.rs       — 静态词库 + warm/cool/slow/fast picker (zero-alloc)
 ├── mood.rs           — touch → (warmth, energy, idle) envelope
 ├── llm_loop.rs       — LLM worker thread + Shared queue
-├── scene_anim.rs     — per-frame spawn logic (glyphs + particles) + ink_current_x(t)
+├── scene_anim.rs     — per-frame spawn logic + ink_current_x(t) + voice_base_size(voice)
 ├── renderer.rs       — per-frame drawing (clear → nebula → moon → stars → particles → glyphs → fog) + self-portrait test
 ├── surface.rs        — Surface enum: DRM / fb0 / Headless unified API
 ├── screenshot.rs     — 60s PPM/PNG frame capture (off-thread)
