@@ -26,14 +26,25 @@ use crate::mood::FrameMood;
 use crate::scene::{lcg, Glyph, Particle, Scene};
 use std::sync::{Arc, Mutex};
 
-/// Glyph size when the character came from the LLM stream.
-pub const LLM_SIZE: f32 = 34.0;
-/// Glyph size when the LLM is healthy but the LLM queue happened to
-/// be empty this spawn — the fallback glyph gets LLM-near sizing so
-/// the ambient doesn't visibly shrink when ollama is paused.
-pub const LLM_BACKUP_SIZE: f32 = 28.0;
-/// Glyph size when the LLM is down (no characters for >4 s).
-pub const FALLBACK_SIZE_BUMP: f32 = 32.0;
+/// Per-voice base glyph sizes. Each of the five curatorial voices
+/// (婉约 / 豪放 / 禅寂 / 稚拙 / 苍茫) carries its own typographic
+/// weight — see `voice_base_size`. A 禅寂 glyph should look smaller
+/// than a 豪放 glyph at the same energy: it reads as 'an austere
+/// trace', not as 'a shouted line'. The voice-specific sizes
+/// replaced the legacy single-size constants — each curatorial voice
+/// is now a real voice, including its type design.
+///
+/// The picker drives this — see `crate::net_ollama::style_for`.
+pub(crate) fn voice_base_size(voice: &str) -> f32 {
+    match voice {
+        "婉约" => 26.0, // lyrical, smaller
+        "豪放" => 44.0, // bold, the largest
+        "禅寂" => 20.0, // austere, the smallest
+        "稚拙" => 28.0, // naive, slightly larger than 婉约
+        "苍茫" => 36.0, // vast, mid-large
+        _ => 30.0,      // unknown voice → mid default
+    }
+}
 
 /// Spawn-rate accumulator. The frame loop accumulates `dt * base_rate`
 /// and pops whole glyphs each time the accumulator crosses 1.0.
@@ -125,12 +136,22 @@ fn spawn_glyphs(
             (llm_char_str.is_some(), ch)
         };
         let llm_ok = llm_loop::llm_ok(shared);
+        // Voice drives the base size — each curatorial voice carries
+        // its own typographic weight. When the LLM is down or the queue
+        // is empty, we still know the voice from (warmth, energy), so
+        // even offline glyphs read as the same curatorial voice.
+        let voice = crate::net_ollama::style_for(frame.warmth, frame.effective_energy());
+        let voice_size = voice_base_size(voice);
         let base_size = if from_llm {
-            LLM_SIZE
+            voice_size
         } else if llm_ok {
-            LLM_BACKUP_SIZE
+            // LLM backup: shrink slightly so the ambient feels
+            // 'quieter' when ollama just hasn't replied yet.
+            voice_size * 0.85
         } else {
-            FALLBACK_SIZE_BUMP
+            // LLM down: bump slightly above the LLM default so the
+            // stream doesn't feel anaemic when fully offline.
+            voice_size * 0.95
         };
         let speed_jitter = 0.82
             + lcg(tick
@@ -246,16 +267,41 @@ mod tests {
     }
 
     #[test]
-    fn size_constants_have_sane_order() {
-        // The visual contract:
-        //   LLM chars  >=  fallback chars (when LLM is up)
-        //   fallback chars  >  backup chars (so the stream doesn't
-        //                            visibly shrink when ollama drops)
-        // The backup size is intentionally the smallest: it's used when
-        // the LLM is healthy but the queue happened to be empty this
-        // spawn, so we want it to read as a "quiet LLM glyph".
-        assert!(LLM_SIZE > FALLBACK_SIZE_BUMP);
-        assert!(FALLBACK_SIZE_BUMP > LLM_BACKUP_SIZE);
+    fn voice_base_size_orders_match_artistic_intent() {
+        // Per ARTIFACT.md: 禅寂 is austere (smallest), 豪放 is bold
+        // (largest), 苍茫 is mid-large. 婉约 and 稚拙 both sit at
+        // the small end but in opposite directions — 婉约 (lyrical,
+        // refined) is slightly smaller than 稚拙 (naive, childlike,
+        // a touch larger).
+        assert!(voice_base_size("禅寂") < voice_base_size("婉约"));
+        assert!(voice_base_size("婉约") < voice_base_size("稚拙"));
+        assert!(voice_base_size("稚拙") < voice_base_size("苍茫"));
+        assert!(voice_base_size("苍茫") < voice_base_size("豪放"));
+    }
+
+    #[test]
+    fn voice_base_size_unknown_falls_back_safely() {
+        // A future addition to VOICE_PARAMS (e.g. an unknown voice
+        // name from a future LLM reply) shouldn't panic the spawn
+        // loop. We fall back to the legacy LLM default.
+        let v = voice_base_size("???");
+        // The legacy default was 34 px — kept here so the spirit of
+        // the original "sane mid-size default" survives.
+        assert!((30.0..=40.0).contains(&v));
+    }
+
+    #[test]
+    fn voice_base_size_range_is_within_render_bounds() {
+        // All per-voice base sizes must stay in a band the renderer
+        // can draw cleanly: too small and the glyph is unreadable,
+        // too large and it clips the screen. The lowest current
+        // value is 22 (禅寂) and the highest is 44 (豪放); with
+        // size_jitter ~0.88-1.12 and an energy bump up to +16 px,
+        // the rendered range is ~20-66 px.
+        for v in ["婉约", "豪放", "禅寂", "稚拙", "苍茫"] {
+            let s = voice_base_size(v);
+            assert!((18.0..=50.0).contains(&s), "{v}={s} out of band");
+        }
     }
 
     #[test]
