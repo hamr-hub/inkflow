@@ -320,7 +320,7 @@ pub fn draw_and_step_glyphs(
         let drip_top_y = g.y + draw_size * 0.42;
         // Slight per-glyph phase so consecutive drips don't line up
         // into a grid. Width tapers top→bottom via two stacked rects.
-        let drip_phase = (g.phase.sin() * 0.5 + 0.5);
+        let drip_phase = g.phase.sin() * 0.5 + 0.5;
         let taper = 0.6 + 0.4 * drip_phase;
         fill_rect(
             pixels,

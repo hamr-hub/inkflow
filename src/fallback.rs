@@ -1,5 +1,12 @@
 // inkflow · fallback.rs
 //
+// Legacy fallback pools kept as documentation of the pre-v0.2.1 word bank.
+// The current runtime picks fragments from `poetry::renderable_phrases()` instead.
+// Marked `#[allow(dead_code)]` so the module compiles even though nothing
+// in the binary references it — the comment is the value.
+#![allow(dead_code)]
+
+//
 // Local-word pool + warm/cool/slow/fast picker.
 //
 // When ollama is unreachable, slow, or returning zero-token streams, the

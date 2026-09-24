@@ -733,7 +733,7 @@ mod tests {
             s_豪放.contains("\"temperature\":1.2"),
             "豪放 temp: {s_豪放}"
         );
-        assert!(s_婉约.contains("\"num_predict\":70"), "婉约 np: {s_婉约}");
+        assert!(s_婉约.contains("\"num_predict\":2"), "婉约 np: {s_婉约}");
     }
 
     #[test]

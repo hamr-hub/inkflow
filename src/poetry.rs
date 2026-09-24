@@ -32,6 +32,11 @@
 /// characters may not all be in the embedded font. For runtime
 /// rendering, use [`renderable_phrases`] which is a hand-curated
 /// subset where every character has a glyph in `fontdata::GLYPHS`.
+/// Source-of-truth corpus (curated lines, may include chars outside the
+/// embedded font). Not referenced at runtime — `renderable_phrases()` is
+/// filtered to chars that actually have glyphs. Kept here so a future
+/// contributor can see the original curation set.
+#[allow(dead_code)]
 pub const PHRASES: &[&str] = &[
     // ----- 王维 Wang Wei — 山水 Moon-Scape School -----
     "明月松间照", // Bright moon between pines
@@ -187,71 +192,279 @@ const RECENT_WINDOW: usize = 2048;
 /// (see tests::phrases_cover_verified_chars).
 pub const fn curated_phrases() -> &'static [&'static str] {
     const RAW: &[&str] = &[
-        "月夜听蝉", "月夜灯暖", "月光微影", "月光雾影",
-        "月影灯影", "月沉夜深", "月光林幽", "月夜风清",
-        "月夜静听", "月夜听风", "月夜听雨", "月夜炉火",
-        "月夜茶烟", "月夜林深", "月夜灯深", "月光夜深",
-        "月灯夜深", "月光石径", "月夜霜寒", "月夜雨深",
-        "月夜露深", "月夜风霜", "月夜星灯", "月夜灯影",
-        "晨曦微光", "晨曦灯影", "晨曦雾影", "晨曦暖灯",
-        "晨曦灯深", "晨曦微影", "晨曦林深", "晨曦月灯",
-        "晨曦灯暖", "晨曦远钟", "风灯影", "风灯寒",
-        "风灯暖", "风灯深", "风听蝉", "风听雪",
-        "风听风", "风听泉", "风听雨", "雪落灯深",
-        "雪夜茶烟", "雪夜灯寒", "雪夜灯影", "雪落夜深",
-        "雪落林深", "雪落幽径", "雪落苔深", "寒灯影",
-        "寒夜灯深", "寒夜听风", "寒夜听雪", "寒夜月灯",
-        "寒夜林深", "寒夜茶烟", "霜寒月影", "凛冬夜深",
-        "凛冬灯深", "雾落灯深", "露落花深", "薄雾灯寒",
-        "雾夜月深", "雾夜灯寒", "雾夜听蝉", "雾夜听泉",
-        "雾落夜深", "雾落月影", "露落灯影", "露落月影",
-        "露落夜深", "潮涌灯影", "潮落月灯", "潮落灯深",
-        "静夜灯火", "静听雪落", "静夜炉火", "静听林深",
-        "静夜雾影", "静夜听风", "静夜听雪", "静夜听雨",
-        "静夜听蝉", "静夜月影", "静夜月灯", "静听露落",
-        "静听薄雾", "静听雾落", "林深月静", "林深灯暖",
-        "林深雪落", "林深听蝉", "林深石径", "林深苔深",
-        "林深露落", "林深雾影", "林深月影", "林深月灯",
-        "林深灯影", "林深夜灯", "林深幽径", "茶烟灯影",
-        "茶烟炉火", "茶烟月影", "茶烟雾影", "茶烟夜深",
-        "茶烟灯深", "茶烟微光", "茶灯暖", "茶灯影",
-        "茶灯深", "茶烟幽径", "茶灯寒", "灯火温暖",
-        "灯火月影", "灯火雾影", "灯火夜深", "灯火微光",
-        "灯火微影", "灯火星灯", "灯火远钟", "灯火石径",
-        "灯火苔深", "灯火幽径", "灯火露落", "灯火薄雾",
-        "暖灯茶烟", "暖灯橘黄", "暖灯烛影", "暖灯麦黄",
-        "暖炉橘黄", "暖灯微光", "暖炉星灯", "暖灯炉火",
-        "暖灯夜灯", "暖灯月灯", "暖灯雾影", "暖灯月影",
-        "暖灯露落", "暖灯微影", "暖灯苔深", "听蝉听雪",
-        "听蝉听雨", "听雪听风", "听雪听泉", "听雨听风",
-        "听雨听蝉", "听风听雨", "听风听蝉", "听蝉听风",
-        "听蝉听露", "听蝉听潮", "听雪听雨", "听雪听潮",
-        "听雪听露", "渡口灯寒", "渡口月影", "渡口灯深",
-        "渡口夜深", "星河灯影", "星河灯暖", "星河月影",
-        "星河夜深", "星河灯深", "星河灯寒", "远钟灯影",
-        "远钟夜深", "远钟月影", "远钟灯深", "薄暮灯寒",
-        "薄暮月影", "薄暮夜深", "黄昏灯深", "黄昏月影",
-        "黄昏夜深", "黄昏微光", "鸟鸣林深", "鸟鸣灯深",
-        "鸟鸣夜深", "鸟鸣幽径", "鸿影月影", "鸿影夜深",
-        "鸿影灯深", "鲸落月影", "鲸落夜深", "橘黄炉火",
-        "橘黄灯深", "橘黄夜深", "橘黄暖灯", "麦黄暖灯",
-        "麦黄灯深", "麦黄夜深", "烛影月影", "烛影夜深",
-        "烛影灯深", "烛影暖灯", "陶灯月影", "陶灯夜深",
-        "陶灯暖灯", "玻璃灯寒", "玻璃灯影", "玻璃月影",
-        "惊鸟灯深", "惊鸟月影", "惊鸟夜深", "钟摆月影",
-        "钟摆夜深", "钟摆灯深", "旧书灯深", "旧书夜深",
-        "旧书月影", "旧书暖灯", "余温暖灯", "余温灯深",
-        "余温夜深", "棉灯深", "棉灯暖", "棉夜深",
-        "绒灯深", "绒夜深", "绒暖灯", "茧灯深",
-        "茧夜深", "蜜灯深", "蜜夜深", "微光月影",
-        "微光夜深", "微光薄雾", "苔深幽径", "苔深月影",
-        "苔深夜深", "幽径月影", "幽径夜深", "幽径灯深",
-        "石径灯深", "石径夜深", "石径月影",
-        "静", "听", "照", "暖", "远", "深", "空",
-        "灯", "月", "夜", "雪", "雨", "风", "雾",
-        "霜", "潮", "林", "苔", "火", "光", "影",
-        "心", "诗", "无", "钟", "渡", "炉", "晨",
-        "曦", "夕", "惊", "星", "茶", "烟",
+        "月夜听蝉",
+        "月夜灯暖",
+        "月光微影",
+        "月光雾影",
+        "月影灯影",
+        "月沉夜深",
+        "月光林幽",
+        "月夜风清",
+        "月夜静听",
+        "月夜听风",
+        "月夜听雨",
+        "月夜炉火",
+        "月夜茶烟",
+        "月夜林深",
+        "月夜灯深",
+        "月光夜深",
+        "月灯夜深",
+        "月光石径",
+        "月夜霜寒",
+        "月夜雨深",
+        "月夜露深",
+        "月夜风霜",
+        "月夜星灯",
+        "月夜灯影",
+        "晨曦微光",
+        "晨曦灯影",
+        "晨曦雾影",
+        "晨曦暖灯",
+        "晨曦灯深",
+        "晨曦微影",
+        "晨曦林深",
+        "晨曦月灯",
+        "晨曦灯暖",
+        "晨曦远钟",
+        "风灯影",
+        "风灯寒",
+        "风灯暖",
+        "风灯深",
+        "风听蝉",
+        "风听雪",
+        "风听风",
+        "风听泉",
+        "风听雨",
+        "雪落灯深",
+        "雪夜茶烟",
+        "雪夜灯寒",
+        "雪夜灯影",
+        "雪落夜深",
+        "雪落林深",
+        "雪落幽径",
+        "雪落苔深",
+        "寒灯影",
+        "寒夜灯深",
+        "寒夜听风",
+        "寒夜听雪",
+        "寒夜月灯",
+        "寒夜林深",
+        "寒夜茶烟",
+        "霜寒月影",
+        "凛冬夜深",
+        "凛冬灯深",
+        "雾落灯深",
+        "露落花深",
+        "薄雾灯寒",
+        "雾夜月深",
+        "雾夜灯寒",
+        "雾夜听蝉",
+        "雾夜听泉",
+        "雾落夜深",
+        "雾落月影",
+        "露落灯影",
+        "露落月影",
+        "露落夜深",
+        "潮涌灯影",
+        "潮落月灯",
+        "潮落灯深",
+        "静夜灯火",
+        "静听雪落",
+        "静夜炉火",
+        "静听林深",
+        "静夜雾影",
+        "静夜听风",
+        "静夜听雪",
+        "静夜听雨",
+        "静夜听蝉",
+        "静夜月影",
+        "静夜月灯",
+        "静听露落",
+        "静听薄雾",
+        "静听雾落",
+        "林深月静",
+        "林深灯暖",
+        "林深雪落",
+        "林深听蝉",
+        "林深石径",
+        "林深苔深",
+        "林深露落",
+        "林深雾影",
+        "林深月影",
+        "林深月灯",
+        "林深灯影",
+        "林深夜灯",
+        "林深幽径",
+        "茶烟灯影",
+        "茶烟炉火",
+        "茶烟月影",
+        "茶烟雾影",
+        "茶烟夜深",
+        "茶烟灯深",
+        "茶烟微光",
+        "茶灯暖",
+        "茶灯影",
+        "茶灯深",
+        "茶烟幽径",
+        "茶灯寒",
+        "灯火温暖",
+        "灯火月影",
+        "灯火雾影",
+        "灯火夜深",
+        "灯火微光",
+        "灯火微影",
+        "灯火星灯",
+        "灯火远钟",
+        "灯火石径",
+        "灯火苔深",
+        "灯火幽径",
+        "灯火露落",
+        "灯火薄雾",
+        "暖灯茶烟",
+        "暖灯橘黄",
+        "暖灯烛影",
+        "暖灯麦黄",
+        "暖炉橘黄",
+        "暖灯微光",
+        "暖炉星灯",
+        "暖灯炉火",
+        "暖灯夜灯",
+        "暖灯月灯",
+        "暖灯雾影",
+        "暖灯月影",
+        "暖灯露落",
+        "暖灯微影",
+        "暖灯苔深",
+        "听蝉听雪",
+        "听蝉听雨",
+        "听雪听风",
+        "听雪听泉",
+        "听雨听风",
+        "听雨听蝉",
+        "听风听雨",
+        "听风听蝉",
+        "听蝉听风",
+        "听蝉听露",
+        "听蝉听潮",
+        "听雪听雨",
+        "听雪听潮",
+        "听雪听露",
+        "渡口灯寒",
+        "渡口月影",
+        "渡口灯深",
+        "渡口夜深",
+        "星河灯影",
+        "星河灯暖",
+        "星河月影",
+        "星河夜深",
+        "星河灯深",
+        "星河灯寒",
+        "远钟灯影",
+        "远钟夜深",
+        "远钟月影",
+        "远钟灯深",
+        "薄暮灯寒",
+        "薄暮月影",
+        "薄暮夜深",
+        "黄昏灯深",
+        "黄昏月影",
+        "黄昏夜深",
+        "黄昏微光",
+        "鸟鸣林深",
+        "鸟鸣灯深",
+        "鸟鸣夜深",
+        "鸟鸣幽径",
+        "鸿影月影",
+        "鸿影夜深",
+        "鸿影灯深",
+        "鲸落月影",
+        "鲸落夜深",
+        "橘黄炉火",
+        "橘黄灯深",
+        "橘黄夜深",
+        "橘黄暖灯",
+        "麦黄暖灯",
+        "麦黄灯深",
+        "麦黄夜深",
+        "烛影月影",
+        "烛影夜深",
+        "烛影灯深",
+        "烛影暖灯",
+        "陶灯月影",
+        "陶灯夜深",
+        "陶灯暖灯",
+        "玻璃灯寒",
+        "玻璃灯影",
+        "玻璃月影",
+        "惊鸟灯深",
+        "惊鸟月影",
+        "惊鸟夜深",
+        "钟摆月影",
+        "钟摆夜深",
+        "钟摆灯深",
+        "旧书灯深",
+        "旧书夜深",
+        "旧书月影",
+        "旧书暖灯",
+        "余温暖灯",
+        "余温灯深",
+        "余温夜深",
+        "棉灯深",
+        "棉灯暖",
+        "棉夜深",
+        "绒灯深",
+        "绒夜深",
+        "绒暖灯",
+        "茧灯深",
+        "茧夜深",
+        "蜜灯深",
+        "蜜夜深",
+        "微光月影",
+        "微光夜深",
+        "微光薄雾",
+        "苔深幽径",
+        "苔深月影",
+        "苔深夜深",
+        "幽径月影",
+        "幽径夜深",
+        "幽径灯深",
+        "石径灯深",
+        "石径夜深",
+        "石径月影",
+        "静",
+        "听",
+        "照",
+        "暖",
+        "远",
+        "深",
+        "空",
+        "灯",
+        "月",
+        "夜",
+        "雪",
+        "雨",
+        "风",
+        "雾",
+        "霜",
+        "潮",
+        "林",
+        "苔",
+        "火",
+        "光",
+        "影",
+        "心",
+        "诗",
+        "无",
+        "钟",
+        "渡",
+        "炉",
+        "晨",
+        "曦",
+        "夕",
+        "惊",
+        "星",
+        "茶",
+        "烟",
     ];
     RAW
 }
@@ -284,12 +497,10 @@ impl PoetryCursor {
         // on identical strings, and also know the exact unique
         // corpus size for the window-ratio comment.
         let mut seen = std::collections::HashSet::new();
-        let mut phrases: Vec<&'static str> = phrases
-            .into_iter()
-            .filter(|p| seen.insert(*p))
-            .collect();
+        let mut phrases: Vec<&'static str> =
+            phrases.into_iter().filter(|p| seen.insert(*p)).collect();
         phrases.shrink_to_fit();
-        let c = Self {
+        Self {
             phrases,
             phrase_idx: 0,
             char_idx: 0,
@@ -297,8 +508,7 @@ impl PoetryCursor {
             recent: [u32::MAX; RECENT_WINDOW],
             recent_head: 0,
             emitted: 0,
-        };
-        c
+        }
     }
 
     /// True if we're between phrases — caller should not spawn a
@@ -341,19 +551,24 @@ impl PoetryCursor {
         let mut idx = 0usize; // current byte offset
         let mut char_count = 0u8;
         let mut found: Option<&'static str> = None;
-        let mut ended = false;
         let mut i = 0;
         while i < bytes.len() {
             let b = bytes[i];
-            let clen = if b < 0x80 { 1 } else if b < 0xE0 { 2 } else if b < 0xF0 { 3 } else { 4 };
+            let clen = if b < 0x80 {
+                1
+            } else if b < 0xE0 {
+                2
+            } else if b < 0xF0 {
+                3
+            } else {
+                4
+            };
             if char_count == self.char_idx {
                 // Hand the char out. We only feed valid UTF-8 chunks
                 // (clen matches the leading byte) so the unsafe
                 // decode is sound — the corpus is generated from a
                 // validated char set, never raw bytes.
-                let raw = unsafe {
-                    std::str::from_utf8_unchecked(&bytes[idx..idx + clen])
-                };
+                let raw = unsafe { std::str::from_utf8_unchecked(&bytes[idx..idx + clen]) };
                 let s: &'static str = match crate::font::static_key_for(raw) {
                     Some(k) => k,
                     None => "墨",
@@ -366,10 +581,6 @@ impl PoetryCursor {
             if found.is_some() && char_count > self.char_idx {
                 break;
             }
-        }
-        if found.is_none() {
-            // char_idx past end of phrase — treat as exhausted
-            ended = true;
         }
         self.char_idx += 1;
         // Did we just emit the last char of the phrase?
@@ -395,7 +606,9 @@ impl PoetryCursor {
     /// continuous emission at 1 char per second.
     fn advance_to_unseen(&mut self) {
         let n = self.phrases.len() as u32;
-        if n == 0 { return; }
+        if n == 0 {
+            return;
+        }
         // Try at most n iterations to find an unseen slot — even
         // if the window is full, we must make progress.
         for _ in 0..n {
@@ -434,7 +647,9 @@ impl PoetryCursor {
     pub fn advance_after_silence(&mut self) {
         if self.cooldown <= 0.0 {
             let n = self.phrases.len() as u32;
-            if n == 0 { return; }
+            if n == 0 {
+                return;
+            }
             // Mark current as shown and step forward
             self.mark_recent();
             self.phrase_idx = (self.phrase_idx + 1) % n;
