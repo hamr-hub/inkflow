@@ -801,8 +801,17 @@ async fn main() {
             // only the upper register softens, reading as ink dispersing
             // into mist rather than a hard horizontal cutoff.
             let top_fade = (g.y / (sh * 0.18)).clamp(0., 1.);
+            // screen-bottom fog: mirror of the top fog, so glyphs also
+            // dissolve into the lower edge as they emerge from below —
+            // symmetric haze at both edges with full presence in the
+            // central register. Sits beside the birth fade (which ramps
+            // alpha over early life) and the top fog (which handles late
+            // ascent); this one anchors the spatial envelope so the stream
+            // reads as ink dispersing into mist at both horizons rather
+            // than stamping on at full alpha just below the top fog.
+            let bottom_fade = ((sh - g.y) / (sh * 0.18)).clamp(0., 1.);
             let mut c = hsl_to_rgb(row_hue, 0.45, 0.85);
-            c.a = birth_eased * (0.30 + aeased * 0.65) * top_fade;
+            c.a = birth_eased * (0.30 + aeased * 0.65) * top_fade * bottom_fade;
             // subtle per-glyph tilt so the falling characters feel brush-set
             // rather than mechanically typed. Two slow sines (one global,
             // one tied to the glyph's own descent) keep adjacent characters
@@ -825,7 +834,7 @@ async fn main() {
             // emerges. Steady midlife + death curves are unchanged.
             let draw_size = g.size * (0.5 + 0.5 * birth_eased);
             let mut halo = hsl_to_rgb(row_hue, 0.4, 0.45);
-            halo.a = halo_strength * 0.12 * top_fade;
+            halo.a = halo_strength * 0.12 * top_fade * bottom_fade;
             draw_circle(g.x, g.y + draw_size * 0.3, draw_size * 0.7, halo);
             let params = TextParams {
                 font: font.as_ref(),
