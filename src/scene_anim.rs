@@ -142,6 +142,26 @@ pub(crate) fn voice_touch_burst_n(voice: &str) -> u32 {
     }
 }
 
+/// Per-voice spawn-Y anchor (0.0 = top of canvas, 1.0 = bottom).
+/// Each curatorial voice has its own preferred spawn band — 婉约
+/// chars drift through the middle (lyrical pacing, no fixed
+/// direction), 豪放 spreads across the full canvas (the line
+/// marches everywhere), 禅寂 chars spawn from the top and fall
+/// slowly (austere descent), 稚拙 fills the bottom (childlike,
+/// ground-up), 苍茫 rises from the bottom (vast ascent). The
+/// composition gains another per-voice axis — the screen's
+/// vertical weight distribution is itself part of the voice.
+pub(crate) fn voice_spawn_anchor(voice: &str) -> f32 {
+    match voice {
+        "婉约" => 0.50, // middle band (no preferred direction)
+        "豪放" => 0.50, // full canvas spread
+        "禅寂" => 0.05, // top — falls slowly (austere descent)
+        "稚拙" => 0.90, // bottom — rises (ground-up childlike)
+        "苍茫" => 0.95, // bottom — rises (vast ascent)
+        _ => 0.50,      // unknown → middle
+    }
+}
+
 /// Spawn-rate accumulator. The frame loop accumulates `dt * base_rate`
 /// and pops whole glyphs each time the accumulator crosses 1.0.
 #[derive(Default)]
@@ -234,9 +254,6 @@ fn spawn_glyphs(
     accum.glyph_acc += dt * (0.85 + energy * 0.7) * rate_voice;
     while accum.glyph_acc >= 1.0 && !poetry.is_breathing() {
         accum.glyph_acc -= 1.0;
-        // Top stream falls slower so the breath reads as "ink rising +
-        // ash falling", not two synchronized streams.
-        let descend = (tick.wrapping_add(scene.glyphs.len() as u64) & 1) == 0;
         // Source priority: live LLM char → curated poetry line.
         // The old random 4-pool fallback is gone — the piece no
         // longer reads as random-character noise.
@@ -299,10 +316,20 @@ fn spawn_glyphs(
         // base time so the picker stays the single source of truth.
         let life_voice = voice_max_life_mul(voice);
         let max_life = (10.0 + energy * 4.0) * life_voice;
-        let (spawn_y, vy) = if descend {
-            (fb_h as f32 + 20.0, -speed)
+        // Voice-anchored spawn: each curatorial voice has its own
+        // preferred vertical band. The voice determines BOTH where
+        // the glyph starts (above or below the screen edge near its
+        // anchor) AND which direction it drifts.
+        let anchor_y_norm = voice_spawn_anchor(voice);
+        let anchor_y_px = anchor_y_norm * fb_h as f32;
+        // Half the chars spawn just above the band (rising up through
+        // the anchor), half just below (falling away from it). The
+        // ratio picks the band — 0.5 = 50/50, 0.9 = 90% rise / 10% fall.
+        let above = (lcg(tick.wrapping_add(53)) < anchor_y_norm) || anchor_y_norm < 0.1;
+        let (spawn_y, vy) = if above {
+            (anchor_y_px + 10.0, -speed)
         } else {
-            (-20.0, speed * 0.55)
+            (anchor_y_px - 10.0, speed * 0.55)
         };
         // Composition: each glyph picks its own x across the full
         // width (lcg-driven), with a soft pull toward the current
@@ -633,6 +660,37 @@ mod tests {
     #[test]
     fn voice_touch_burst_n_unknown_falls_back_safely() {
         assert_eq!(voice_touch_burst_n("???"), 1);
+    }
+
+    #[test]
+    fn voice_spawn_anchor_distinguishes_top_from_bottom() {
+        // Per ARTIFACT.md each curatorial voice has its own
+        // preferred vertical band: 禅寂 top (descending austere
+        // marks), 稚拙 / 苍茫 bottom (rising marks), 婉约 / 豪放
+        // middle (no preferred direction).
+        assert!(voice_spawn_anchor("禅寂") < 0.20, "禅寂 spawns near top");
+        assert!(voice_spawn_anchor("婉约") > 0.40 && voice_spawn_anchor("婉约") < 0.60);
+        assert!(voice_spawn_anchor("豪放") > 0.40 && voice_spawn_anchor("豪放") < 0.60);
+        assert!(voice_spawn_anchor("稚拙") > 0.80, "稚拙 spawns near bottom");
+        assert!(voice_spawn_anchor("苍茫") > 0.80, "苍茫 spawns near bottom");
+    }
+
+    #[test]
+    fn voice_spawn_anchor_magnitude_is_bounded() {
+        // Output must stay in (0.0, 1.0) — every anchor falls inside
+        // the visible canvas. (A pure 0.0 or 1.0 would always spawn
+        // off-screen, which would be invisible noise.)
+        for v in ["婉约", "豪放", "禅寂", "稚拙", "苍茫"] {
+            let a = voice_spawn_anchor(v);
+            assert!((0.0..=1.0).contains(&a), "{v} anchor {a} out of band");
+        }
+    }
+
+    #[test]
+    fn voice_spawn_anchor_unknown_falls_back_safely() {
+        // An unknown voice name shouldn't panic; falling back to
+        // 0.5 (middle) is correct.
+        assert_eq!(voice_spawn_anchor("???"), 0.5);
     }
 
     #[test]
