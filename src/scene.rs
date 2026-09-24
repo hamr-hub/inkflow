@@ -21,7 +21,7 @@
 
 use crate::color::{self, blend_add_lin, blend_screen, rgb};
 use crate::glyph;
-use crate::phrase::{self, Mood, Phrase};
+use crate::phrase::{self, Phrase};
 use crate::rhythm::{Beat, Phase};
 
 /// Tiny deterministic LCG so the dust looks "natural" but stable across runs.
@@ -265,11 +265,15 @@ impl Composition {
                 fade_out: 0.7,
                 stagger: 0.0,
             },
-            // 2 — Upper right (small body, right-aligned)
+            // 2 — Upper right (small body, right-aligned).  Anchored near
+            //   the rule-of-thirds intersection (0.84, 0.22) so the upper
+            //   echo sits in deliberate tension with the lower-left at
+            //   (0.14, 0.82): the diagonal midpoint falls at the visual
+            //   centre and top/bottom margins are balanced.
             SlotDef {
                 role: SlotRole::Support,
-                x_frac: 0.86,
-                y_frac: 0.18,
+                x_frac: 0.84,
+                y_frac: 0.22,
                 align: Align::Right,
                 em_scale: 0.30,
                 target_w_frac: 0.0,
@@ -316,13 +320,31 @@ impl Composition {
     }
 
     /// Step the composition forward by `dt`. Updates slot ages, refreshes
-    /// expired supporting slots with fresh theme-aligned phrases.
+    /// expired supporting slots with fresh theme-aligned phrases. When the
+    /// theme is associated with a poem group, slots stay pinned to their
+    /// assigned lines; their age is held in the peak-alpha zone so the
+    /// inscription reads as a permanent fixture of the composition.
     pub fn step(&mut self, dt: f32, rng: u32, theme_idx: usize) {
+        let pinned = phrase::POEM_BY_THEME
+            .get(theme_idx)
+            .copied()
+            .flatten()
+            .map(|g| !phrase::poem_group_line_indices(g).is_empty())
+            .unwrap_or(false);
         for slot in self.slots.iter_mut() {
             if slot.def.role == SlotRole::Hero {
                 continue;
             }
             slot.age += dt;
+            if pinned {
+                // Keep the slot at peak alpha forever — the four-line poem
+                // stays on screen as a stable inscription. Wrap before the
+                // fade-out ramp kicks in.
+                if slot.age > slot.def.lifetime * 0.8 {
+                    slot.age = slot.def.lifetime * 0.5;
+                }
+                continue;
+            }
             if slot.primed && slot.age >= slot.def.lifetime {
                 // Roll to a new phrase from the same theme. Filter by
                 // `max_chars` so the new phrase always fits the slot.
@@ -342,6 +364,12 @@ impl Composition {
     /// Called when the rhythm engine starts a new hero beat. Refreshes one
     /// supporting slot (round-robin) and proposes a new theme. Returns the
     /// proposed theme index — the caller (Scene) applies it.
+    ///
+    /// When the active theme is associated with a curated poem group
+    /// (`POEM_BY_THEME`), all four slots are pinned to lines of that group
+    /// in reading order instead of sampling the theme pool. The hero cycles
+    /// through the group's lines once every four beats; the supporting slots
+    /// take the other lines, slot-by-slot in their existing layout order.
     pub fn on_hero_beat(
         &mut self,
         beat_index: u64,
@@ -349,12 +377,35 @@ impl Composition {
         hero_phrase: &'static Phrase,
         theme_idx: usize,
     ) -> usize {
-        // Update hero's phrase reference (the Beat carries its own copy, but
-        // we mirror it here so the rest of the composition can read it).
-        self.slots[self.hero_idx].phrase = hero_phrase;
-        self.slots[self.hero_idx].last_idx = phrase_index_of(hero_phrase);
+        let poem_group = phrase::POEM_BY_THEME
+            .get(theme_idx)
+            .copied()
+            .flatten()
+            .and_then(|g| {
+                let lines = phrase::poem_group_line_indices(g);
+                if lines.is_empty() {
+                    None
+                } else {
+                    Some(lines)
+                }
+            });
 
-        // Refresh one supporting slot (round-robin across the support slots).
+        // Update the hero slot's phrase. Pinned to the poem group line at
+        // (beat_index / 4) % group_len when a group is active, otherwise the
+        // rhythm engine's pick.
+        let hero_pinned = poem_group.map(|lines| {
+            let pos = ((beat_index as usize) / 4) % lines.len();
+            (lines[pos], &phrase::PHRASES[lines[pos] as usize])
+        });
+        let (hero_line_idx, hero_static) = match hero_pinned {
+            Some((li, p)) => (li, p),
+            None => (phrase_index_of(hero_phrase), hero_phrase),
+        };
+        self.slots[self.hero_idx].phrase = hero_static;
+        self.slots[self.hero_idx].last_idx = hero_line_idx;
+
+        // Refresh supporting slots. Pinned to the remaining poem group lines
+        // when a group is active, otherwise one round-robin pick from theme.
         let support_indices: Vec<usize> = self
             .slots
             .iter()
@@ -367,7 +418,23 @@ impl Composition {
                 }
             })
             .collect();
-        if !support_indices.is_empty() {
+        if let Some(lines) = poem_group {
+            // Pinned: assign each supporting slot to its line in slot order,
+            // starting AFTER the hero's current line so all four lines of the
+            // quatrain appear on screen simultaneously.
+            let hero_pos = ((beat_index as usize) / 4) % lines.len();
+            for (cursor, &slot_idx) in support_indices.iter().enumerate() {
+                let line_pos = (hero_pos + 1 + cursor) % lines.len();
+                let line_idx = lines[line_pos];
+                let slot = &mut self.slots[slot_idx];
+                slot.phrase = &phrase::PHRASES[line_idx as usize];
+                slot.last_idx = line_idx;
+                slot.primed = true;
+                // Sit at mid-life so the slot lives at peak alpha forever;
+                // the composition breathes around a fixed inscription.
+                slot.age = (slot.def.lifetime * 0.5).max(0.0);
+            }
+        } else if !support_indices.is_empty() {
             let pos = (beat_index as usize) % support_indices.len();
             let slot_idx = support_indices[pos];
             // Force a refresh on this slot: skip ahead a fraction of its
@@ -425,23 +492,62 @@ impl Scene {
         let sparks = Vec::with_capacity(64);
         let mut composition = Composition::default_layout();
         // Prime supporting slots with deterministic initial phrases drawn
-        // from the active theme (theme 0 by default — moonlit). Each pick
-        // honours the slot's `max_chars` so the prime is always in-budget.
+        // from the active theme (theme 0 by default — moonlit). When the
+        // theme is associated with a curated poem group, all four slots are
+        // pinned to its lines so the screen reads as one complete same-
+        // moment quatrain rather than a thematic collage of fragments.
         let initial_theme = 0usize;
-        for slot in composition.slots.iter_mut() {
-            if slot.def.role == SlotRole::Support {
-                let p = phrase::pick_from_theme_by_len(
-                    rng.next(),
-                    initial_theme,
-                    slot.def.max_chars,
-                    &[],
-                );
-                slot.phrase = p;
-                slot.last_idx = phrase_index_of(p);
-                // Stagger their visible birth by giving them negative age so
-                // they fade in over the first second rather than all at once.
-                slot.age = -slot.def.stagger;
-                slot.primed = false;
+        let pinned = phrase::POEM_BY_THEME
+            .get(initial_theme)
+            .copied()
+            .flatten()
+            .and_then(|g| {
+                let lines = phrase::poem_group_line_indices(g);
+                if lines.is_empty() {
+                    None
+                } else {
+                    Some(lines)
+                }
+            });
+        if let Some(lines) = pinned {
+            let mut cursor = 0usize;
+            for slot in composition.slots.iter_mut() {
+                match slot.def.role {
+                    SlotRole::Hero => {
+                        let idx = lines[0];
+                        slot.phrase = &phrase::PHRASES[idx as usize];
+                        slot.last_idx = idx;
+                        slot.age = 0.0;
+                        slot.primed = true;
+                    }
+                    SlotRole::Support => {
+                        let pos = (1 + cursor) % lines.len();
+                        let idx = lines[pos];
+                        slot.phrase = &phrase::PHRASES[idx as usize];
+                        slot.last_idx = idx;
+                        // Stagger their visible birth by giving them negative
+                        // age so they fade in over the first second rather
+                        // than all at once.
+                        slot.age = -slot.def.stagger;
+                        slot.primed = false;
+                        cursor += 1;
+                    }
+                }
+            }
+        } else {
+            for slot in composition.slots.iter_mut() {
+                if slot.def.role == SlotRole::Support {
+                    let p = phrase::pick_from_theme_by_len(
+                        rng.next(),
+                        initial_theme,
+                        slot.def.max_chars,
+                        &[],
+                    );
+                    slot.phrase = p;
+                    slot.last_idx = phrase_index_of(p);
+                    slot.age = -slot.def.stagger;
+                    slot.primed = false;
+                }
             }
         }
         Self {
@@ -769,8 +875,11 @@ fn paint_supporting_slot(fb: &mut [u32], w: u32, h: u32, slot: &Slot, time: f32,
         let fx = pen_x_q8;
         let fy = baseline_y * 256;
 
-        // A whisper of outer glow — barely there.
-        let glow_a = char_alpha * 0.20;
+        // No outer glow on supporting lines — ART_DIRECTION mandates
+        // "bloom only on the focal line". The supporting corners are
+        // echoes, not lamps; they stay crisp-cream on the gradient so the
+        // hero's warm halo reads as the sole light source on the page.
+        let glow_a = 0.0_f32;
         if glow_a > 0.01 {
             glyph::draw_glyph(
                 fb, w as usize, h as usize, glyph_idx, glow_color, glow_color, fx, fy, scale_q8,
@@ -788,20 +897,22 @@ fn paint_supporting_slot(fb: &mut [u32], w: u32, h: u32, slot: &Slot, time: f32,
 
 /// Paint the hero slot using the existing rhythm-engine `Beat` (entrance /
 /// hold / exit, per-char stagger, overshoot).  Reads the hero's phrase from
-/// the Beat, not from the composition, so they stay in sync.
+/// the composition slot (so the composition's pinning — e.g. to a poem group
+/// line — wins over the engine's beat-round-robin pick), while still using
+/// the beat's phase timeline for animation timing.
 #[allow(clippy::too_many_arguments)]
 pub fn paint_hero(
     fb: &mut [u32],
     w: u32,
     h: u32,
     beat: &Beat,
+    phrase: &'static Phrase,
     warmth: f32,
     pulse: f32,
-    mood: Mood,
     time: f32,
     def: &SlotDef,
 ) {
-    let text = beat.phrase.text;
+    let text = phrase.text;
     let chars: Vec<char> = text.chars().collect();
     let n = chars.len();
     if n == 0 {
@@ -834,7 +945,7 @@ pub fn paint_hero(
 
     let base_color = mix(color::ink::CREAM, color::ink::WARM, warmth * 0.5);
     let glow_color = mix(color::ink::GLOW, color::ink::WARM, warmth * 0.6);
-    let beat_glow = beat.phrase.glow;
+    let beat_glow = phrase.glow;
     let glow_alpha = (0.10 + 0.18 * pulse + 0.06 * warmth + beat_glow * 0.10).clamp(0.0, 0.55);
 
     let overshoot = if matches!(beat.phase, Phase::Entrance) {
@@ -890,7 +1001,6 @@ pub fn paint_hero(
             char_alpha,
         );
     }
-    let _ = mood;
 }
 
 /// Paint the whole composition — hero (using the rhythm engine's Beat) plus
@@ -914,9 +1024,12 @@ pub fn paint_composition(
     }
     if let Some(b) = beat {
         // Use the hero's own SlotDef so its position stays in sync with the
-        // composition's layout.
-        let hero_def = scene.composition.slots[scene.composition.hero_idx].def;
-        paint_hero(fb, w, h, b, warmth, pulse, b.phrase.mood, time, &hero_def);
+        // composition's layout, and read the phrase from the slot (not the
+        // beat) so any pinning — e.g. to a poem group line — actually shows.
+        let hero_slot = &scene.composition.slots[scene.composition.hero_idx];
+        let hero_def = hero_slot.def;
+        let hero_phrase = hero_slot.phrase;
+        paint_hero(fb, w, h, b, hero_phrase, warmth, pulse, time, &hero_def);
     }
 }
 

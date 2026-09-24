@@ -36,6 +36,7 @@ enum Mode {
     LayoutTest,
     ComposeTest,
     Gfx2Test,
+    PoemTest,
     DrmTest,
     Help,
 }
@@ -51,6 +52,8 @@ fn parse_args() -> (Mode, u32, u32, usize, String) {
             mode = Mode::DrmTest;
         } else if a == "--gfx2-test" {
             mode = Mode::Gfx2Test;
+        } else if a == "--poem-test" {
+            mode = Mode::PoemTest;
         } else if a == "--layout-test" {
             mode = Mode::LayoutTest;
         } else if a == "--compose-test" {
@@ -164,6 +167,11 @@ fn main() -> ExitCode {
             run_gfx2_test(w, h, frames.max(1), &out_dir);
             ExitCode::SUCCESS
         }
+        Mode::PoemTest => {
+            let _ = std::fs::create_dir_all(&out_dir);
+            run_poem_test(w, h, &out_dir);
+            ExitCode::SUCCESS
+        }
         Mode::DrmTest => {
             // /dev/fb0 first: the driver owns the modeset and scans out
             // on every vsync with no DRM master, so an unprivileged user
@@ -261,6 +269,65 @@ fn render_frame(
 ///   1 — long hero phrase centred
 ///   2 — hero + body stacked (different buckets in one frame)
 ///   3 — body-only multi-line strip showing the body bucket
+/// Lay one complete ordered poem group out as a vertical reading column —
+/// all four lines from one source, equally centred, over the same mist
+/// background the live piece uses. This is the "one complete work, not a
+/// themed collage" layout preview.
+fn run_poem_test(w: u32, h: u32, out_dir: &str) {
+    run_poem_test_impl(w, h, out_dir);
+}
+
+fn run_poem_test_impl(w: u32, h: u32, out_dir: &str) {
+    let mut surf = Surface::memory(w, h);
+    let scene = Scene::new(w, h);
+    let warmth = 0.55_f32;
+    let pulse = 0.30_f32;
+    scene::paint_background(&mut surf.pixels, w, h, &scene, pulse, warmth);
+
+    let line_indices = phrase::poem_group_line_indices(0);
+    let texts: Vec<&str> = line_indices
+        .iter()
+        .map(|&i| phrase::PHRASES[i as usize].text)
+        .collect();
+    let n = texts.len() as i32;
+    let em = glyph::BODY_EM_PX as i32;
+    let line_step = (em as f32 * 1.62) as i32;
+    let first_baseline = (h as i32) / 2 - (n - 1) * line_step / 2 + em / 6;
+    let ink = color::ink::CREAM;
+    let glow = color::ink::GLOW;
+
+    for (i, text) in texts.iter().enumerate() {
+        let baseline_y = first_baseline + i as i32 * line_step;
+        let pen_x = center_pen_x(w, text, glyph::BODY_EM_PX);
+        glyph::draw_phrase(
+            &mut surf.pixels,
+            w as usize,
+            h as usize,
+            text,
+            Point::new(pen_x, baseline_y),
+            Bucket::Body,
+            glow,
+            0.16,
+        );
+        glyph::draw_phrase(
+            &mut surf.pixels,
+            w as usize,
+            h as usize,
+            text,
+            Point::new(pen_x, baseline_y),
+            Bucket::Body,
+            ink,
+            1.0,
+        );
+    }
+
+    let path = format!("{out_dir}/poem-0.png");
+    match surf.write_png(&path) {
+        Ok(_) => eprintln!("inkflow: wrote {path} ({} lines, one complete work)", n),
+        Err(e) => eprintln!("inkflow: write {path}: {e}"),
+    }
+}
+
 fn run_gfx2_test(w: u32, h: u32, frames: usize, out_dir: &str) {
     let bg = color::bg::DEEP; // rgb(4, 6, 14) — deep midnight
     let ink = color::ink::CREAM;

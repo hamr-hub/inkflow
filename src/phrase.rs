@@ -486,6 +486,19 @@ pub const POEM_GROUPS: &[PoemGroup] = &[
     },
 ];
 
+/// Per-theme association to a poem group (if any). When a theme is associated
+/// with a group, the composition pins all slots to lines from that group so
+/// the screen reads as one complete same-moment quatrain rather than a
+/// thematic collage of fragments from different sources.
+pub const POEM_BY_THEME: &[Option<usize>] = &[
+    // 0 moonlit — pinned to 《寻隐者不遇》 (group 0)
+    Some(0),
+    // 1 mist / 2 warm / 3 time — no pinned group, fall back to theme pool
+    None,
+    None,
+    None,
+];
+
 /// The successive line indices of a poem group, so a composition can lay the
 /// whole work out in reading order (indexing [`PHRASES`] itself) instead of
 /// sampling a theme. Returns an empty slice if the group index is out of range.

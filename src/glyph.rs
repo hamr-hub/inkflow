@@ -196,6 +196,12 @@ pub fn draw_phrase(
     // Render at the bucket's native em — scale_q8 = "relative to hero em" so
     // we need to scale up for the smaller body bucket.
     let scale_q8 = (bucket.em_px() as u32) * 256u32 / (HERO_EM_PX as u32);
+    // One source pixel in screen Q8 — same factor composite_glyph uses. At a
+    // bucket's native em this is 256 (1:1). Advance is stored in the bucket's
+    // source pixels, so it must be converted with this step, not scale_q8
+    // alone (which for Body shrank a 72 px advance to ~40 px and piled the
+    // characters on top of each other).
+    let src_step_q8 = (scale_q8 as i32) * (HERO_EM_PX as i32) / (bucket.em_px() as i32);
     let mut pen_x_q8 = position.x * 256;
     let fy = position.y * 256;
     let data: &'static [u8] = match bucket {
@@ -208,8 +214,9 @@ pub fn draw_phrase(
         composite_glyph(
             fb, w, h, g, data, bucket, color, pen_x_q8, fy, scale_q8, alpha,
         );
-        // Advance pen by glyph.advance scaled to the bucket's native em.
-        pen_x_q8 += (g.advance as i32) * (scale_q8 as i32);
+        // Advance pen by glyph.advance in the bucket's source pixels,
+        // converted to screen Q8.
+        pen_x_q8 += (g.advance as i32) * src_step_q8;
     }
 }
 
