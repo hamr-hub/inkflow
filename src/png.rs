@@ -10,7 +10,11 @@ const CRC_TABLE: [u32; 256] = {
         let mut c = i as u32;
         let mut k = 0;
         while k < 8 {
-            c = if c & 1 != 0 { 0xedb8_8320 ^ (c >> 1) } else { c >> 1 };
+            c = if c & 1 != 0 {
+                0xedb8_8320 ^ (c >> 1)
+            } else {
+                c >> 1
+            };
             k += 1;
         }
         t[i] = c;
@@ -43,18 +47,14 @@ struct Writer {
 
 impl Writer {
     fn with_capacity(cap: usize) -> Self {
-        Self { out: Vec::with_capacity(cap) }
-    }
-    fn push(&mut self, b: u8) {
-        self.out.push(b);
+        Self {
+            out: Vec::with_capacity(cap),
+        }
     }
     fn push_all(&mut self, s: &[u8]) {
         self.out.extend_from_slice(s);
     }
     fn push_be32(&mut self, v: u32) {
-        self.out.extend_from_slice(&v.to_be_bytes());
-    }
-    fn push_be16(&mut self, v: u16) {
         self.out.extend_from_slice(&v.to_be_bytes());
     }
     fn chunk(&mut self, kind: &[u8; 4], data: &[u8]) {
@@ -63,7 +63,7 @@ impl Writer {
         crc_buf.copy_from_slice(kind);
         self.push_all(&crc_buf);
         self.push_all(data);
-        let mut tail = [0u8; 4 + data.len()];
+        let mut tail = vec![0u8; 4 + data.len()];
         tail[..4].copy_from_slice(kind);
         tail[4..].copy_from_slice(data);
         self.push_be32(crc32(&tail));
@@ -75,7 +75,11 @@ impl Writer {
 pub fn encode_rgb(width: u32, height: u32, pixels: &[u8]) -> Vec<u8> {
     let bpp: u32 = 3;
     let stride = width as usize * bpp as usize;
-    assert_eq!(pixels.len(), stride * height as usize, "pixel buffer size mismatch");
+    assert_eq!(
+        pixels.len(),
+        stride * height as usize,
+        "pixel buffer size mismatch"
+    );
 
     let mut w = Writer::with_capacity(8 + (stride + 1) * height as usize / 4);
     // signature
@@ -99,8 +103,8 @@ pub fn encode_rgb(width: u32, height: u32, pixels: &[u8]) -> Vec<u8> {
     let mut zbuf = Vec::with_capacity(raw_line + 8);
     zbuf.push(0x78); // CMF: deflate, window 32K
     zbuf.push(0x01); // FLG: no dict, level 0
-    // For each row: filter byte 0, then RGB; we slice into blocks of <= max_block raw bytes.
-    // DEFLATE stored format: 1 byte (BFINAL + BTYPE=00), then LEN, NLEN, then LEN bytes of data.
+                     // For each row: filter byte 0, then RGB; we slice into blocks of <= max_block raw bytes.
+                     // DEFLATE stored format: 1 byte (BFINAL + BTYPE=00), then LEN, NLEN, then LEN bytes of data.
     let mut row = 0;
     while row < height as usize {
         // We can store up to (max_block - 1) rows worth of raw bytes if line fits.
@@ -111,7 +115,7 @@ pub fn encode_rgb(width: u32, height: u32, pixels: &[u8]) -> Vec<u8> {
         let block_len = rows_this_block * raw_line;
         zbuf.push(if is_last { 0x01 } else { 0x00 }); // BFINAL | BTYPE=00
         zbuf.extend_from_slice(&(block_len as u16).to_le_bytes());
-        zbuf.extend_from_slice(&((!(block_len as u16)) as u16).to_le_bytes());
+        zbuf.extend_from_slice(&(!block_len as u16).to_le_bytes());
         for r in row..row + rows_this_block {
             zbuf.push(0); // filter type: None
             let off = r * stride;

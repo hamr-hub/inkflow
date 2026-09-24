@@ -10,11 +10,17 @@ pub const fn rgb(r: u8, g: u8, b: u8) -> u32 {
 }
 
 #[inline]
-pub const fn r(p: u32) -> u8 { (p >> 16) as u8 }
+pub const fn r(p: u32) -> u8 {
+    (p >> 16) as u8
+}
 #[inline]
-pub const fn g(p: u32) -> u8 { (p >> 8) as u8 }
+pub const fn g(p: u32) -> u8 {
+    (p >> 8) as u8
+}
 #[inline]
-pub const fn b(p: u32) -> u8 { p as u8 }
+pub const fn b(p: u32) -> u8 {
+    p as u8
+}
 
 /// sRGB → linear (cheap gamma 2.2 — good enough for blending).
 #[inline]
@@ -40,7 +46,11 @@ pub fn blend_add_lin(dst: u32, src: u32, src_a: f32) -> u32 {
     let sr = srgb_to_lin(r(src)) as f32 * src_a;
     let sg = srgb_to_lin(g(src)) as f32 * src_a;
     let sb = srgb_to_lin(b(src)) as f32 * src_a;
-    rgb(lin_to_srgb(dr + sr), lin_to_srgb(dg + sg), lin_to_srgb(db + sb))
+    rgb(
+        lin_to_srgb(dr + sr),
+        lin_to_srgb(dg + sg),
+        lin_to_srgb(db + sb),
+    )
 }
 
 /// "Screen" blend: 1 - (1 - dst) * (1 - src), a soft additive that never blows out.
@@ -53,7 +63,11 @@ pub fn blend_screen(dst: u32, src: u32, src_a: f32) -> u32 {
     let sg = srgb_to_lin(g(src)) * src_a;
     let sb = srgb_to_lin(b(src)) * src_a;
     let o = |d: f32, s: f32| 1.0 - (1.0 - d) * (1.0 - s);
-    rgb(lin_to_srgb(o(dr, sr)), lin_to_srgb(o(dg, sg)), lin_to_srgb(o(db, sb)))
+    rgb(
+        lin_to_srgb(o(dr, sr)),
+        lin_to_srgb(o(dg, sg)),
+        lin_to_srgb(o(db, sb)),
+    )
 }
 
 /// Normal alpha-over composite in linear light.
@@ -67,7 +81,11 @@ pub fn blend_over_lin(dst: u32, src: u32, src_a: f32) -> u32 {
     let sg = srgb_to_lin(g(src)) as f32;
     let sb = srgb_to_lin(b(src)) as f32;
     let o = |d: f32, s: f32| s * a + d * (1.0 - a);
-    rgb(lin_to_srgb(o(dr, sr)), lin_to_srgb(o(dg, sg)), lin_to_srgb(o(db, sb)))
+    rgb(
+        lin_to_srgb(o(dr, sr)),
+        lin_to_srgb(o(dg, sg)),
+        lin_to_srgb(o(db, sb)),
+    )
 }
 
 /// Multiply blend for ink-on-paper deepening.
@@ -81,12 +99,18 @@ pub fn blend_mul(dst: u32, src: u32, src_a: f32) -> u32 {
     let sb = srgb_to_lin(b(src));
     let a = src_a.clamp(0.0, 1.0);
     let m = |d: f32, s: f32| d * (1.0 - a + a * s);
-    rgb(lin_to_srgb(m(dr, sr)), lin_to_srgb(m(dg, sg)), lin_to_srgb(m(db, sb)))
+    rgb(
+        lin_to_srgb(m(dr, sr)),
+        lin_to_srgb(m(dg, sg)),
+        lin_to_srgb(m(db, sb)),
+    )
 }
 
 /// Hue shift in YIQ-ish space (cheap). `t` in [-1, 1].
 pub fn hue_shift(p: u32, t: f32) -> u32 {
-    if t.abs() < 1e-5 { return p; }
+    if t.abs() < 1e-5 {
+        return p;
+    }
     let r = r(p) as f32 / 255.0;
     let g = g(p) as f32 / 255.0;
     let b = b(p) as f32 / 255.0;
@@ -130,7 +154,9 @@ pub fn grad2(c0: u32, c1: u32, u: f32) -> u32 {
 
 #[inline]
 pub fn lerp_u8(a: u8, b: u8, t: f32) -> u8 {
-    (a as f32 + (b as f32 - a as f32) * t).round().clamp(0.0, 255.0) as u8
+    (a as f32 + (b as f32 - a as f32) * t)
+        .round()
+        .clamp(0.0, 255.0) as u8
 }
 
 /// Smoothstep easing (Perlin's classic).
@@ -152,28 +178,28 @@ pub fn smootherstep(t: f32) -> f32 {
 /// Deep background — top: midnight teal; mid: aubergine; bottom: warm umber horizon.
 pub mod bg {
     use super::rgb;
-    pub const SKY: u32 = rgb(8, 12, 22);      // near-black midnight
-    pub const MID: u32 = rgb(28, 22, 44);     // aubergine
+    pub const SKY: u32 = rgb(8, 12, 22); // near-black midnight
+    pub const MID: u32 = rgb(28, 22, 44); // aubergine
     pub const HORIZON: u32 = rgb(70, 50, 42); // warm umber glow at the bottom
-    pub const DEEP: u32 = rgb(4, 6, 14);      // deepest shadow
+    pub const DEEP: u32 = rgb(4, 6, 14); // deepest shadow
 }
 
 /// Glyph ink — warm cream with cool shadow variant.
 pub mod ink {
     use super::rgb;
-    pub const CREAM: u32 = rgb(232, 212, 168);  // primary glyph color
-    pub const WARM: u32 = rgb(248, 232, 184);   // highlight
+    pub const CREAM: u32 = rgb(232, 212, 168); // primary glyph color
+    pub const WARM: u32 = rgb(248, 232, 184); // highlight
     pub const SHADOW: u32 = rgb(192, 168, 136); // shadow
-    pub const GLOW: u32 = rgb(248, 224, 160);   // outer glow
+    pub const GLOW: u32 = rgb(248, 224, 160); // outer glow
 }
 
 /// Particle palette — warm + cool + neutral ink drops.
 pub mod drop {
     use super::rgb;
-    pub const AMBER: u32 = rgb(232, 168, 120);    // warm amber
+    pub const AMBER: u32 = rgb(232, 168, 120); // warm amber
     pub const AMBER_HI: u32 = rgb(248, 216, 168); // amber highlight
-    pub const CYAN: u32 = rgb(90, 200, 216);      // cool cyan
-    pub const CYAN_HI: u32 = rgb(154, 230, 232);  // cyan highlight
+    pub const CYAN: u32 = rgb(90, 200, 216); // cool cyan
+    pub const CYAN_HI: u32 = rgb(154, 230, 232); // cyan highlight
     pub const PARCHMENT: u32 = rgb(216, 192, 160); // neutral parchment
     pub const PARCHMENT_HI: u32 = rgb(248, 232, 192); // parchment highlight
 }

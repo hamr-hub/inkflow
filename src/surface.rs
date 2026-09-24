@@ -5,11 +5,15 @@
 //! it to a mapped DRM dumb buffer. All three paths share the same `Surface` API.
 
 use std::fs::{File, OpenOptions};
-use std::io::{Read, Write};
+use std::io::Write;
 use std::os::unix::io::{AsRawFd, RawFd};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Backend { Memory, Framebuffer, DrmDumb }
+pub enum Backend {
+    Memory,
+    Framebuffer,
+    DrmDumb,
+}
 
 pub struct Surface {
     pub width: u32,
@@ -20,8 +24,8 @@ pub struct Surface {
     // native handle (kept for the lifetime of the surface)
     pub fb_file: Option<File>,
     pub drm_file: Option<File>,
-    pub drm_handle: u32,   // GEM handle for the dumb buffer
-    pub fb_id: u32,        // DRM framebuffer id (for cleanup)
+    pub drm_handle: u32, // GEM handle for the dumb buffer
+    pub fb_id: u32,      // DRM framebuffer id (for cleanup)
 }
 
 impl Surface {
@@ -29,9 +33,15 @@ impl Surface {
         let stride = width;
         let pixels = vec![0u32; (stride * height) as usize];
         Self {
-            width, height, stride, pixels,
+            width,
+            height,
+            stride,
+            pixels,
             backend: Backend::Memory,
-            fb_file: None, drm_file: None, drm_handle: 0, fb_id: 0,
+            fb_file: None,
+            drm_file: None,
+            drm_handle: 0,
+            fb_id: 0,
         }
     }
 
@@ -39,7 +49,13 @@ impl Surface {
         let f = OpenOptions::new().read(true).write(true).open(path)?;
         // Query screen info: vscreeninfo tells us xres/yres.
         let mut vinfo: libc_fb_vscreeninfo = unsafe { std::mem::zeroed() };
-        let r = unsafe { libc_ioctl(f.as_raw_fd(), FBIOGET_VSCREENINFO, &mut vinfo as *mut _) };
+        let r = unsafe {
+            libc_ioctl(
+                f.as_raw_fd(),
+                FBIOGET_VSCREENINFO,
+                (&mut vinfo as *mut libc_fb_vscreeninfo) as *mut std::ffi::c_void,
+            )
+        };
         if r != 0 {
             return Err(std::io::Error::last_os_error());
         }
@@ -47,7 +63,13 @@ impl Surface {
         let sh = vinfo.yres.max(1) as u32;
         // Query fix screen info: line_length, smem_len, type.
         let mut finfo: libc_fb_fix_screeninfo = unsafe { std::mem::zeroed() };
-        let r = unsafe { libc_ioctl(f.as_raw_fd(), FBIOGET_FSCREENINFO, &mut finfo as *mut _) };
+        let r = unsafe {
+            libc_ioctl(
+                f.as_raw_fd(),
+                FBIOGET_FSCREENINFO,
+                (&mut finfo as *mut libc_fb_fix_screeninfo) as *mut std::ffi::c_void,
+            )
+        };
         if r != 0 {
             return Err(std::io::Error::last_os_error());
         }
@@ -60,13 +82,13 @@ impl Surface {
             libc_mmap(
                 std::ptr::null_mut(),
                 map_bytes,
-                3,  // PROT_READ | PROT_WRITE
-                1,  // MAP_SHARED
+                3, // PROT_READ | PROT_WRITE
+                1, // MAP_SHARED
                 f.as_raw_fd(),
                 0,
             )
         };
-        if ptr == libc_MAP_FAILED {
+        if unsafe { map_failed(ptr) } {
             return Err(std::io::Error::last_os_error());
         }
         // Copy pixels out of the fb into our Vec, then the caller renders, then we blit back.
@@ -80,10 +102,15 @@ impl Surface {
         }
         let _ = (width, height); // ignore requested dims on real fb
         Ok(Self {
-            width: sw, height: sh, stride: sw, pixels,
+            width: sw,
+            height: sh,
+            stride: sw,
+            pixels,
             backend: Backend::Framebuffer,
             fb_file: Some(f),
-            drm_file: None, drm_handle: 0, fb_id: 0,
+            drm_file: None,
+            drm_handle: 0,
+            fb_id: 0,
         })
     }
 
@@ -96,33 +123,45 @@ impl Surface {
             cb.height = height;
             cb.width = width;
             cb.bpp = 32;
-            let r = libc_ioctl(fd, DRM_IOCTL_MODE_CREATE_DUMB, &mut cb as *mut _);
-            if r != 0 { return Err(std::io::Error::last_os_error()); }
+            let r = libc_ioctl(
+                fd,
+                DRM_IOCTL_MODE_CREATE_DUMB,
+                (&mut cb as *mut drm_mode_create_dumb) as *mut std::ffi::c_void,
+            );
+            if r != 0 {
+                return Err(std::io::Error::last_os_error());
+            }
             let handle = cb.handle;
             let pitch = cb.pitch;
             // Map it.
             let mut mb: drm_mode_map_dumb = std::mem::zeroed();
             mb.handle = handle;
-            let r = libc_ioctl(fd, DRM_IOCTL_MODE_MAP_DUMB, &mut mb as *mut _);
+            let r = libc_ioctl(
+                fd,
+                DRM_IOCTL_MODE_MAP_DUMB,
+                (&mut mb as *mut drm_mode_map_dumb) as *mut std::ffi::c_void,
+            );
             if r != 0 {
                 // destroy the dumb on failure
                 let mut db: drm_mode_destroy_dumb = std::mem::zeroed();
                 db.handle = handle;
-                libc_ioctl(fd, DRM_IOCTL_MODE_DESTROY_DUMB, &mut db as *mut _);
+                libc_ioctl(
+                    fd,
+                    DRM_IOCTL_MODE_DESTROY_DUMB,
+                    (&mut db as *mut drm_mode_destroy_dumb) as *mut std::ffi::c_void,
+                );
                 return Err(std::io::Error::last_os_error());
             }
             let map_bytes = (pitch as usize) * (height as usize);
-            let ptr = libc_mmap(
-                std::ptr::null_mut(),
-                map_bytes,
-                3, 1,
-                fd,
-                mb.offset as i64,
-            );
-            if ptr == libc_MAP_FAILED {
+            let ptr = libc_mmap(std::ptr::null_mut(), map_bytes, 3, 1, fd, mb.offset as i64);
+            if map_failed(ptr) {
                 let mut db: drm_mode_destroy_dumb = std::mem::zeroed();
                 db.handle = handle;
-                libc_ioctl(fd, DRM_IOCTL_MODE_DESTROY_DUMB, &mut db as *mut _);
+                libc_ioctl(
+                    fd,
+                    DRM_IOCTL_MODE_DESTROY_DUMB,
+                    (&mut db as *mut drm_mode_destroy_dumb) as *mut std::ffi::c_void,
+                );
                 return Err(std::io::Error::last_os_error());
             }
             // Copy current contents of the dumb buffer into our pixel vec.
@@ -133,7 +172,10 @@ impl Surface {
                 map_bytes.min(pixels.len() * 4),
             );
             Ok(Self {
-                width, height, stride: width, pixels,
+                width,
+                height,
+                stride: width,
+                pixels,
                 backend: Backend::DrmDumb,
                 fb_file: None,
                 drm_file: Some(drm),
@@ -152,15 +194,8 @@ impl Surface {
                 if let Some(f) = &self.fb_file {
                     let fd = f.as_raw_fd();
                     let bytes = (self.width * self.height * 4) as usize;
-                    let ptr = unsafe {
-                        libc_mmap(
-                            std::ptr::null_mut(),
-                            bytes,
-                            3, 1,
-                            fd, 0,
-                        )
-                    };
-                    if ptr == libc_MAP_FAILED {
+                    let ptr = unsafe { libc_mmap(std::ptr::null_mut(), bytes, 3, 1, fd, 0) };
+                    if unsafe { map_failed(ptr) } {
                         return Err(std::io::Error::last_os_error());
                     }
                     unsafe {
@@ -178,19 +213,23 @@ impl Surface {
                 // Similar: mmap and copy.
                 if let Some(d) = &self.drm_file {
                     let fd = d.as_raw_fd();
-                    let mut mb: drm_mode_map_dumb = std::mem::zeroed();
+                    let mut mb = unsafe { std::mem::zeroed::<drm_mode_map_dumb>() };
                     mb.handle = self.drm_handle;
-                    let r = unsafe { libc_ioctl(fd, DRM_IOCTL_MODE_MAP_DUMB, &mut mb as *mut _) };
-                    if r != 0 { return Err(std::io::Error::last_os_error()); }
-                    let bytes = (self.stride * self.height * 4) as usize;
-                    let ptr = unsafe {
-                        libc_mmap(
-                            std::ptr::null_mut(),
-                            bytes, 3, 1, fd,
-                            mb.offset as i64,
+                    let r = unsafe {
+                        libc_ioctl(
+                            fd,
+                            DRM_IOCTL_MODE_MAP_DUMB,
+                            (&mut mb as *mut drm_mode_map_dumb) as *mut std::ffi::c_void,
                         )
                     };
-                    if ptr == libc_MAP_FAILED {
+                    if r != 0 {
+                        return Err(std::io::Error::last_os_error());
+                    }
+                    let bytes = (self.stride * self.height * 4) as usize;
+                    let ptr = unsafe {
+                        libc_mmap(std::ptr::null_mut(), bytes, 3, 1, fd, mb.offset as i64)
+                    };
+                    if unsafe { map_failed(ptr) } {
                         return Err(std::io::Error::last_os_error());
                     }
                     unsafe {
@@ -229,9 +268,22 @@ impl Surface {
 
 extern "C" {
     fn ioctl(fd: i32, req: i64, ...) -> i32;
-    fn mmap(addr: *mut std::ffi::c_void, len: usize, prot: i32, flags: i32, fd: i32, offset: i64) -> *mut std::ffi::c_void;
+    fn mmap(
+        addr: *mut std::ffi::c_void,
+        len: usize,
+        prot: i32,
+        flags: i32,
+        fd: i32,
+        offset: i64,
+    ) -> *mut std::ffi::c_void;
     fn munmap(addr: *mut std::ffi::c_void, len: usize) -> i32;
-    static MAP_FAILED: *mut std::ffi::c_void;
+}
+
+/// `MAP_FAILED` is `((void *) -1)` on Linux/musl/glibc. We define a helper
+/// rather than depending on the libc crate (zero-dep target).
+#[inline]
+unsafe fn map_failed(p: *mut std::ffi::c_void) -> bool {
+    p as isize == -1
 }
 
 #[inline]
@@ -239,19 +291,31 @@ unsafe fn libc_ioctl(fd: RawFd, req: i64, arg: *mut std::ffi::c_void) -> i32 {
     ioctl(fd, req, arg)
 }
 #[inline]
-unsafe fn libc_mmap(addr: *mut std::ffi::c_void, len: usize, prot: i32, flags: i32, fd: i32, offset: i64) -> *mut std::ffi::c_void {
+unsafe fn libc_mmap(
+    addr: *mut std::ffi::c_void,
+    len: usize,
+    prot: i32,
+    flags: i32,
+    fd: i32,
+    offset: i64,
+) -> *mut std::ffi::c_void {
     mmap(addr, len, prot, flags, fd, offset)
 }
 #[inline]
-unsafe fn libc_munmap(addr: *mut std::ffi::c_void, len: usize) -> i32 { munmap(addr, len) }
+unsafe fn libc_munmap(addr: *mut std::ffi::c_void, len: usize) -> i32 {
+    munmap(addr, len)
+}
 
 // DRM constants — see <drm.h> / <drm_mode.h>
 const DRM_IOCTL_BASE: u64 = 0x64;
 // 'd'=0x64, DRM command encoding uses base + cmd
-const fn drm_iowr(cmd: u64, _size: usize) -> i64 { (DRM_IOCTL_BASE + cmd) as i64 }
+const fn drm_iowr(cmd: u64, _size: usize) -> i64 {
+    (DRM_IOCTL_BASE + cmd) as i64
+}
 const DRM_IOCTL_MODE_CREATE_DUMB: i64 = drm_iowr(0xB2, std::mem::size_of::<drm_mode_create_dumb>());
-const DRM_IOCTL_MODE_MAP_DUMB:    i64 = drm_iowr(0xB3, std::mem::size_of::<drm_mode_map_dumb>());
-const DRM_IOCTL_MODE_DESTROY_DUMB:i64 = drm_iowr(0xB4, std::mem::size_of::<drm_mode_destroy_dumb>());
+const DRM_IOCTL_MODE_MAP_DUMB: i64 = drm_iowr(0xB3, std::mem::size_of::<drm_mode_map_dumb>());
+const DRM_IOCTL_MODE_DESTROY_DUMB: i64 =
+    drm_iowr(0xB4, std::mem::size_of::<drm_mode_destroy_dumb>());
 
 #[repr(C)]
 struct drm_mode_create_dumb {
@@ -281,18 +345,32 @@ const FBIOGET_FSCREENINFO: i64 = 0x4602;
 #[repr(C)]
 #[derive(Default)]
 struct libc_fb_vscreeninfo {
-    xres: u32, yres: u32, xres_virtual: u32, yres_virtual: u32,
-    xoffset: u32, yoffset: u32,
-    bits_per_pixel: u32, grayscale: u32,
-    red: fb_bitfield, green: fb_bitfield, blue: fb_bitfield, transp: fb_bitfield,
-    nonstd: u32, activate: u32,
-    height: u32, width: u32,
+    xres: u32,
+    yres: u32,
+    xres_virtual: u32,
+    yres_virtual: u32,
+    xoffset: u32,
+    yoffset: u32,
+    bits_per_pixel: u32,
+    grayscale: u32,
+    red: fb_bitfield,
+    green: fb_bitfield,
+    blue: fb_bitfield,
+    transp: fb_bitfield,
+    nonstd: u32,
+    activate: u32,
+    height: u32,
+    width: u32,
     accel_flags: u32,
     pixclock: u32,
-    left_margin: u32, right_margin: u32,
-    upper_margin: u32, lower_margin: u32,
-    hsync_len: u32, vsync_len: u32,
-    sync: u32, vmode: u32,
+    left_margin: u32,
+    right_margin: u32,
+    upper_margin: u32,
+    lower_margin: u32,
+    hsync_len: u32,
+    vsync_len: u32,
+    sync: u32,
+    vmode: u32,
     rotate: u32,
     colorspace: u32,
     reserved: [u32; 4],
@@ -300,7 +378,9 @@ struct libc_fb_vscreeninfo {
 #[repr(C)]
 #[derive(Default, Copy, Clone)]
 struct fb_bitfield {
-    offset: u32, length: u32, msb_right: u32,
+    offset: u32,
+    length: u32,
+    msb_right: u32,
 }
 #[repr(C)]
 struct libc_fb_fix_screeninfo {
@@ -310,7 +390,8 @@ struct libc_fb_fix_screeninfo {
     type_: u32,
     type_aux: u32,
     visual: u32,
-    xpanstep: u16, ypanstep: u16,
+    xpanstep: u16,
+    ypanstep: u16,
     ywrapstep: u16,
     line_length: u32,
     mmio_start: u64,
