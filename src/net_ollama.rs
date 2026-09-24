@@ -61,7 +61,12 @@ impl OllamaClient {
             elapsed: Duration::ZERO,
         };
         let prompt = build_prompt(warmth, energy);
-        let body = build_body(&self.model, &prompt);
+        // The picker is pure; calling it twice (here and inside
+        // build_prompt via style_for) yields the same answer for the
+        // same (warmth, energy). We do that on purpose so build_body
+        // never has to thread the voice name through from the caller.
+        let voice = style_for(warmth, energy);
+        let body = build_body(&self.model, &prompt, voice);
         let addr = match self.host.parse::<std::net::SocketAddr>() {
             Ok(a) => a,
             Err(_) => match self.host.to_socket_addrs() {
@@ -134,6 +139,100 @@ impl OllamaClient {
     }
 }
 
+// ---------- per-voice sampling ----------
+
+/// Per-voice sampling parameters. Each of the five curatorial voices
+/// in ARTIFACT.md has its own characteristic temperature, top_p, and
+/// num_predict — the picker chooses a voice, and these parameters
+/// make the voice actually sound like itself instead of producing
+/// near-identical output under one shared sampling config.
+///
+///  - 婉约  : low temperature → tight, lyrical, sparse
+///  - 豪放  : high temperature → bold, ranging, occasionally surprising
+///  - 禅寂  : lowest temperature + tight top_p → minimal, no excess
+///  - 稚拙  : highest temperature + high top_p → naive, scattershot
+///  - 苍茫  : mid temperature, low num_predict → vast, few words
+#[derive(Clone, Copy)]
+struct VoiceParams {
+    temperature: f32,
+    top_p: f32,
+    num_predict: u32,
+}
+
+const VOICE_PARAMS: &[(&str, VoiceParams)] = &[
+    (
+        "婉约",
+        VoiceParams {
+            temperature: 0.85,
+            top_p: 0.90,
+            num_predict: 70,
+        },
+    ),
+    (
+        "豪放",
+        VoiceParams {
+            temperature: 1.20,
+            top_p: 0.92,
+            num_predict: 70,
+        },
+    ),
+    (
+        "禅寂",
+        VoiceParams {
+            temperature: 0.80,
+            top_p: 0.88,
+            num_predict: 50,
+        },
+    ),
+    (
+        "稚拙",
+        VoiceParams {
+            temperature: 1.25,
+            top_p: 0.95,
+            num_predict: 60,
+        },
+    ),
+    (
+        "苍茫",
+        VoiceParams {
+            temperature: 0.95,
+            top_p: 0.88,
+            num_predict: 50,
+        },
+    ),
+];
+
+fn voice_params(name: &str) -> VoiceParams {
+    for (n, p) in VOICE_PARAMS {
+        if *n == name {
+            return *p;
+        }
+    }
+    // Unknown voices fall back to the legacy shared config so a
+    // future addition to VOICE_PARAMS doesn't silently change
+    // behaviour for the others.
+    VoiceParams {
+        temperature: 1.05,
+        top_p: 0.92,
+        num_predict: 90,
+    }
+}
+
+/// Format an f32 into the JSON-safe subset ollama accepts: at least
+/// one digit after the decimal point, no trailing zeros that might
+/// shift a later substring match.
+fn f32_to_json(x: f32) -> String {
+    let s = format!("{x:.4}");
+    let trimmed = s.trim_end_matches('0').trim_end_matches('.');
+    if trimmed.is_empty() || trimmed == "-" {
+        "0".into()
+    } else if trimmed.contains('.') {
+        trimmed.into()
+    } else {
+        format!("{trimmed}.0")
+    }
+}
+
 // ---------- prompt ----------
 
 /// Five-style picker for the LLM system prompt. Per ARTIFACT.md:
@@ -200,11 +299,16 @@ fn build_prompt(warmth: f32, energy: f32) -> String {
     )
 }
 
-fn build_body(model: &str, prompt: &str) -> Vec<u8> {
+fn build_body(model: &str, prompt: &str, voice: &str) -> Vec<u8> {
     // Hand-roll a minimal JSON body so we don't pull serde.
     // ollama /api/generate accepts an independent "system" field
     // (≥ 0.1.20) which carries the work's voice separately from the
     // per-tick user prompt. See SYSTEM_PROMPT above.
+    //
+    // The per-voice temperature / top_p / num_predict come from
+    // VOICE_PARAMS — each of the five curatorial voices is a real
+    // voice with its own sampling config, not just a name.
+    let vp = voice_params(voice);
     let mut body = String::with_capacity(1024);
     body.push_str("{\"model\":\"");
     body.push_str(&escape_json(model));
@@ -212,9 +316,13 @@ fn build_body(model: &str, prompt: &str) -> Vec<u8> {
     body.push_str(&escape_json(SYSTEM_PROMPT));
     body.push_str("\",\"prompt\":\"");
     body.push_str(&escape_json(prompt));
-    body.push_str(
-        "\",\"stream\":true,\"options\":{\"num_predict\":90,\"temperature\":1.05,\"top_p\":0.92}}",
-    );
+    body.push_str("\",\"stream\":true,\"options\":{\"num_predict\":");
+    body.push_str(&vp.num_predict.to_string());
+    body.push_str(",\"temperature\":");
+    body.push_str(&f32_to_json(vp.temperature));
+    body.push_str(",\"top_p\":");
+    body.push_str(&f32_to_json(vp.top_p));
+    body.push_str("}}");
     body.into_bytes()
 }
 
@@ -533,7 +641,7 @@ mod tests {
 
     #[test]
     fn build_body_has_required_fields() {
-        let b = build_body("gemma3:1b", "test");
+        let b = build_body("gemma3:1b", "test", "婉约");
         let s = String::from_utf8(b).unwrap();
         assert!(s.contains("\"model\":\"gemma3:1b\""));
         assert!(s.contains("\"prompt\":\"test\""));
@@ -544,7 +652,7 @@ mod tests {
     fn build_body_carries_system_prompt_as_independent_field() {
         // The system field must exist as a top-level JSON field, NOT
         // be inlined into the prompt. ollama ≥ 0.1.20 honours it.
-        let b = build_body("gemma3:1b", "anything");
+        let b = build_body("gemma3:1b", "anything", "豪放");
         let s = String::from_utf8(b).unwrap();
         // Locate the system field and confirm it contains the voice.
         assert!(s.contains("\"system\":\""), "missing system field: {s}");
@@ -592,5 +700,41 @@ mod tests {
                 assert_eq!(style_for(w, e), style_for(w, e));
             }
         }
+    }
+
+    #[test]
+    fn build_body_uses_per_voice_sampling() {
+        // Each voice must contribute its own temperature / num_predict
+        // to the OPTIONS block — they are real voices, not labels.
+        let 婉约_body = build_body("gemma3:1b", "x", "婉约");
+        let 豪放_body = build_body("gemma3:1b", "x", "豪放");
+        let s_婉约 = String::from_utf8(婉约_body).unwrap();
+        let s_豪放 = String::from_utf8(豪放_body).unwrap();
+        // 婉约 has temperature 0.85; 豪放 has temperature 1.20.
+        assert!(
+            s_婉约.contains("\"temperature\":0.85"),
+            "婉约 temp: {s_婉约}"
+        );
+        assert!(
+            s_豪放.contains("\"temperature\":1.2"),
+            "豪放 temp: {s_豪放}"
+        );
+        assert!(s_婉约.contains("\"num_predict\":70"), "婉约 np: {s_婉约}");
+    }
+
+    #[test]
+    fn f32_to_json_keeps_decimal_point() {
+        // ollama accepts either form, but our explicit formatter
+        // guarantees a stable substring we can match on in
+        // build_body_uses_per_voice_sampling.
+        assert_eq!(f32_to_json(1.05), "1.05");
+        assert_eq!(f32_to_json(0.0), "0.0");
+        assert_eq!(f32_to_json(1.20), "1.2");
+    }
+
+    #[test]
+    fn voice_params_falls_back_for_unknown() {
+        let vp = voice_params("未知的声部");
+        assert!((vp.temperature - 1.05).abs() < 1e-6);
     }
 }
