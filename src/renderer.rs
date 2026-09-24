@@ -213,7 +213,30 @@ pub fn draw_and_step_particles(
         let p_hue =
             (hue + (p.x * 0.3 + p.y * 0.5).sin() * 0.06 + (t * 0.05).sin() * 0.08).rem_euclid(1.0);
         let color = Rgba::from_hsl(p_hue, 0.7, 0.6);
+        // Brushstroke smear: render the main dot, then a trailing dot
+        // up the velocity vector at half the radius and half the alpha.
+        // For near-stationary drift embers the two collapse onto the
+        // same pixel and look like a single dot; for fast touch-driven
+        // particles the trail reads as motion. Cost is one extra small
+        // fill_circle per particle (~260 → ~520 calls/frame on Jetson).
+        let speed = (p.vx * p.vx + p.vy * p.vy).sqrt();
+        let smear_len = (speed * 0.04).clamp(0.0, p.r * 1.8);
+        let ux = if speed > 0.001 { p.vx / speed } else { 0.0 };
+        let uy = if speed > 0.001 { p.vy / speed } else { 0.0 };
         fill_circle(pixels, pitch_px, fb_w, fb_h, p.x, p.y, p.r, color, a * 0.5);
+        if smear_len > 0.5 {
+            fill_circle(
+                pixels,
+                pitch_px,
+                fb_w,
+                fb_h,
+                p.x - ux * smear_len,
+                p.y - uy * smear_len,
+                p.r * 0.55,
+                color,
+                a * 0.28,
+            );
+        }
     }
     particles.retain(|p| p.life > 0.0 && p.y > -20.0);
 }
