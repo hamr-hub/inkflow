@@ -29,9 +29,10 @@ SHOT=state/screen.png
 tail -n 12 state/telemetry.jsonl > state/tel_tail.txt 2>/dev/null || true
 
 cat > state/claude_prompt.txt <<'EOF'
-You are the unattended maintainer of "inkflow" (Rust + macroquad + evdev + ollama),
-a self-iterating generative art object: fullscreen ambient Chinese text stream +
-particles on a Jetson Orin Nano, shaped by touch input. It must NEVER go dark.
+You are the unattended maintainer of "inkflow" (now a ZERO-DEP, std-only Rust binary).
+Read these in order each turn: ZERO_DEP.md, PRODUCTION.md, then state/tel_tail.txt and
+state/screen.png. Rendering is DRM/KMS dumb-buffer + software 32bpp; evdev touch via
+raw ioctl; ollama over hand-written TCP; embedded CJK bitmap font. It must never go dark.
 
 Do ONE bounded improvement/maintenance turn, autonomously.
 
