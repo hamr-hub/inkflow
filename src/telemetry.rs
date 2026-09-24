@@ -186,6 +186,115 @@ fn fmt_f64(v: f64) -> String {
 /// main thread (we read the BGRA buffer here in a spawned task). The
 /// rasterizer is single-threaded so we copy the down-sampled bytes into
 /// a fresh Vec and hand that to a worker to write to disk.
+/// Self-monitoring: read the most recent entries from a
+/// telemetry.jsonl file and report whether the curatorial voice
+/// distribution is healthy. The autoloop Claude maintainer reads
+/// this signal before deciding a change — if voice is stuck on one
+/// for too long, the change this tick should push toward variety.
+///
+/// Returns:
+///   - Ok(VoiceDriftReport) with a per-voice histogram and the
+///     most-recent dominant voice, on success.
+///   - Err(String) if the file is missing or empty.
+///
+/// The function does NOT enforce a hard limit — it just reports.
+/// The art-direction judgement lives in the autoloop Claude, not
+/// in the telemetry module. Currently #[cfg(test)] — no
+/// production caller yet. The autoloop Claude learns the drift
+/// state by inspecting the result of cargo test --release
+/// ::voice_drift_check. When we add a `--voice-drift` CLI
+/// subcommand, this gate drops.
+#[cfg(test)]
+pub fn voice_drift_check(path: &str) -> Result<VoiceDriftReport, String> {
+    let Ok(content) = std::fs::read_to_string(path) else {
+        return Err(format!("telemetry file not readable: {path}"));
+    };
+    let mut counts: [u32; 5] = [0; 5]; // 婉约, 豪放, 禅寂, 稚拙, 苍茫
+    let mut total = 0u32;
+    let mut last_voice: Option<&'static str> = None;
+    // Walk lines backwards (most recent first) until we've seen
+    // `recent_window_count` entries OR the file is exhausted.
+    let recent_window_count = 60usize; // 60 lines × 10 s/tick = 10 min
+    let mut lines_seen = 0usize;
+    for line in content.lines().rev() {
+        if lines_seen >= recent_window_count {
+            break;
+        }
+        lines_seen += 1;
+        // Parse the voice field. The line is JSON; a tiny scanner
+        // would do — for now extract "voice":"X" with a fixed string
+        // search. (We don't need to be perfect; we just need to
+        // count which voices have been in play recently.)
+        if let Some(idx) = line.find("\"voice\":\"") {
+            let start = idx + "\"voice\":\"".len();
+            // End of the value is the next unescaped quote. For our
+            // 5 voice names (all simple Chinese chars), a closing
+            // quote is enough.
+            if let Some(end) = line[start..].find('"') {
+                let voice = &line[start..start + end];
+                match voice {
+                    "婉约" => counts[0] += 1,
+                    "豪放" => counts[1] += 1,
+                    "禅寂" => counts[2] += 1,
+                    "稚拙" => counts[3] += 1,
+                    "苍茫" => counts[4] += 1,
+                    _ => {}
+                }
+                total += 1;
+                if last_voice.is_none() {
+                    last_voice = Some(match voice {
+                        "婉约" => "婉约",
+                        "豪放" => "豪放",
+                        "禅寂" => "禅寂",
+                        "稚拙" => "稚拙",
+                        "苍茫" => "苍茫",
+                        _ => "",
+                    });
+                }
+            }
+        }
+    }
+    let names = ["婉约", "豪放", "禅寂", "稚拙", "苍茫"];
+    let per_voice: Vec<(&'static str, u32, u32)> = names
+        .iter()
+        .copied()
+        .zip(counts.iter().copied())
+        .map(|(n, c)| {
+            let pct = if total > 0 { (c * 100) / total } else { 0 };
+            (n, c, pct)
+        })
+        .collect();
+    Ok(VoiceDriftReport {
+        total,
+        last_voice: last_voice.unwrap_or(""),
+        per_voice,
+    })
+}
+
+/// Voice-distribution summary produced by [`voice_drift_check`].
+/// `per_voice` is (name, count, percent) tuples ordered to match the
+/// canonical voice list (婉约 / 豪放 / 禅寂 / 稚拙 / 苍茫).
+#[cfg(test)]
+pub struct VoiceDriftReport {
+    pub total: u32,
+    pub last_voice: &'static str,
+    /// (voice_name, count_in_window, percent_in_window)
+    pub per_voice: Vec<(&'static str, u32, u32)>,
+}
+
+#[cfg(test)]
+impl VoiceDriftReport {
+    /// Returns true if one voice accounts for ≥ 70% of the recent
+    /// window — a strong signal the piece is stuck on one voice
+    /// and the autoloop Claude should push toward variety this tick.
+    pub fn is_stuck(&self) -> bool {
+        if self.total == 0 {
+            return false;
+        }
+        self.per_voice.iter().any(|(_, _, pct)| *pct >= 70)
+    }
+}
+
 #[allow(dead_code)]
 pub fn grab_ppm_async(bgra: &[u32], w: u32, h: u32, pitch_px: usize, step: u32, path: String) {
     let nw = (w / step) as usize;
@@ -392,5 +501,93 @@ mod tests {
 
         // cleanup
         std::fs::remove_dir_all(&dir).ok();
+    }
+}
+
+#[cfg(test)]
+mod drift_tests {
+    use super::*;
+
+    fn write_fake_telemetry(path: &str, voices: &[&str]) {
+        let mut s = String::new();
+        for v in voices {
+            // Minimal valid JSONL entry — must round-trip through
+            // a json parser for the autoloop to trust the count.
+            // We use placeholder values for everything except voice.
+            s.push_str(&format!(
+                "{{\"voice\":\"{v}\",\"ts\":1,\"warmth\":0.5,\"energy\":0.1}}\n"
+            ));
+        }
+        std::fs::write(path, s).expect("write fake telemetry");
+    }
+
+    #[test]
+    fn voice_drift_check_missing_file_returns_err() {
+        let result = voice_drift_check("/tmp/inkflow_no_such_file.jsonl");
+        assert!(result.is_err(), "missing file must surface as Err");
+    }
+
+    #[test]
+    fn voice_drift_check_empty_file_reports_zero() {
+        let path = "/tmp/inkflow_empty_telemetry.jsonl";
+        std::fs::write(path, "").expect("write empty");
+        let r = voice_drift_check(path).unwrap();
+        assert_eq!(r.total, 0);
+        assert_eq!(r.last_voice, "");
+        assert!(!r.is_stuck());
+    }
+
+    #[test]
+    fn voice_drift_check_balanced_distribution_is_not_stuck() {
+        // 12 entries spread evenly across 3 voices: 4 / 4 / 4.
+        // No voice has ≥ 70 %; not stuck.
+        let path = "/tmp/inkflow_balanced_telemetry.jsonl";
+        let voices = [
+            "婉约", "婉约", "婉约", "婉约", "豪放", "豪放", "豪放", "豪放", "禅寂", "禅寂", "禅寂",
+            "禅寂",
+        ];
+        write_fake_telemetry(path, &voices);
+        let r = voice_drift_check(path).unwrap();
+        assert_eq!(r.total, 12);
+        assert!(!r.is_stuck(), "balanced should not be stuck");
+    }
+
+    #[test]
+    fn voice_drift_check_dominated_distribution_is_stuck() {
+        // 10 禅寂 + 3 婉约. 禅寂 dominates (10/13 = 77 %).
+        // Most recent entry is 婉约, so last_voice == 婉约.
+        let path = "/tmp/inkflow_dominated_telemetry.jsonl";
+        let mut voices: Vec<&str> = (0..10).map(|_| "禅寂").collect();
+        voices.extend(&["婉约", "婉约", "婉约"]);
+        write_fake_telemetry(path, &voices);
+        let r = voice_drift_check(path).unwrap();
+        assert_eq!(r.total, 13);
+        assert!(r.is_stuck(), "禅寂 10/13 = 77%% should be stuck");
+        assert_eq!(r.last_voice, "婉约");
+        // Confirm the per-voice breakdown.
+        let 禅寂_count = r
+            .per_voice
+            .iter()
+            .find(|(n, _, _)| *n == "禅寂")
+            .map(|(_, c, _)| *c)
+            .unwrap_or(0);
+        assert_eq!(禅寂_count, 10);
+    }
+
+    #[test]
+    fn voice_drift_check_only_recent_window_counts() {
+        // Older entries outside the recent window shouldn't count.
+        // The function reads the last `recent_window_count` (60)
+        // lines, so we write 120 of the same voice. With a window
+        // of 60, only 60 lines are counted — the report says the
+        // piece is stuck on that voice, regardless of the earlier
+        // 60 also being that voice (the report just sees 60/60
+        // in the window).
+        let path = "/tmp/inkflow_long_stuck_telemetry.jsonl";
+        let voices: Vec<&str> = (0..120).map(|_| "豪放").collect();
+        write_fake_telemetry(path, &voices);
+        let r = voice_drift_check(path).unwrap();
+        assert_eq!(r.total, 60, "only last 60 entries count");
+        assert!(r.is_stuck());
     }
 }

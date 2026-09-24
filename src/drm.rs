@@ -635,22 +635,25 @@ fn build_display(card_fd: c_int, path: &str) -> Result<Display, String> {
         conn.count_modes
     );
 
-    // Pull modes array.
+    // Pull modes + encoders in a single GETCONNECTOR. Properties are
+    // not requested (count_props forced to 0). The kernel copies every
+    // array whose count is non-zero, so leaving count_props at its
+    // probed value with props_ptr = NULL made the whole ioctl fail with
+    // EFAULT before any mode was copied — every mode then read as
+    // 0x0 and CREATE_DUMB rejected the 0×0 request with EINVAL,
+    // dropping the piece into the headless fallback and a dark panel.
     let mut modes: Vec<DrmModeModeInfo> =
         vec![DrmModeModeInfo::default(); conn.count_modes as usize];
+    let mut enc_arr: Vec<u32> = vec![0; conn.count_encoders as usize];
     {
         let mut c2 = conn;
         c2.modes_ptr = modes.as_mut_ptr() as u64;
+        c2.encoders_ptr = enc_arr.as_mut_ptr() as u64;
         c2.props_ptr = 0;
-        c2.encoders_ptr = 0;
         c2.prop_values_ptr = 0;
-        match sys::ioctl_struct(card_fd, DRM_IOCTL_MODE_GETCONNECTOR, &mut c2) {
-            Ok(_) => eprintln!(
-                "DBG second GETCONN ok modes_ptr={:#x} count_modes={} m0={}x{}",
-                c2.modes_ptr, c2.count_modes, modes[0].hdisplay, modes[0].vdisplay
-            ),
-            Err(e) => eprintln!("DBG second GETCONN err errno={e}"),
-        }
+        c2.count_props = 0;
+        sys::ioctl_struct(card_fd, DRM_IOCTL_MODE_GETCONNECTOR, &mut c2)
+            .map_err(|e| format!("GETCONNECTOR modes+encoders: errno={e}"))?;
     }
     let mode = modes[0];
     log!(
@@ -659,17 +662,6 @@ fn build_display(card_fd: c_int, path: &str) -> Result<Display, String> {
         mode.vdisplay,
         mode.vrefresh
     );
-
-    // Pull encoders array.
-    let mut enc_arr: Vec<u32> = vec![0; conn.count_encoders as usize];
-    {
-        let mut c2 = conn;
-        c2.encoders_ptr = enc_arr.as_mut_ptr() as u64;
-        c2.modes_ptr = modes.as_mut_ptr() as u64;
-        c2.props_ptr = 0;
-        c2.prop_values_ptr = 0;
-        let _ = sys::ioctl_struct(card_fd, DRM_IOCTL_MODE_GETCONNECTOR, &mut c2);
-    }
 
     // Find an encoder that supports this connector and at least one CRTC.
     let mut chosen_enc: Option<u32> = None;
