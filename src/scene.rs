@@ -298,6 +298,12 @@ impl Composition {
             //   quatrain's location hint is already a step further from
             //   certainty than the subtitle.
             //   Stagger 0.34s so it fades in third, after the subtitle.
+            //   shadow_mix 0.30 → 0.26, alpha 0.66 → 0.72: lift the
+            //   upper-right back into readable territory so the four-line
+            //   quatrain registers as four lines on the page, not two. The
+            //   brush-weight gradient still holds (subtitle 0.10, upper-
+            //   right 0.26, lower-left deepest), and the line stays
+            //   clearly subordinate to the hero.
             SlotDef {
                 role: SlotRole::Support,
                 x_frac: 0.80,
@@ -306,8 +312,8 @@ impl Composition {
                 em_scale: 0.30,
                 target_w_frac: 0.0,
                 max_chars: 5,
-                alpha: 0.66,
-                shadow_mix: 0.30,
+                alpha: 0.72,
+                shadow_mix: 0.26,
                 drift_x: 3.0,
                 drift_y: 2.0,
                 drift_fx: 0.15,
@@ -330,6 +336,14 @@ impl Composition {
             //   read as one calligraphic inscription.
             //   Stagger 0.50s so it fades in last, the final stroke of
             //   the inscription.
+            //   shadow_mix 0.55 → 0.42, alpha 0.50 → 0.58: lift the
+            //   lower-left out of invisibility so 《只在此山中》 actually
+            //   registers as text — the line was dissolving so far into
+            //   the mist it no longer read at all. The far-faint reading
+            //   still holds (it stays the dimmest of the four lines and
+            //   still leans furthest into shadow), but the viewer now
+            //   sees a full quatrain on the page rather than two lines
+            //   and two absences.
             SlotDef {
                 role: SlotRole::Support,
                 x_frac: 0.18,
@@ -338,8 +352,8 @@ impl Composition {
                 em_scale: 0.30,
                 target_w_frac: 0.0,
                 max_chars: 5,
-                alpha: 0.50,
-                shadow_mix: 0.55,
+                alpha: 0.58,
+                shadow_mix: 0.42,
                 drift_x: 3.0,
                 drift_y: 2.0,
                 drift_fx: 0.13,
