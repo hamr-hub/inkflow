@@ -1,18 +1,16 @@
 [package]
 name = "inkflow"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
-description = "Self-iterating generative ambience: local LLM text-stream + particles, shaped by touch."
+description = "Self-iterating generative ambience: local LLM text-stream + particles, shaped by touch. Zero-dep std-only build: DRM/KMS dumb-buffer + evdev raw ioctl + hand-written ollama HTTP/1.1 + embedded CJK bitmap font."
 
+# Hard contract: zero third-party crates. All ioctl / syscalls / net / JSON /
+# font extraction done by hand. See src/sys.rs for the extern "C" syscall
+# surface that replaces libc.
 [dependencies]
-macroquad = "0.4"
-evdev = "0.12"
-ureq = { version = "2.12", features = ["json"] }
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-anyhow = "1"
 
 [profile.release]
 opt-level = 3
 lto = "thin"
 codegen-units = 1
+strip = "symbols"
