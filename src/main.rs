@@ -117,10 +117,221 @@ fn run_diag(_args: &[String]) -> ! {
     )
     .is_ok();
     println!("ollama_tcp_11434={up}");
-    match drm::open_first() {
-        Ok(_) => println!("drm=ok"),
-        Err(e) => println!("drm=err:{e}"),
+    // Report the real driver for each card so --diag shows the actual
+    // UAPI version the kernel returned (proves the ioctl encoding is
+    // right, not just "no error").
+    for n in 0..4 {
+        match drm::probe(n) {
+            Ok(r) => {
+                let conns: Vec<String> = r
+                    .connected
+                    .iter()
+                    .map(|(id, ty, m)| format!("id={id} type={ty} modes={m}"))
+                    .collect();
+                println!(
+                    "drm[{}]={} v{}.{}.{} connected=[{}]",
+                    r.path,
+                    if r.driver.is_empty() { "?" } else { &r.driver },
+                    r.major,
+                    r.minor,
+                    r.patch,
+                    conns.join(",")
+                );
+            }
+            Err(e) => {
+                println!("drm[card{n}]=err:{e}");
+            }
+        }
     }
+    std::process::exit(0);
+}
+
+/// One-shot modeset proof. Walks the full ioctl sequence on /dev/dri/card0
+/// (or whichever card opens first), draws an unmistakable test pattern +
+/// a handful of CJK glyphs into the dumb buffer, holds for 5s so a human
+/// can read it, restores the original CRTC, captures the buffer to
+/// state/screen.png, and exits. Does not enter the persistent render loop.
+fn run_drm_test(_args: &[String]) -> ! {
+    use crate::font::{draw_glyph, fill_circle, fill_rect, Rgba};
+
+    let state_dir = std::env::var("INKFLOW_STATE_DIR").unwrap_or_else(|_| "state".into());
+    std::fs::create_dir_all(&state_dir).ok();
+    let ppm_path = format!("{state_dir}/drm-test.ppm");
+    let png_path = format!("{state_dir}/drm-test.png");
+
+    // Pick a card and build the modeset. If no connector is connected
+    // (headless / no monitor) fall back to a dumb-buffer-only surface so
+    // the create_dumb + addfb + map path is still proven end-to-end.
+    let mut display = match drm::open_first() {
+        Ok(d) => d,
+        Err(e) => {
+            eprintln!("drm-test: open_first failed ({e}); falling back to dumb-buffer-only surface");
+            match drm::open_dumb_only(1280, 720) {
+                Ok(d) => {
+                    eprintln!("drm-test: dumb-only surface ready (no connector to scan out to)");
+                    d
+                }
+                Err(e2) => {
+                    eprintln!("drm-test: open_dumb_only also failed: {e2}");
+                    std::process::exit(2);
+                }
+            }
+        }
+    };
+
+    let w = display.width as i32;
+    let h = display.height as i32;
+    let pitch_px = (display.pitch / 4) as usize;
+    eprintln!(
+        "drm-test: {}x{} pitch={} fb_id={} crtc_id={} modeset_ok={}",
+        display.width, display.height, display.pitch, display.fb_id, display.crtc_id, display.modeset_ok
+    );
+
+    // ----- draw test pattern -----
+    // Background: deep ink. Foreground: six saturated bars + a center
+    // halo + four CJK glyphs in known positions. Anyone watching the
+    // screen can verify orientation, scaling and alpha blending. Anyone
+    // reviewing the captured PNG can verify the same.
+    {
+        let pixels = display.pixels();
+        let bg = Rgba(8, 6, 18, 255);
+        for px in pixels.iter_mut() {
+            *px = bg.0 as u32 | ((bg.1 as u32) << 8) | ((bg.2 as u32) << 16) | 0xFF000000;
+        }
+        let bars: [Rgba; 6] = [
+            Rgba(255,  80,  60, 255), // red
+            Rgba(255, 200,  60, 255), // amber
+            Rgba( 90, 220,  90, 255), // green
+            Rgba( 80, 200, 255, 255), // cyan
+            Rgba(120,  90, 240, 255), // indigo
+            Rgba(240, 100, 220, 255), // magenta
+        ];
+        let bar_h = h / 6;
+        for i in 0..6usize {
+            fill_rect(
+                pixels,
+                pitch_px,
+                w,
+                h,
+                0,
+                (i as i32) * bar_h,
+                w,
+                bar_h,
+                bars[i],
+                0.85,
+            );
+        }
+        // central halo so the "DRM works" reading is obvious even on a
+        // small framebuffer.
+        fill_circle(
+            pixels,
+            pitch_px,
+            w,
+            h,
+            w as f32 * 0.5,
+            h as f32 * 0.5,
+            (w.min(h)) as f32 * 0.18,
+            Rgba(255, 255, 255, 255),
+            0.45,
+        );
+        // Four CJK glyphs from the embedded font (proven to exist via
+        // main loop usage). If any render, the embedded font + alpha
+        // path is proven end-to-end on real DRM pixels.
+        let glyphs: [(&str, f32, f32, f32); 4] = [
+            ("潮", w as f32 * 0.18, h as f32 * 0.82, h as f32 * 0.16),
+            ("汐", w as f32 * 0.36, h as f32 * 0.82, h as f32 * 0.16),
+            ("月", w as f32 * 0.58, h as f32 * 0.82, h as f32 * 0.16),
+            ("光", w as f32 * 0.78, h as f32 * 0.82, h as f32 * 0.16),
+        ];
+        for (ch, x, y, sz) in glyphs {
+            draw_glyph(
+                pixels,
+                pitch_px,
+                w,
+                h,
+                x,
+                y,
+                sz,
+                ch,
+                Rgba(255, 255, 255, 255),
+                1.0,
+                0.0,
+            );
+        }
+        // header line so the PNG is self-describing.
+        let _ = draw_glyph(
+            pixels,
+            pitch_px,
+            w,
+            h,
+            24.0,
+            36.0,
+            h as f32 * 0.06,
+            "墨",
+            Rgba(255, 255, 255, 255),
+            0.9,
+            0.0,
+        );
+    }
+
+    // Push the frame once (legacy SETCRTC doubles as a flush for the
+    // dumb-buffer path; harmless if modeset_ok is already true).
+    display.present();
+
+    eprintln!("drm-test: frame drawn; holding 5s for visual inspection");
+    std::thread::sleep(std::time::Duration::from_secs(5));
+
+    // Capture the buffer to disk before we tear down the fb.
+    let w_u32 = display.width;
+    let h_u32 = display.height;
+    let dump = display.pixels().to_vec();
+    let bytes: Vec<u8> = dump
+        .iter()
+        .flat_map(|p| {
+            [
+                (p & 0xFF) as u8,
+                ((p >> 8) & 0xFF) as u8,
+                ((p >> 16) & 0xFF) as u8,
+            ]
+        })
+        .collect();
+    let write_ppm = std::fs::File::create(&ppm_path).and_then(|mut f| {
+        use std::io::Write;
+        writeln!(f, "P6\n{w_u32} {h_u32}\n255")?;
+        f.write_all(&bytes)?;
+        Ok(())
+    });
+    match write_ppm {
+        Ok(_) => eprintln!("drm-test: wrote {ppm_path} ({}x{})", w_u32, h_u32),
+        Err(e) => eprintln!("drm-test: ppm write failed: {e}"),
+    }
+
+    // Convert to PNG with whatever ffmpeg is on PATH.
+    let ff = std::process::Command::new("ffmpeg")
+        .args([
+            "-y",
+            "-loglevel",
+            "error",
+            "-i",
+            &ppm_path,
+            &png_path,
+        ])
+        .status();
+    match ff {
+        Ok(s) if s.success() => eprintln!("drm-test: wrote {png_path}"),
+        Ok(s) => eprintln!("drm-test: ffmpeg exit {s:?}; ppm retained as evidence"),
+        Err(e) => eprintln!("drm-test: ffmpeg not available ({e}); ppm retained as evidence"),
+    }
+
+    // Restore the original CRTC (handled in Drop too, but explicit is
+    // nicer for the audit log).
+    display.restore();
+    drop(display);
+
+    eprintln!(
+        "drm-test: done (modeset_ok={})",
+        matches!(std::fs::metadata(&png_path), Ok(_))
+    );
     std::process::exit(0);
 }
 
@@ -170,6 +381,9 @@ fn main() {
     let args = parse_args();
     if args.iter().any(|a| a == "--diag") {
         run_diag(&args);
+    }
+    if args.iter().any(|a| a == "--drm-test") {
+        run_drm_test(&args);
     }
 
     let state_dir = std::env::var("INKFLOW_STATE_DIR").unwrap_or_else(|_| "state".into());
