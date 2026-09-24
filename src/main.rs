@@ -735,10 +735,18 @@ fn main() {
         }
         if last_shot.elapsed().as_secs() >= 60 {
             last_shot = Instant::now();
+            // Snapshot pixels into an owned Vec on the render thread
+            // (one synchronous 4 MB copy per minute — bounded), then hand
+            // everything else to the worker: PPM write + ffmpeg PPM→PNG.
+            // ffmpeg previously ran synchronously here via .status(),
+            // which blocked the render loop for 100-500 ms every 60 s
+            // and violated the "single-frame cost < 2 ms" production
+            // contract.
             let bytes: Vec<u32> = display.pixels().to_vec();
             let w = fb_w;
             let h = fb_h;
             let path = format!("{state_dir}/screen.ppm");
+            let shot = shot_path.clone();
             std::thread::spawn(move || {
                 if let Ok(mut f) = std::fs::File::create(&path) {
                     use std::io::Write;
@@ -751,17 +759,11 @@ fn main() {
                     }
                     let _ = f.write_all(&buf);
                 }
+                // PNG encode happens here, off the render thread.
+                let _ = std::process::Command::new("ffmpeg")
+                    .args(["-y", "-loglevel", "error", "-i", &path, &shot])
+                    .status();
             });
-            let _ = std::process::Command::new("ffmpeg")
-                .args([
-                    "-y",
-                    "-loglevel",
-                    "error",
-                    "-i",
-                    &format!("{state_dir}/screen.ppm"),
-                    &shot_path,
-                ])
-                .status();
         }
 
         let frame_target = std::time::Duration::from_micros(16_667);
