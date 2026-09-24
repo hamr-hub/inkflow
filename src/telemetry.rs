@@ -21,6 +21,16 @@ pub struct Telemetry<'a> {
     pub llm_last: &'a str,
     pub glyphs: usize,
     pub particles: usize,
+    // Per-window (10 s) frame cadence envelope in microseconds:
+    // frame_min_us — fastest interval between consecutive frame starts
+    //                 (smallest wall-clock gap the loop achieved)
+    // frame_max_us — slowest interval between consecutive frame starts
+    //                 (largest wall-clock gap; large = a frame missed
+    //                 its budget and the loop had to skip-ahead).
+    // frame_min_us = u32::MAX means "no frames in window" (u32 sentinels
+    // never appear because the loop body resets to 0 every tick).
+    pub frame_min_us: u32,
+    pub frame_max_us: u32,
 }
 
 // Telemetry JSONL is appended every 10 s (≈ 8.6 K lines/day, ≈ 1.8 MB/day on
@@ -81,7 +91,17 @@ fn encode(t: &Telemetry<'_>) -> String {
     s.push(',');
     push_kv_num(&mut s, "glyphs", t.glyphs as f64, false);
     s.push(',');
-    push_kv_num(&mut s, "particles", t.particles as f64, true);
+    push_kv_num(&mut s, "particles", t.particles as f64, false);
+    s.push(',');
+    // u32::MAX sentinel means "no frames completed in window" — emit as
+    // null so consumers don't accidentally average an impossible value.
+    if t.frame_min_us == u32::MAX {
+        s.push_str("\"frame_min_us\":null");
+    } else {
+        push_kv_num(&mut s, "frame_min_us", t.frame_min_us as f64, false);
+    }
+    s.push(',');
+    push_kv_num(&mut s, "frame_max_us", t.frame_max_us as f64, true);
     s.push('}');
     s
 }

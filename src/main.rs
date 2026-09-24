@@ -426,16 +426,36 @@ fn main() {
     let mut fps_acc = 0.0f32;
     let mut fps_n = 0u32;
     let start = Instant::now();
+    // Aligned cadence: we sleep until an absolute monotonic deadline
+    // (start + N * frame_target), not relative to "now at the bottom of
+    // the loop". Without this, sleep jitter accumulates and the loop
+    // drifts a few hundred µs per frame, capping fps at ~58 instead of
+    // 60. If a frame blows its budget we skip-ahead (no catch-up burst)
+    // so the deadline stays monotonic.
+    let frame_target = std::time::Duration::from_micros(16_667);
     let mut prev_frame = start;
+    let mut next_frame = start + frame_target;
+    let mut frame_min_us: u32 = u32::MAX;
+    let mut frame_max_us: u32 = 0;
 
     let mut sources: Vec<(f32, f32)> = Vec::with_capacity(8);
     let mut dev_buf: String;
     let model_buf = model.clone();
 
     loop {
-        let now = Instant::now();
-        let dt = (now - prev_frame).as_secs_f32().clamp(0.001, 0.05);
-        prev_frame = now;
+        let frame_start = Instant::now();
+        // raw cadence from previous frame start (µs, unclamped) — feeds
+        // min/max tracking so we can see the actual jitter envelope
+        // rather than the [1ms, 50ms] clamp that dt uses for motion.
+        let raw_dt_us = frame_start.duration_since(prev_frame).as_micros() as u32;
+        let dt = (raw_dt_us as f32 / 1_000_000.0).clamp(0.001, 0.05);
+        prev_frame = frame_start;
+        if raw_dt_us < frame_min_us {
+            frame_min_us = raw_dt_us;
+        }
+        if raw_dt_us > frame_max_us {
+            frame_max_us = raw_dt_us;
+        }
         let t = start.elapsed().as_secs_f32();
         tick = tick.wrapping_add(1);
 
@@ -705,6 +725,18 @@ fn main() {
             };
             fps_acc = 0.0;
             fps_n = 0;
+            // Snapshot the cadence envelope for this window and reset
+            // so the next 10 s sees only fresh samples. u32::MAX sentinel
+            // is preserved if no frames completed (impossible — we just
+            // counted one — but defended against future refactors).
+            let window_min_us = if frame_min_us == u32::MAX {
+                0
+            } else {
+                frame_min_us
+            };
+            let window_max_us = frame_max_us;
+            frame_min_us = u32::MAX;
+            frame_max_us = 0;
             dev_buf = dev;
             // model is already a String above; use it directly to keep telemetry caller simple.
             let _ = model_buf;
@@ -730,6 +762,8 @@ fn main() {
                     llm_last: &sh.llm_last,
                     glyphs: scene.glyphs.len(),
                     particles: scene.particles.len(),
+                    frame_min_us: window_min_us,
+                    frame_max_us: window_max_us,
                 },
             );
         }
@@ -766,10 +800,16 @@ fn main() {
             });
         }
 
-        let frame_target = std::time::Duration::from_micros(16_667);
-        let elapsed = now.elapsed();
-        if elapsed < frame_target {
-            std::thread::sleep(frame_target - elapsed);
+        // Aligned cadence: sleep until the absolute deadline `next_frame`,
+        // then advance it by exactly one frame. If work blew past the
+        // budget, skip-ahead instead of catch-up — the deadline stays
+        // monotonic and never silently slips behind wall-clock.
+        let work_done = Instant::now();
+        if work_done < next_frame {
+            std::thread::sleep(next_frame - work_done);
+            next_frame += frame_target;
+        } else {
+            next_frame = work_done + frame_target;
         }
     }
 }
