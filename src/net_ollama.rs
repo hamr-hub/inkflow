@@ -162,6 +162,20 @@ fn style_for(warmth: f32, energy: f32) -> &'static str {
     }
 }
 
+/// The piece's voice — sent as the independent "system" field of the
+/// ollama request. Per ARTIFACT.md "LLM is the work's personality, not a
+/// feature": the system prompt establishes who is speaking, separately
+/// from the per-tick user prompt that carries the curatorial style and
+/// the mood vector. ollama ≥ 0.1.20 honours the system field.
+const SYSTEM_PROMPT: &str = "\
+你是墨流（inkflow）的中文声部——一件永不熄灭的中文氛围工艺品的语言部分。\
+你产出的每一段文字会被切成单字或两字，逐一飘上画面。\
+你必须遵守的规则：\
+1. 只用中文；不出现英文、数字、标点堆砌。\
+2. 词汇优先来自宋词、水墨意象、禅偈、童谣、楚辞、月令七十二候；避免现代口语、网络词。\
+3. 每次输出的字都能作为「单字画面」独立成立；不依赖上下文解释。\
+4. 你是人格，不是工具；你不解释自己。";
+
 fn build_prompt(warmth: f32, energy: f32) -> String {
     let mood = if energy > 0.6 {
         if warmth > 0.55 {
@@ -188,9 +202,14 @@ fn build_prompt(warmth: f32, energy: f32) -> String {
 
 fn build_body(model: &str, prompt: &str) -> Vec<u8> {
     // Hand-roll a minimal JSON body so we don't pull serde.
-    let mut body = String::with_capacity(512);
+    // ollama /api/generate accepts an independent "system" field
+    // (≥ 0.1.20) which carries the work's voice separately from the
+    // per-tick user prompt. See SYSTEM_PROMPT above.
+    let mut body = String::with_capacity(1024);
     body.push_str("{\"model\":\"");
     body.push_str(&escape_json(model));
+    body.push_str("\",\"system\":\"");
+    body.push_str(&escape_json(SYSTEM_PROMPT));
     body.push_str("\",\"prompt\":\"");
     body.push_str(&escape_json(prompt));
     body.push_str(
@@ -519,6 +538,26 @@ mod tests {
         assert!(s.contains("\"model\":\"gemma3:1b\""));
         assert!(s.contains("\"prompt\":\"test\""));
         assert!(s.contains("\"stream\":true"));
+    }
+
+    #[test]
+    fn build_body_carries_system_prompt_as_independent_field() {
+        // The system field must exist as a top-level JSON field, NOT
+        // be inlined into the prompt. ollama ≥ 0.1.20 honours it.
+        let b = build_body("gemma3:1b", "anything");
+        let s = String::from_utf8(b).unwrap();
+        // Locate the system field and confirm it contains the voice.
+        assert!(s.contains("\"system\":\""), "missing system field: {s}");
+        // The system prompt must mention the work by name; this is
+        // what the LLM sees as its identity.
+        assert!(
+            s.contains("墨流"),
+            "system field missing 墨流 identity: {s}"
+        );
+        assert!(
+            s.contains("inkflow"),
+            "system field missing inkflow identity: {s}"
+        );
     }
 
     #[test]
