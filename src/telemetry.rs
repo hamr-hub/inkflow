@@ -67,40 +67,34 @@ pub fn append(path: &str, t: &Telemetry<'_>) {
 }
 
 fn encode(t: &Telemetry<'_>) -> String {
+    // Each push_kv_* helper appends a trailing comma when `last=false`,
+    // so the field separator is owned by the helper — no manual commas
+    // between calls. The earlier code did both, which produced `,,`
+    // between every field and made the JSONL unparseable by any strict
+    // JSON consumer (jq, Python json.loads, …).
     let mut s = String::with_capacity(512);
     s.push('{');
     push_kv_num(&mut s, "ts", t.ts as f64, false);
-    s.push(',');
     push_kv_num(&mut s, "fps", t.fps as f64, false);
-    s.push(',');
     push_kv_num(&mut s, "warmth", t.warmth as f64, false);
-    s.push(',');
     push_kv_num(&mut s, "energy", t.energy as f64, false);
-    s.push(',');
     push_kv_num(&mut s, "contacts", t.contacts as f64, false);
-    s.push(',');
     push_kv_str(&mut s, "touch_device", t.touch_device, false);
-    s.push(',');
     push_kv_bool(&mut s, "llm_ok", t.llm_ok, false);
-    s.push(',');
     push_kv_num(&mut s, "llm_toks_per_s", t.llm_toks_per_s as f64, false);
-    s.push(',');
     push_kv_str(&mut s, "llm_model", t.llm_model, false);
-    s.push(',');
     push_kv_str(&mut s, "llm_last", t.llm_last, false);
-    s.push(',');
     push_kv_num(&mut s, "glyphs", t.glyphs as f64, false);
-    s.push(',');
     push_kv_num(&mut s, "particles", t.particles as f64, false);
-    s.push(',');
     // u32::MAX sentinel means "no frames completed in window" — emit as
     // null so consumers don't accidentally average an impossible value.
+    // The null literal carries its own trailing comma so the next field
+    // (frame_max_us) is separated consistently with the helper path.
     if t.frame_min_us == u32::MAX {
-        s.push_str("\"frame_min_us\":null");
+        s.push_str("\"frame_min_us\":null,");
     } else {
         push_kv_num(&mut s, "frame_min_us", t.frame_min_us as f64, false);
     }
-    s.push(',');
     push_kv_num(&mut s, "frame_max_us", t.frame_max_us as f64, true);
     s.push('}');
     s
