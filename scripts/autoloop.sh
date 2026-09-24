@@ -33,28 +33,33 @@ You are the unattended maintainer of "inkflow" (Rust + macroquad + evdev + ollam
 a self-iterating generative art object: fullscreen ambient Chinese text stream +
 particles on a Jetson Orin Nano, shaped by touch input. It must NEVER go dark.
 
-Do ONE bounded improvement/maintenance turn, autonomously:
+Do ONE bounded improvement/maintenance turn, autonomously.
 
-1. Read state/tel_tail.txt (fps, warmth/energy, touch device, llm_ok, tok/s,
-   glyph/particle counts) and state/screen.png (current screen).
-2. Pick exactly ONE small, high-value change, e.g.:
-   - visual/typography polish (layout, fade, hue, motion, glyph sizing)
-   - touch→mood mapping (position/energy/contacts → prompt, colour, speed)
-   - LLM prompt engineering; resilience when ollama is slow/down
-   - performance/memory (Jetson 8GB, keep app RSS under ~1GB, avoid OOM)
-   - fix anything visibly broken in the screenshot
-   Constraints: keep the calm ambience aesthetic; no menus, no HUD, no debug text;
-   output is Chinese-first; local fallback generator must always keep streaming.
-3. Edit src/ and/or scripts/. Then run, ALL must pass:
+PRIMARY MISSION NOW: make this PRODUCTION-GRADE. Read PRODUCTION.md and work down
+its checklist, highest-impact unverified item first. Priority order:
+  1. stability/memory (RSS limits, object pools vs per-frame alloc, no leaks)
+  2. real frame-rate/frame-time correctness and CPU ceiling
+  3. true fullscreen + resolution adapt + unattended boot-to-piece
+  4. LLM resilience + real measured tok/s + graceful fallback/backoff
+  5. touch hotplug, log rotation, disk caps
+After each change, capture REAL EVIDENCE in your commit message and (if useful)
+append to PRODUCTION.md checkboxes using measured numbers from telemetry/journal.
+
+Default selection rules when reading state/tel_tail.txt and state/screen.png:
+pick exactly ONE small, high-value step per turn. Keep the calm ambience; no menus,
+no HUD, no debug text; Chinese-first; the local fallback generator must always stream.
+
+Hard rules for every turn:
+- Edit src/ and/or scripts/, then ALL must pass:
      cargo fmt
      cargo clippy --release -- -D warnings
      cargo build --release
-4. If build passes: systemctl --user restart inkflow.service
-   then commit: git add -A && git commit -m "auto: <one-line change>"
-   (pre-commit hook enforces fmt+build). Do NOT push.
-5. If anything fails: revert your edits (`git checkout -- .`), leave the running
-   service untouched, and append what failed to state/autoloop.log.
-Stay minimal. Do not edit systemd units, CI, or this governance loop.
+- If build passes: systemctl --user restart inkflow.service
+  then commit: git add -A && git commit -m "auto: <one-line change w/ measured evidence>"
+  (pre-commit hook enforces fmt+build). Do NOT push.
+- If anything fails: revert your edits (`git checkout -- .`), leave the running
+  service untouched, and append what failed to state/autoloop.log.
+Stay minimal. Do not edit systemd units, CI, PRODUCTION.md's mission, or this loop.
 EOF
 
 timeout 780 claude --dangerously-skip-permissions --print \
