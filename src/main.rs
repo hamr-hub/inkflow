@@ -397,8 +397,21 @@ fn main() {
             Surface::Real(d)
         }
         Err(e) => {
-            log!("display: headless fallback (no DRM): {e}");
-            Surface::Headless(Headless::new(1280, 800))
+            log!("display: DRM open_first failed ({e}); trying /dev/fb0");
+            match drm::open_fb0() {
+                Ok(d) => {
+                    log!(
+                        "display: /dev/fb0 legacy framebuffer ({}x{})",
+                        d.width,
+                        d.height
+                    );
+                    Surface::Real(d)
+                }
+                Err(e2) => {
+                    log!("display: /dev/fb0 unavailable ({e2}); headless fallback");
+                    Surface::Headless(Headless::new(1280, 800))
+                }
+            }
         }
     };
     let fb_w = display.w();

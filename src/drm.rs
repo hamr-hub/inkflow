@@ -301,6 +301,7 @@ fn build_dumb_only(card_fd: c_int, w: u32, h: u32) -> Result<Display, String> {
         map_size,
         modeset_ok: false,
         saved_crtc: None,
+        via_fb0: false,
     })
 }
 
@@ -326,6 +327,9 @@ pub struct Display {
     pub modeset_ok: bool,
     /// Saved CRTC state to restore on Drop / --drm-test teardown.
     pub saved_crtc: Option<DrmModeCrtc>,
+    /// True for /dev/fb0 surfaces. Suppresses SETCRTC in `present()` and
+    /// any ioctl that doesn't apply to a legacy fb device.
+    pub via_fb0: bool,
 }
 
 impl Display {
@@ -349,6 +353,12 @@ impl Display {
     }
 
     pub fn present(&self) {
+        // /dev/fb0 surfaces are scanned out by the driver automatically —
+        // writes to the mmap'd buffer appear on the next vsync without an
+        // extra ioctl, so skip SETCRTC entirely.
+        if self.via_fb0 {
+            return;
+        }
         // legacy SET_CRTC to push the next frame. For a single fixed mode
         // this is plenty fast; can swap to atomic/page-flip later if
         // tearing shows up.
@@ -789,6 +799,7 @@ fn build_display(card_fd: c_int, path: &str) -> Result<Display, String> {
         map_size,
         modeset_ok,
         saved_crtc: Some(saved_crtc),
+        via_fb0: false,
     })
 }
 
@@ -862,6 +873,138 @@ const _: () = {
         "drm_mode_destroy_dumb must be 4B"
     );
 };
+
+// ---------- /dev/fb0 legacy framebuffer fallback ----------
+//
+// When the kernel has a working KMS driver (tegra, i915, amdgpu, nouveau)
+// we go through DRM and produce a real scan-out frame. When it doesn't —
+// typically on Jetson with the proprietary nvidia-drm driver, which sets
+// the mode itself but refuses CREATE_DUMB — the driver still exposes its
+// own framebuffer at `/dev/fb0`. Drawing into that surface makes the piece
+// visible end-to-end without touching the kernel driver stack or breaking
+// the zero-dep contract (we only add three ioctls to sys.rs… well, zero:
+// these are the standard Linux FBIOGET_* ioctls, encoded as raw u64s).
+
+pub const FBIOGET_VSCREENINFO: u64 = 0x4600;
+pub const FBIOGET_FSCREENINFO: u64 = 0x4602;
+
+#[repr(C)]
+#[derive(Copy, Clone, Default)]
+pub struct FbBitfield {
+    pub offset: u32,
+    pub length: u32,
+    pub msb_right: u32,
+}
+
+#[repr(C)]
+pub struct FbVarScreeninfo {
+    pub xres: u32,
+    pub yres: u32,
+    pub xres_virtual: u32,
+    pub yres_virtual: u32,
+    pub xoffset: u32,
+    pub yoffset: u32,
+    pub bits_per_pixel: u32,
+    pub grayscale: u32,
+    pub red: FbBitfield,
+    pub green: FbBitfield,
+    pub blue: FbBitfield,
+    pub transp: FbBitfield,
+    pub nonstd: u32,
+    pub activate: u32,
+    pub height: u32,
+    pub width: u32,
+    pub accel_flags: u32,
+    pub pixclock: u32,
+    pub left_margin: u32,
+    pub right_margin: u32,
+    pub upper_margin: u32,
+    pub lower_margin: u32,
+    pub hsync_len: u32,
+    pub vsync_len: u32,
+    pub sync: u32,
+    pub vmode: u32,
+    pub rotate: u32,
+    pub colorspace: u32,
+    pub reserved: [u32; 4],
+}
+
+#[repr(C)]
+pub struct FbFixScreeninfo {
+    pub id: [c_char; 16],
+    pub smem_start: usize, // unsigned long on aarch64 = u64
+    pub smem_len: u32,
+    pub type_: u32,
+    pub type_aux: u32,
+    pub visual: u32,
+    pub xpanstep: u16,
+    pub ypanstep: u16,
+    pub ywrapstep: u16,
+    pub line_length: u32,
+    pub mmio_start: usize,
+    pub mmio_len: u32,
+    pub accel: u32,
+    pub reserved: [u16; 3],
+}
+
+/// Try to claim `/dev/fb0` as a scan-out surface. Works on every Linux
+/// machine that has a usable `/dev/fb0` device node (legacy framebuffer
+/// interface). Returns a Display whose `pixels()` slice IS the visible
+/// scan-out — writes appear on the next vsync without any extra ioctl.
+pub fn open_fb0() -> Result<Display, String> {
+    let fd = sys::open_rw("/dev/fb0").map_err(|e| format!("open /dev/fb0: errno={e}"))?;
+    let mut var: FbVarScreeninfo = unsafe { core::mem::zeroed() };
+    if let Err(e) = sys::ioctl_struct(fd, FBIOGET_VSCREENINFO, &mut var) {
+        sys::close_fd(fd);
+        return Err(format!("FBIOGET_VSCREENINFO: errno={e}"));
+    }
+    let mut fix: FbFixScreeninfo = unsafe { core::mem::zeroed() };
+    if let Err(e) = sys::ioctl_struct(fd, FBIOGET_FSCREENINFO, &mut fix) {
+        sys::close_fd(fd);
+        return Err(format!("FBIOGET_FSCREENINFO: errno={e}"));
+    }
+    if var.bits_per_pixel != 32 || var.xres == 0 || var.yres == 0 {
+        sys::close_fd(fd);
+        return Err(format!(
+            "/dev/fb0: unsupported geometry ({}x{} @ {}bpp)",
+            var.xres, var.yres, var.bits_per_pixel
+        ));
+    }
+    let map_size = fix.smem_len as usize;
+    if map_size == 0 {
+        sys::close_fd(fd);
+        return Err("/dev/fb0: smem_len=0".into());
+    }
+    let ptr = sys::map_shared(fd, map_size, 0).map_err(|e| {
+        sys::close_fd(fd);
+        format!("mmap /dev/fb0: errno={e}")
+    })?;
+    log!(
+        "fb0: {}x{} bpp={} stride={} smem={}B",
+        var.xres,
+        var.yres,
+        var.bits_per_pixel,
+        fix.line_length,
+        map_size
+    );
+    Ok(Display {
+        card_fd: fd,
+        crtc_id: 0,
+        conn_id: 0,
+        fb_id: 0,
+        dumb_handle: 0,
+        pitch: fix.line_length,
+        width: var.xres,
+        height: var.yres,
+        bpp: 32,
+        stride: (fix.line_length / 4) as usize,
+        map_ptr: ptr as *mut u32,
+        map_size,
+        modeset_ok: true, // /dev/fb0 IS the scan-out; the driver owns modeset
+        saved_crtc: None,
+        via_fb0: true,
+    })
+}
 
 // ---------- headless fallback ----------
 //
