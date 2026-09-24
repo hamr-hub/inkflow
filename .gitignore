@@ -1,3 +1,8 @@
 target/
 state/
 ._target
+Cargo.lock
+**/*.rs.bk
+**/*.rs.bak
+.DS_Store
+._.DS_Store

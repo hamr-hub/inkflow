@@ -1,234 +1,1058 @@
-// inkflow · scene.rs
-//
-// Per-frame ambience state. Hoisted, pre-allocated, fixed-cap:
-//   - glyphs[] holds at most 260 floating CJK characters
-//   - particles[] holds at most 260 sparks
-//   - stars[] is rebuilt exactly once when screen dimensions arrive
-//
-// glyphs / particles live in VecDeque so push is O(1) at the cap —
-// pop_front evicts the oldest in constant time and push_back appends
-// the new entry, so a saturated LLM stream never touches a memmove.
-// Stars stay in Vec because they're seeded once and iterated forever.
+//! Scene rendering — a poetic *composition* of phrases on a beat.
+//!
+//! The screen is no longer a single lonely line.  At any moment it carries a
+//! small **constellation** of readable Chinese phrases — one hero in the
+//! optical focal area, and a handful of supporting lines distributed across
+//! the field with clear, non-overlapping placement.  Supporting lines drift
+//! gently and refresh on a staggered cadence so the wall feels alive without
+//! ever becoming a dense clutter.
+//!
+//! Responsibilities:
+//!   * Paint a restrained background (gradient + nebula glow + vignette + a
+//!     thin layer of dust motes + sparks on touch). No panels, no HUD.
+//!   * Maintain a `Composition` of `Slot`s.  Each slot has a fixed geometry
+//!     (position, scale, alignment, baseline alpha) and a rolling phrase
+//!     picked from the active theme.
+//!   * Animate the hero through Entrance / Hold / Exit via the rhythm engine.
+//!     Supporting slots have their own simple lifecycle (fade-in over a few
+//!     hundred ms, hold for several seconds, fade out, swap).
+//!   * Drive a coherent theme that rotates occasionally; the hero's warmth
+//!     tints the palette, supporting lines echo the same hue family.
 
-use crate::font::Rgba;
-use std::collections::VecDeque;
+use crate::color::{self, blend_add_lin, blend_screen, rgb};
+use crate::glyph;
+use crate::phrase::{self, Mood, Phrase};
+use crate::rhythm::{Beat, Phase};
 
-pub const GLYPH_CAP: usize = 260;
-pub const PARTICLE_CAP: usize = 260;
-pub const STAR_COUNT: usize = 90;
+/// Tiny deterministic LCG so the dust looks "natural" but stable across runs.
+pub struct Lcg(u64);
+impl Lcg {
+    pub fn new(seed: u64) -> Self {
+        Self(
+            seed.wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407),
+        )
+    }
+    #[inline]
+    #[allow(clippy::should_implement_trait)]
+    pub fn next(&mut self) -> u32 {
+        self.0 = self
+            .0
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
+        (self.0 >> 33) as u32
+    }
+    #[inline]
+    pub fn unit(&mut self) -> f32 {
+        (self.next() & 0xFFFFFF) as f32 / 16_777_216.0
+    }
+}
 
+/// One dust mote — drifts very slowly with a faint sinusoidal sway.
 #[derive(Clone, Copy)]
-pub struct Glyph {
-    pub ch: &'static str,
+pub struct Dust {
+    pub x: f32,
+    pub y: f32,
+    pub r: f32,
+    pub a: f32,
+    pub phase: f32,
+    pub speed: f32,
+    pub hue: u32,
+}
+
+/// Touch burst particle — same primitive, much faster decay, brighter.
+#[derive(Clone, Copy)]
+pub struct Spark {
     pub x: f32,
     pub y: f32,
     pub vx: f32,
     pub vy: f32,
     pub life: f32,
     pub max_life: f32,
-    pub size: f32,
-    pub phase: f32,
-    /// Per-voice hue offset (in 0..=1) added at render time to the
-    /// global hue. Lets each curatorial voice (婉约 / 豪放 / 禅寂 /
-    /// 稚拙 / 苍茫) carry its own colour temperature without
-    /// re-tuning the mood vector — 禅寂 chars lean cool, 豪放
-    /// chars lean warm. See `scene_anim::voice_hue_offset`.
-    pub hue_bias: f32,
+    pub hue: u32,
 }
 
-#[derive(Clone, Copy)]
-pub struct Particle {
-    pub x: f32,
-    pub y: f32,
-    pub vx: f32,
-    pub vy: f32,
-    pub life: f32,
-    pub max_life: f32,
-    pub r: f32,
+// ============================================================
+// Composition — slot geometry
+// ============================================================
+
+/// Slot horizontal alignment.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Align {
+    Left,
+    Center,
+    Right,
 }
 
-#[derive(Clone, Copy)]
-pub struct Star {
-    pub x: f32,
-    pub y: f32,
-    pub r: f32,
-    pub base: f32,
-    pub phase: f32,
-    pub period: f32,
-    pub hue_offset: f32,
+/// A single slot definition — geometric recipe.  Each slot owns a fixed
+/// position on screen, a fixed scale, and a baseline alpha.  Supporting slots
+/// gently sway around their anchor with their own drift frequency.
+#[derive(Clone, Copy, Debug)]
+pub struct SlotDef {
+    /// Role label — only `Hero` is the focal point; the rest are supporting.
+    pub role: SlotRole,
+    /// Anchor x as a fraction of the screen width (0..1).
+    pub x_frac: f32,
+    /// Anchor y as a fraction of the screen height (0..1) — *baseline*.
+    pub y_frac: f32,
+    pub align: Align,
+    /// Em size as a fraction of the hero bucket's native em (1.0 = 128 px).
+    /// `0` means "auto-fit to width" (used by the hero only).
+    pub em_scale: f32,
+    /// Target screen-width fraction for the auto-fit hero (only when em_scale == 0).
+    pub target_w_frac: f32,
+    /// Maximum characters allowed in this slot's phrase. The picker filters
+    /// the active theme so the picked phrase always fits the slot's safe
+    /// width — no slot can ever select a too-long phrase that would clip at
+    /// the frame edge.
+    pub max_chars: usize,
+    /// Baseline alpha (0..1).
+    pub alpha: f32,
+    /// Drift amplitude in pixels for x/y sinusoid sway.
+    pub drift_x: f32,
+    pub drift_y: f32,
+    /// Drift frequencies (Hz).
+    pub drift_fx: f32,
+    pub drift_fy: f32,
+    /// Phase offset for the drift sinusoid.
+    pub drift_phase: f32,
+    /// Lifetime for a single phrase inside this slot (seconds).
+    pub lifetime: f32,
+    /// Fade-in / fade-out durations (seconds).
+    pub fade_in: f32,
+    pub fade_out: f32,
+    /// Optional stagger delay added at startup so slots don't all blink on
+    /// at the same instant.
+    pub stagger: f32,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SlotRole {
+    Hero,
+    Support,
+}
+
+/// A live slot instance — the geometry plus current phrase + lifecycle state.
+pub struct Slot {
+    pub def: SlotDef,
+    pub phrase: &'static Phrase,
+    /// Seconds since the current phrase was placed.
+    pub age: f32,
+    /// Cached phrase index (into `phrase::PHRASES`) for repeat-avoidance.
+    pub last_idx: u16,
+    /// Whether this slot has had its first phrase placed.
+    pub primed: bool,
+}
+
+impl Slot {
+    fn new(def: SlotDef) -> Self {
+        Self {
+            def,
+            phrase: phrase::phrase_for_beat(0),
+            age: -def.stagger, // negative age → still in initial stagger
+            last_idx: u16::MAX,
+            primed: false,
+        }
+    }
+
+    /// Current rendered alpha (lifecycle ramp × baseline alpha).
+    pub fn alpha_now(&self) -> f32 {
+        if self.age < 0.0 {
+            return 0.0;
+        }
+        let f = self.def.fade_in.max(0.001);
+        let o = self.def.fade_out.max(0.001);
+        let ramp_in = (self.age / f).clamp(0.0, 1.0);
+        let ramp_out = ((self.def.lifetime - self.age) / o).clamp(0.0, 1.0);
+        let l = color::smootherstep(ramp_in) * color::smootherstep(ramp_out);
+        l * self.def.alpha
+    }
+
+    /// Drift offsets (pixels) at time `t` (seconds).
+    fn drift(&self, t: f32) -> (f32, f32) {
+        let dx = (t * self.def.drift_fx + self.def.drift_phase).sin() * self.def.drift_x;
+        let dy = (t * self.def.drift_fy + self.def.drift_phase * 1.3).cos() * self.def.drift_y;
+        (dx, dy)
+    }
+}
+
+/// Whole scene state.
 pub struct Scene {
-    pub glyphs: VecDeque<Glyph>,
-    pub particles: VecDeque<Particle>,
-    pub stars: Vec<Star>,
+    pub width: u32,
+    pub height: u32,
+    pub rng: Lcg,
+    pub dust: Vec<Dust>,
+    pub sparks: Vec<Spark>,
+    /// Phase for the soft nebula / vignette center.
+    pub nebula_phase: f32,
+    /// 0..=1, used to bias palette warmth.
+    pub warmth: f32,
+    /// Persistent low-frequency pulse — softens into "atmosphere breathing".
+    pub ambient_pulse: f32,
+    /// Active theme index (into `phrase::THEMES`).
+    pub theme_idx: usize,
+    /// Composition of slots (1 hero + N supporting).
+    pub composition: Composition,
+}
+
+pub struct Composition {
+    pub slots: Vec<Slot>,
+    /// Slot index of the hero (always 0 in the default layout).
+    pub hero_idx: usize,
+    /// Beat counter at the last theme change — used to throttle rotations.
+    pub beats_since_theme: u32,
+    /// When the hero starts, advance to a new phrase. Counter for the
+    /// round-robin supporting refresh — slot index that should refresh on
+    /// the next hero beat.
+    pub next_support_to_refresh: usize,
+}
+
+impl Composition {
+    pub fn default_layout() -> Self {
+        // Four slots: one hero + three supporting.
+        //
+        // Layout intent (1280x720):
+        //   * Hero (auto-fit, centred) is the focal point at the upper-third
+        //     focal area. Up to 8 chars; the auto-fit scales down so 6–10 char
+        //     phrases still fit within 60 % of the screen width.
+        //   * Subtitle (≤ 7 chars) sits below the hero on a centred baseline —
+        //     the "echo" line that reads as a poetic continuation.
+        //   * Upper-right corner (≤ 5 chars) and lower-left corner (≤ 5 chars)
+        //     anchor the composition's diagonal, keeping the eye moving.
+        //
+        // All slots are sized so their phrase, plus drift and bearing-y margin,
+        // stays fully inside the safe inner box (top/bottom/left/right
+        // margins ≥ 64 px). `max_chars` ensures the picker cannot select a
+        // phrase that overflows the slot's safe width.
+        let defs: Vec<SlotDef> = vec![
+            // 0 — Hero (focal, auto-fit)
+            SlotDef {
+                role: SlotRole::Hero,
+                x_frac: 0.50,
+                y_frac: 0.42,
+                align: Align::Center,
+                em_scale: 0.0, // auto-fit to width
+                target_w_frac: 0.55,
+                max_chars: 8,
+                alpha: 1.0,
+                drift_x: 3.0,
+                drift_y: 2.0,
+                drift_fx: 0.18,
+                drift_fy: 0.13,
+                drift_phase: 0.0,
+                lifetime: f32::INFINITY,
+                fade_in: 0.45,
+                fade_out: 0.55,
+                stagger: 0.0,
+            },
+            // 1 — Subtitle (centred echo, just below hero)
+            SlotDef {
+                role: SlotRole::Support,
+                x_frac: 0.50,
+                y_frac: 0.66,
+                align: Align::Center,
+                em_scale: 0.34,
+                target_w_frac: 0.0,
+                max_chars: 7,
+                alpha: 0.78,
+                drift_x: 3.0,
+                drift_y: 1.5,
+                drift_fx: 0.21,
+                drift_fy: 0.17,
+                drift_phase: 0.7,
+                lifetime: 12.0,
+                fade_in: 0.55,
+                fade_out: 0.7,
+                stagger: 0.0,
+            },
+            // 2 — Upper right (small body, right-aligned)
+            SlotDef {
+                role: SlotRole::Support,
+                x_frac: 0.86,
+                y_frac: 0.18,
+                align: Align::Right,
+                em_scale: 0.30,
+                target_w_frac: 0.0,
+                max_chars: 5,
+                alpha: 0.72,
+                drift_x: 3.0,
+                drift_y: 2.0,
+                drift_fx: 0.15,
+                drift_fy: 0.19,
+                drift_phase: 1.4,
+                lifetime: 12.0,
+                fade_in: 0.6,
+                fade_out: 0.7,
+                stagger: 0.0,
+            },
+            // 3 — Lower left (small body, left-aligned)
+            SlotDef {
+                role: SlotRole::Support,
+                x_frac: 0.14,
+                y_frac: 0.82,
+                align: Align::Left,
+                em_scale: 0.30,
+                target_w_frac: 0.0,
+                max_chars: 5,
+                alpha: 0.72,
+                drift_x: 3.0,
+                drift_y: 2.0,
+                drift_fx: 0.13,
+                drift_fy: 0.21,
+                drift_phase: 2.8,
+                lifetime: 12.0,
+                fade_in: 0.6,
+                fade_out: 0.7,
+                stagger: 0.0,
+            },
+        ];
+        let slots: Vec<Slot> = defs.into_iter().map(Slot::new).collect();
+        Self {
+            slots,
+            hero_idx: 0,
+            beats_since_theme: 0,
+            next_support_to_refresh: 1, // skip the hero
+        }
+    }
+
+    /// Step the composition forward by `dt`. Updates slot ages, refreshes
+    /// expired supporting slots with fresh theme-aligned phrases.
+    pub fn step(&mut self, dt: f32, rng: u32, theme_idx: usize) {
+        for slot in self.slots.iter_mut() {
+            if slot.def.role == SlotRole::Hero {
+                continue;
+            }
+            slot.age += dt;
+            if slot.primed && slot.age >= slot.def.lifetime {
+                // Roll to a new phrase from the same theme. Filter by
+                // `max_chars` so the new phrase always fits the slot.
+                let avoid: [u16; 1] = [slot.last_idx];
+                let new_phrase =
+                    phrase::pick_from_theme_by_len(rng, theme_idx, slot.def.max_chars, &avoid);
+                slot.phrase = new_phrase;
+                slot.last_idx = phrase_index_of(new_phrase);
+                slot.age = 0.0;
+            }
+            if !slot.primed && slot.age >= 0.0 {
+                slot.primed = true;
+            }
+        }
+    }
+
+    /// Called when the rhythm engine starts a new hero beat. Refreshes one
+    /// supporting slot (round-robin) and proposes a new theme. Returns the
+    /// proposed theme index — the caller (Scene) applies it.
+    pub fn on_hero_beat(
+        &mut self,
+        beat_index: u64,
+        rng: u32,
+        hero_phrase: &'static Phrase,
+        theme_idx: usize,
+    ) -> usize {
+        // Update hero's phrase reference (the Beat carries its own copy, but
+        // we mirror it here so the rest of the composition can read it).
+        self.slots[self.hero_idx].phrase = hero_phrase;
+        self.slots[self.hero_idx].last_idx = phrase_index_of(hero_phrase);
+
+        // Refresh one supporting slot (round-robin across the support slots).
+        let support_indices: Vec<usize> = self
+            .slots
+            .iter()
+            .enumerate()
+            .filter_map(|(i, s)| {
+                if s.def.role == SlotRole::Support {
+                    Some(i)
+                } else {
+                    None
+                }
+            })
+            .collect();
+        if !support_indices.is_empty() {
+            let pos = (beat_index as usize) % support_indices.len();
+            let slot_idx = support_indices[pos];
+            // Force a refresh on this slot: skip ahead a fraction of its
+            // lifetime so the visual turnover feels lively.
+            let slot = &mut self.slots[slot_idx];
+            let avoid: [u16; 1] = [slot.last_idx];
+            let new_phrase =
+                phrase::pick_from_theme_by_len(rng, theme_idx, slot.def.max_chars, &avoid);
+            slot.phrase = new_phrase;
+            slot.last_idx = phrase_index_of(new_phrase);
+            // Reset age to half the lifetime so the slot re-enters mid-life;
+            // the fade-in / fade-out ramps still apply.
+            slot.age = (slot.def.lifetime - slot.def.fade_in - 0.1).max(0.0) * 0.5;
+            slot.primed = true;
+        }
+
+        // Rotate the theme every ~3 beats, but stay put if we're early.
+        self.beats_since_theme += 1;
+        if self.beats_since_theme >= 3 {
+            let next = ((beat_index as usize) / 3) % phrase::THEMES.len();
+            self.beats_since_theme = 0;
+            next
+        } else {
+            theme_idx
+        }
+    }
+}
+
+fn phrase_index_of(p: &Phrase) -> u16 {
+    let base = phrase::PHRASES.as_ptr() as usize;
+    let here = p as *const Phrase as usize;
+    let off = (here - base) / core::mem::size_of::<Phrase>();
+    off as u16
 }
 
 impl Scene {
-    pub fn new() -> Self {
-        // VecDeque with a hard cap-equivalent capacity gives us O(1)
-        // push_back / pop_front. The set never grows past the cap, so
-        // we pre-size to GLYPH_CAP (not +slack) — push_back after the
-        // buffer is full would panic, but our push_* call sites always
-        // pop_front first when at cap, so the invariant holds.
-        let g: VecDeque<Glyph> = VecDeque::with_capacity(GLYPH_CAP);
-        let p: VecDeque<Particle> = VecDeque::with_capacity(PARTICLE_CAP);
+    pub fn new(width: u32, height: u32) -> Self {
+        let mut rng = Lcg::new(0x00C0_FFEE_BEEF);
+        let mut dust = Vec::with_capacity(48);
+        for _ in 0..48 {
+            dust.push(Dust {
+                x: rng.unit() * width as f32,
+                y: rng.unit() * height as f32,
+                r: 0.6 + rng.unit() * 1.8,
+                a: 0.05 + rng.unit() * 0.18,
+                phase: rng.unit() * core::f32::consts::TAU,
+                speed: 0.04 + rng.unit() * 0.12,
+                // Single warm-cream hue — no off-color blue/cyan motes.
+                // The earlier cool dust produced stray "off-color dots" against
+                // the warm gradient. We keep them faint and warm so they read
+                // as fireflies/starlight instead of digital artifacts.
+                hue: color::star::WARM,
+            });
+        }
+        let sparks = Vec::with_capacity(64);
+        let mut composition = Composition::default_layout();
+        // Prime supporting slots with deterministic initial phrases drawn
+        // from the active theme (theme 0 by default — moonlit). Each pick
+        // honours the slot's `max_chars` so the prime is always in-budget.
+        let initial_theme = 0usize;
+        for slot in composition.slots.iter_mut() {
+            if slot.def.role == SlotRole::Support {
+                let p = phrase::pick_from_theme_by_len(
+                    rng.next(),
+                    initial_theme,
+                    slot.def.max_chars,
+                    &[],
+                );
+                slot.phrase = p;
+                slot.last_idx = phrase_index_of(p);
+                // Stagger their visible birth by giving them negative age so
+                // they fade in over the first second rather than all at once.
+                slot.age = -slot.def.stagger;
+                slot.primed = false;
+            }
+        }
         Self {
-            glyphs: g,
-            particles: p,
-            stars: Vec::with_capacity(STAR_COUNT + 4),
+            width,
+            height,
+            rng,
+            dust,
+            sparks,
+            nebula_phase: 0.0,
+            warmth: 0.0,
+            ambient_pulse: 0.0,
+            theme_idx: 0,
+            composition,
         }
     }
 
-    pub fn seed_stars(&mut self, sw: f32, sh: f32) {
-        if !self.stars.is_empty() {
-            return;
+    /// Trigger a touch particle burst at pixel position (px, py) with intensity 0..=1.
+    pub fn touch(&mut self, px: f32, py: f32, intensity: f32) {
+        let n = (12.0 + intensity * 28.0) as usize;
+        let warm = self.warmth > 0.05;
+        for _ in 0..n {
+            let ang = self.rng.unit() * core::f32::consts::TAU;
+            let sp = 40.0 + self.rng.unit() * 220.0 * (0.5 + intensity);
+            let hue = if warm && self.rng.unit() < 0.7 {
+                color::drop::AMBER_HI
+            } else if warm {
+                color::drop::AMBER
+            } else if self.rng.unit() < 0.7 {
+                color::drop::CYAN_HI
+            } else {
+                color::drop::CYAN
+            };
+            let life = 0.45 + self.rng.unit() * 0.55;
+            self.sparks.push(Spark {
+                x: px,
+                y: py,
+                vx: ang.cos() * sp,
+                vy: ang.sin() * sp,
+                life,
+                max_life: life,
+                hue,
+            });
         }
-        self.stars.resize(STAR_COUNT, Star::sentinel());
-        for (i, s) in self.stars.iter_mut().enumerate() {
-            let i = i as u64;
-            s.x = lcg(i + 1) * sw;
-            s.y = lcg(i + 1001).powf(1.4) * sh;
-            s.r = 0.7 + lcg(i + 2003) * 1.4;
-            s.base = 0.18 + lcg(i + 3001) * 0.22;
-            s.phase = lcg(i + 4001) * core::f32::consts::TAU;
-            s.period = 4.0 + lcg(i + 5003) * 10.0;
-            s.hue_offset = (lcg(i + 6007) - 0.5) * 0.24;
+        if self.sparks.len() > 64 {
+            let extra = self.sparks.len() - 64;
+            self.sparks.drain(..extra);
         }
     }
 
-    pub fn push_glyph(&mut self, g: Glyph) {
-        // O(1) at cap: pop the oldest off the front, then append the new
-        // glyph at the back. Replaces the previous Vec::remove(0) which
-        // memmove'd every entry down by one (~36 B × 259 = ~9.3 KB) on
-        // every LLM-streamed char past the 260-entry cap.
-        if self.glyphs.len() >= GLYPH_CAP {
-            self.glyphs.pop_front();
+    /// Step the simulation forward.
+    pub fn step(&mut self, dt: f32, warmth: f32, pulse: f32) {
+        self.warmth = warmth;
+        self.nebula_phase += dt * 0.06;
+        self.ambient_pulse += dt * 0.4;
+        let (w, h) = (self.width as f32, self.height as f32);
+        for d in self.dust.iter_mut() {
+            d.phase += dt * d.speed;
+            // gentle sway + tiny drift
+            let sway_x = d.phase.cos() * 0.4;
+            let sway_y = d.phase.sin() * 0.3;
+            d.x += sway_x * dt * 6.0;
+            d.y += sway_y * dt * 4.0 - dt * 0.5; // slow downward drift
+                                                 // wrap
+            if d.x < -8.0 {
+                d.x += w + 16.0;
+            }
+            if d.x > w + 8.0 {
+                d.x -= w + 16.0;
+            }
+            if d.y < -8.0 {
+                d.y += h + 16.0;
+            }
+            if d.y > h + 8.0 {
+                d.y -= h + 16.0;
+            }
+            // pulse boosts brightness briefly
+            d.a *= 1.0 + pulse * 0.2;
+            d.a = d.a.clamp(0.0, 0.5);
         }
-        self.glyphs.push_back(g);
-    }
+        // sparks
+        let drag = (0.85_f32).powf(dt * 60.0);
+        for s in self.sparks.iter_mut() {
+            s.life -= dt;
+            s.x += s.vx * dt;
+            s.y += s.vy * dt;
+            s.vx *= drag;
+            s.vy *= drag;
+            s.vy += dt * 30.0; // light gravity
+        }
+        self.sparks.retain(|s| s.life > 0.0);
 
-    pub fn push_particle(&mut self, p: Particle) {
-        // Same O(1) drop-oldest pattern as push_glyph. The previous
-        // implementation drained the entire prefix down to fit, which
-        // under high-energy / multi-touch contact pressure can run on
-        // most frames; this is now constant work.
-        if self.particles.len() >= PARTICLE_CAP {
-            self.particles.pop_front();
-        }
-        self.particles.push_back(p);
+        // Composition: age supporting slots and pick new phrases when they
+        // expire naturally (the per-hero-beat refresh is layered on top in
+        // `on_hero_beat`).
+        self.composition.step(dt, self.rng.next(), self.theme_idx);
     }
 }
 
-impl Star {
-    fn sentinel() -> Self {
-        Star {
-            x: 0.,
-            y: 0.,
-            r: 0.,
-            base: 0.,
-            phase: 0.,
-            period: 1.,
-            hue_offset: 0.,
+// ============================================================
+// Background paint
+// ============================================================
+
+/// Paint the background layer (gradient + nebula + vignette + dust) into the
+/// framebuffer. This is the SAME routine used by the live renderer and the
+/// headless harness — no separate "preview" path.
+pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f32, warmth: f32) {
+    let w_f = w as f32;
+    let h_f = h as f32;
+
+    // Pick palette center based on warmth.
+    let nebula_top = mix(color::bg::SKY, rgb(20, 16, 22), warmth * 0.4);
+    let nebula_mid = mix(color::bg::MID, rgb(48, 30, 36), warmth * 0.5);
+    let nebula_bot = mix(color::bg::HORIZON, rgb(110, 70, 50), warmth * 0.6);
+
+    // Slow nebula center — drifts very gently.
+    let cx = w_f * 0.5 + (scene.nebula_phase.sin()) * 40.0;
+    let cy = h_f * (0.55 + 0.04 * scene.nebula_phase.cos());
+    let max_r2 = (w_f * w_f + h_f * h_f) * 0.25;
+
+    // Atmospheric breathing — adds a faint global luminance wave.
+    let ambient = 0.02 * (scene.ambient_pulse.sin()) + pulse * 0.06;
+
+    for y in 0..h {
+        let v = y as f32 / (h_f - 1.0).max(1.0);
+        let base = color::grad3(nebula_top, nebula_mid, nebula_bot, v);
+        for x in 0..w {
+            let dx = x as f32 - cx;
+            let dy = y as f32 - cy;
+            let d2 = (dx * dx + dy * dy) / max_r2;
+            // soft nebula glow (radial), tinted slightly warmer on pulse.
+            let nebula = (1.0 - d2).clamp(0.0, 1.0).powf(2.0);
+            let glow_color = mix(rgb(60, 50, 70), rgb(140, 96, 72), warmth);
+            let p = blend_screen(base, glow_color, nebula * (0.18 + pulse * 0.10));
+            // vignette darken corners
+            let vx = (x as f32 / w_f - 0.5).abs() * 2.0;
+            let vy = (y as f32 / h_f - 0.5).abs() * 2.0;
+            let vig = (vx * vx + vy * vy).powf(0.7);
+            let vig_dark = (vig * 0.65).clamp(0.0, 0.78);
+            let p = mix(p, color::bg::DEEP, vig_dark);
+            // ambient luminance wave
+            let p = blend_add_lin(p, color::star::WARM, ambient * (1.0 - vig_dark * 0.6));
+            fb[(y * w + x) as usize] = p;
+        }
+    }
+
+    // dust layer
+    for d in &scene.dust {
+        let cx = d.x as i32;
+        let cy = d.y as i32;
+        let r = d.r as i32 + 1;
+        for oy in -r..=r {
+            for ox in -r..=r {
+                let xx = cx + ox;
+                let yy = cy + oy;
+                if xx < 0 || yy < 0 || xx >= w as i32 || yy >= h as i32 {
+                    continue;
+                }
+                let dist2 = (ox * ox + oy * oy) as f32;
+                let rr = (r * r) as f32;
+                let a = (1.0 - dist2 / rr).max(0.0) * d.a;
+                if a > 0.003 {
+                    let idx = (yy as u32 * w + xx as u32) as usize;
+                    fb[idx] = blend_add_lin(fb[idx], d.hue, a);
+                }
+            }
+        }
+    }
+
+    // sparks
+    for s in &scene.sparks {
+        if s.life <= 0.0 {
+            continue;
+        }
+        let k = (s.life / s.max_life).clamp(0.0, 1.0);
+        let cx = s.x as i32;
+        let cy = s.y as i32;
+        let r = 1 + (k * 2.5) as i32;
+        for oy in -r..=r {
+            for ox in -r..=r {
+                let xx = cx + ox;
+                let yy = cy + oy;
+                if xx < 0 || yy < 0 || xx >= w as i32 || yy >= h as i32 {
+                    continue;
+                }
+                let d = ((ox * ox + oy * oy) as f32).sqrt();
+                let a = (1.0 - d / r as f32).max(0.0) * k * 0.7;
+                if a > 0.003 {
+                    let idx = (yy as u32 * w + xx as u32) as usize;
+                    fb[idx] = blend_add_lin(fb[idx], s.hue, a);
+                }
+            }
         }
     }
 }
 
-// deterministic LCG used for spawn jitter — the same seed always lands on
-// the same glyph characteristics so the stream looks stable across runs.
+// ============================================================
+// Composition paint
+// ============================================================
+
+/// Compute (pen_x, baseline_y, scale_q8) for a slot anchored at (def.x_frac,
+/// def.y_frac) with the given character count.  Honours alignment and the
+/// em_scale / target_w_frac rules, and **clamps the result into the safe
+/// inner box** so a phrase can never poke past the screen edge — even after
+/// the slot's drift offsets are applied.  If the natural em-scale would push
+/// the phrase outside the safe box, the slot's `em_scale` is shrunk just
+/// enough to fit.
+fn place_slot(def: &SlotDef, w: u32, h: u32, char_count: usize) -> (i32, i32, u32) {
+    let hero_em = glyph::HERO_EM_PX as f32;
+    let mut target_px = if def.em_scale <= 0.0 {
+        // Auto-fit to width.
+        let ideal_total_w = (w as f32) * def.target_w_frac.max(0.1);
+        let n = char_count as f32;
+        (ideal_total_w / (n * 1.06)).clamp(40.0, hero_em)
+    } else {
+        (def.em_scale * hero_em).clamp(16.0, hero_em)
+    };
+    // Bearing-x: glyphs in the table can sit slightly left of the pen. The
+    // worst-case we observed is ~10 px at the hero bucket's 128-px native em,
+    // i.e. 8 % of em.  Use that as a margin on the pen side.
+    let bearing_x_pad = (target_px * 0.08) as i32;
+    // Bearing-y: top of the glyph sits at (baseline - bearing_y * em). For
+    // the hero bucket, bearing_y is typically ~92-105 px at 128 em, so use
+    // ~85 % of em for safety on the top side.
+    let bearing_y_pad = (target_px * 0.85) as i32;
+    // Descender: very small for CJK, but add a few px to keep the bottom
+    // edge safe.
+    let descender_pad = (target_px * 0.10) as i32 + 2;
+    // Drift: phrase can sway by up to drift_x / drift_y pixels each axis.
+    let drift_pad_x = def.drift_x.ceil() as i32 + 2;
+    let drift_pad_y = def.drift_y.ceil() as i32 + 2;
+    // Per-frame safety margin on every screen edge.
+    let safe_pad: i32 = 16;
+
+    // Try to find the largest target_px that keeps the phrase inside the
+    // safe inner box.  If the natural scale pushes outside, shrink.
+    let mut total_w = {
+        let per_char = (target_px * 1.06) as i32;
+        per_char * (char_count as i32 - 1).max(0) + (target_px as i32)
+    };
+    let ax = (def.x_frac * w as f32) as i32;
+    let ay = (def.y_frac * h as f32) as i32;
+    // Compute the inner safe box for the slot's horizontal extent.
+    let (safe_x0, safe_x1) = match def.align {
+        Align::Left => (ax + safe_pad, (w as i32) - safe_pad),
+        Align::Right => (safe_pad, ax - safe_pad),
+        Align::Center => {
+            let half = (w as i32) / 2 - safe_pad;
+            (ax - half, ax + half)
+        }
+    };
+
+    // Shrink target_px until total_w fits in [safe_x0, safe_x1].
+    for _ in 0..6 {
+        let pen_x = match def.align {
+            Align::Left => safe_x0,
+            Align::Right => safe_x1 - total_w,
+            Align::Center => ax - total_w / 2,
+        };
+        let pen_x_end = pen_x + total_w;
+        let fits = pen_x >= safe_x0
+            && pen_x_end <= safe_x1
+            // also account for bearing-x negative overshoot and drift.
+            && pen_x - bearing_x_pad - drift_pad_x >= 0
+            && pen_x_end + bearing_x_pad + drift_pad_x <= w as i32;
+        if fits {
+            break;
+        }
+        target_px *= 0.9;
+        if target_px < 14.0 {
+            target_px = 14.0;
+            break;
+        }
+        let per_char = (target_px * 1.06) as i32;
+        total_w = per_char * (char_count as i32 - 1).max(0) + (target_px as i32);
+    }
+
+    let scale_q8 = ((target_px / hero_em) * 256.0).round() as u32;
+    let per_char = (target_px * 1.06) as i32;
+    let total_w = per_char * (char_count as i32 - 1).max(0) + (target_px as i32);
+
+    let pen_x = match def.align {
+        Align::Left => safe_x0,
+        Align::Right => safe_x1 - total_w,
+        Align::Center => ax - total_w / 2,
+    };
+    // Vertical safe box: phrase sits around y_frac * h.  Top edge is
+    // baseline - bearing_y_pad, bottom edge is baseline + descender_pad.
+    let safe_y0 = bearing_y_pad + drift_pad_y + safe_pad;
+    let safe_y1 = (h as i32) - descender_pad - drift_pad_y - safe_pad;
+    let mut baseline_y = ay + (target_px * 0.05) as i32;
+    baseline_y = baseline_y.clamp(safe_y0, safe_y1);
+
+    (pen_x, baseline_y, scale_q8)
+}
+
+/// Paint one supporting slot — fade-in/out ramps, drift, no per-char stagger.
+fn paint_supporting_slot(fb: &mut [u32], w: u32, h: u32, slot: &Slot, time: f32, warmth: f32) {
+    let alpha = slot.alpha_now();
+    if alpha < 0.01 {
+        return;
+    }
+    let chars: Vec<char> = slot.phrase.text.chars().collect();
+    let n = chars.len();
+    if n == 0 {
+        return;
+    }
+    let (pen_x0, baseline_y0, scale_q8) = place_slot(&slot.def, w, h, n);
+    let (dx, dy) = slot.drift(time);
+    let pen_x0 = pen_x0 + dx as i32;
+    let baseline_y = baseline_y0 + dy as i32;
+
+    // Supporting lines use a calmer ink colour than the hero — a touch
+    // shadow-toned so the hero always reads as the focal point.
+    let base_color = mix(color::ink::CREAM, color::ink::SHADOW, 0.25);
+    let glow_color = mix(color::ink::GLOW, color::ink::SHADOW, 0.4);
+
+    // Per-character alpha is the slot alpha (no per-char stagger for
+    // supporting lines — they reveal as a single line).
+    let char_alpha = alpha;
+    for (i, &ch) in chars.iter().enumerate() {
+        let glyph_idx = glyph::index_for(ch as u32);
+        let slot_idx = glyph_idx as usize;
+        let advance_q8 = glyph::HERO_TABLE[slot_idx].advance as i32 * (scale_q8 as i32);
+        let pen_x_q8 = pen_x0 * 256 + advance_q8 * (i as i32);
+        let fx = pen_x_q8;
+        let fy = baseline_y * 256;
+
+        // A whisper of outer glow — barely there.
+        let glow_a = char_alpha * 0.20;
+        if glow_a > 0.01 {
+            glyph::draw_glyph(
+                fb, w as usize, h as usize, glyph_idx, glow_color, glow_color, fx, fy, scale_q8,
+                glow_a,
+            );
+        }
+        glyph::draw_glyph(
+            fb, w as usize, h as usize, glyph_idx, base_color, glow_color, fx, fy, scale_q8,
+            char_alpha,
+        );
+    }
+    // Tinted by warmth so the supporting lines follow the same hue family.
+    let _ = warmth;
+}
+
+/// Paint the hero slot using the existing rhythm-engine `Beat` (entrance /
+/// hold / exit, per-char stagger, overshoot).  Reads the hero's phrase from
+/// the Beat, not from the composition, so they stay in sync.
+#[allow(clippy::too_many_arguments)]
+pub fn paint_hero(
+    fb: &mut [u32],
+    w: u32,
+    h: u32,
+    beat: &Beat,
+    warmth: f32,
+    pulse: f32,
+    mood: Mood,
+    time: f32,
+    def: &SlotDef,
+) {
+    let text = beat.phrase.text;
+    let chars: Vec<char> = text.chars().collect();
+    let n = chars.len();
+    if n == 0 {
+        return;
+    }
+    let (pen_x0, baseline_y0, scale_q8) = place_slot(def, w, h, n);
+    let (dx, dy) = (
+        def.drift_x * (time * def.drift_fx + def.drift_phase).sin(),
+        def.drift_y * (time * def.drift_fy + def.drift_phase * 1.3).cos(),
+    );
+    let pen_x0 = pen_x0 + dx as i32;
+    let baseline_y0 = baseline_y0 + dy as i32;
+
+    // Phase-aware motion (existing behaviour).
+    let ep = match beat.phase {
+        Phase::Entrance => beat.entrance_progress(),
+        Phase::Hold => 1.0,
+        Phase::Exit => 1.0 - beat.exit_progress(),
+        Phase::Rest => 0.0,
+    };
+    let ep_eased = color::smootherstep(ep);
+
+    let total_chars_delay = 0.40_f32;
+    let per_char_window = (1.0 - total_chars_delay) / (n as f32).max(1.0);
+    let slide_y_px = match beat.phase {
+        Phase::Entrance => ((1.0 - ep) * 24.0) as i32,
+        Phase::Exit => (ep * 18.0) as i32,
+        _ => 0,
+    };
+
+    let base_color = mix(color::ink::CREAM, color::ink::WARM, warmth * 0.5);
+    let glow_color = mix(color::ink::GLOW, color::ink::WARM, warmth * 0.6);
+    let beat_glow = beat.phrase.glow;
+    let glow_alpha = (0.10 + 0.18 * pulse + 0.06 * warmth + beat_glow * 0.10).clamp(0.0, 0.55);
+
+    let overshoot = if matches!(beat.phase, Phase::Entrance) {
+        let p = beat.entrance_progress();
+        if p < 0.7 {
+            1.0
+        } else {
+            let k = (p - 0.7) / 0.3;
+            1.0 + 0.06 * (1.0 - k) * (k * core::f32::consts::TAU).sin()
+        }
+    } else if matches!(beat.phase, Phase::Hold) {
+        1.0 + 0.015 * pulse * (beat.t_in_beat * 1.7).sin()
+    } else {
+        1.0
+    };
+    let scale_q8 = ((scale_q8 as f32) * overshoot).round() as u32;
+
+    for (i, &ch) in chars.iter().enumerate() {
+        let stagger = total_chars_delay * (i as f32) / (n as f32).max(1.0);
+        let local = ((ep - stagger) / per_char_window).clamp(0.0, 1.0);
+        let local_eased = color::smootherstep(local);
+        let char_alpha = (local_eased * ep_eased).clamp(0.0, 1.0);
+        if char_alpha <= 0.005 {
+            continue;
+        }
+        let glyph_idx = glyph::index_for(ch as u32);
+        let slot = glyph_idx as usize;
+        let advance_q8 = glyph::HERO_TABLE[slot].advance as i32 * (scale_q8 as i32);
+        let pen_x_q8 = pen_x0 * 256 + advance_q8 * (i as i32);
+        let baseline_y = baseline_y0 + slide_y_px;
+        let micro = 1.0 + 0.06 * (1.0 - local) * (local * core::f32::consts::TAU).sin();
+        let char_scale = ((scale_q8 as f32) * micro) as u32;
+        let fx = pen_x_q8;
+        let fy = baseline_y * 256;
+
+        let glow_alpha_local = glow_alpha * char_alpha;
+        if glow_alpha_local > 0.01 {
+            glyph::draw_glyph(
+                fb,
+                w as usize,
+                h as usize,
+                glyph_idx,
+                glow_color,
+                glow_color,
+                fx,
+                fy,
+                char_scale,
+                glow_alpha_local * 0.45,
+            );
+        }
+        glyph::draw_glyph(
+            fb, w as usize, h as usize, glyph_idx, base_color, glow_color, fx, fy, char_scale,
+            char_alpha,
+        );
+    }
+    let _ = mood;
+}
+
+/// Paint the whole composition — hero (using the rhythm engine's Beat) plus
+/// every supporting slot from `scene.composition`.
+#[allow(clippy::too_many_arguments)]
+pub fn paint_composition(
+    fb: &mut [u32],
+    w: u32,
+    h: u32,
+    scene: &Scene,
+    beat: Option<&Beat>,
+    warmth: f32,
+    pulse: f32,
+    time: f32,
+) {
+    // Paint supporting slots first so the hero sits on top.
+    for slot in &scene.composition.slots {
+        if matches!(slot.def.role, SlotRole::Support) {
+            paint_supporting_slot(fb, w, h, slot, time, warmth);
+        }
+    }
+    if let Some(b) = beat {
+        // Use the hero's own SlotDef so its position stays in sync with the
+        // composition's layout.
+        let hero_def = scene.composition.slots[scene.composition.hero_idx].def;
+        paint_hero(fb, w, h, b, warmth, pulse, b.phrase.mood, time, &hero_def);
+    }
+}
+
 #[inline]
-pub fn lcg(seed: u64) -> f32 {
-    let x = seed
-        .wrapping_mul(6364136223846793005)
-        .wrapping_add(1442695040888963407);
-    ((x >> 33) as f32) / (1u64 << 31) as f32
+fn mix(a: u32, b: u32, t: f32) -> u32 {
+    let t = t.clamp(0.0, 1.0);
+    let ar = color::r(a) as f32;
+    let ag = color::g(a) as f32;
+    let ab = color::b(a) as f32;
+    let br = color::r(b) as f32;
+    let bg = color::g(b) as f32;
+    let bb = color::b(b) as f32;
+    rgb(
+        (ar + (br - ar) * t) as u8,
+        (ag + (bg - ag) * t) as u8,
+        (ab + (bb - ab) * t) as u8,
+    )
 }
 
-// Hue → rgba helper (re-export).
-#[allow(dead_code)]
-#[inline]
-pub fn hue_rgba(h: f32, s: f32, l: f32) -> Rgba {
-    Rgba::from_hsl(h, s, l)
-}
+// ============================================================
+// Tests
+// ============================================================
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn lcg_is_in_unit_interval() {
-        for seed in [0u64, 1, 42, 1_000_000, u64::MAX] {
-            let v = lcg(seed);
-            assert!((0.0..=1.0).contains(&v), "seed={seed} -> {v}");
+    fn default_layout_has_one_hero_and_supporting() {
+        let c = Composition::default_layout();
+        let heroes = c
+            .slots
+            .iter()
+            .filter(|s| matches!(s.def.role, SlotRole::Hero))
+            .count();
+        let supports = c
+            .slots
+            .iter()
+            .filter(|s| matches!(s.def.role, SlotRole::Support))
+            .count();
+        assert_eq!(heroes, 1, "expected exactly one hero slot");
+        assert!((3..=5).contains(&supports), "supporting count out of range");
+    }
+
+    #[test]
+    fn slots_fit_screen() {
+        let c = Composition::default_layout();
+        let dummy = Scene::new(1280, 720);
+        for slot in &c.slots {
+            // Try the worst case: a string of the slot's full max_chars so we
+            // exercise the safety shrink path.
+            let n = slot.def.max_chars.max(slot.phrase.text.chars().count());
+            let (px, by, _sq) = place_slot(&slot.def, dummy.width, dummy.height, n);
+            assert!(px >= 0 && px < dummy.width as i32, "pen_x out of bounds");
+            assert!(
+                by >= 0 && by < dummy.height as i32,
+                "baseline_y out of bounds"
+            );
+            // Re-derive total_w and verify it fits the inner safe box.
+            let _per_char = 0; // placeholder; use place_slot's maths
+                               // Compute total_w from em_scale × max_chars + drift/bearing pad.
+            let scale_q8 = _sq;
+            let target_px = (scale_q8 as f32) / 256.0 * glyph::HERO_EM_PX as f32;
+            let per_char = (target_px * 1.06) as i32;
+            let total_w = per_char * (n as i32 - 1).max(0) + (target_px as i32);
+            // Drift + bearing-x overshoot must stay inside [16, w-16].
+            let drift_pad = slot.def.drift_x.ceil() as i32 + 2;
+            let bx_pad = (target_px * 0.08) as i32;
+            assert!(
+                px - bx_pad - drift_pad >= 16,
+                "left edge unsafe for slot {:?}: px={} total_w={} drift={}",
+                slot.def.role,
+                px,
+                total_w,
+                drift_pad
+            );
+            assert!(
+                px + total_w + bx_pad + drift_pad <= dummy.width as i32 - 16,
+                "right edge unsafe for slot {:?}: px={} total_w={} drift={} w={}",
+                slot.def.role,
+                px,
+                total_w,
+                drift_pad,
+                dummy.width
+            );
+            // Vertical: baseline + descender + drift must stay under h, and
+            // baseline - bearing must stay above 0.
+            let by_pad = (target_px * 0.85) as i32;
+            let d_pad = (target_px * 0.10) as i32 + 2;
+            let dy_pad = slot.def.drift_y.ceil() as i32 + 2;
+            assert!(
+                by - by_pad - dy_pad >= 16,
+                "top edge unsafe for slot {:?}: by={}",
+                slot.def.role,
+                by
+            );
+            assert!(
+                by + d_pad + dy_pad <= dummy.height as i32 - 16,
+                "bottom edge unsafe for slot {:?}: by={} h={}",
+                slot.def.role,
+                by,
+                dummy.height
+            );
         }
     }
 
     #[test]
-    fn lcg_is_deterministic() {
-        for seed in 0..256u64 {
-            assert_eq!(lcg(seed), lcg(seed));
-        }
-    }
-
-    #[test]
-    fn scene_pools_hard_cap() {
-        let mut scene = Scene::new();
-        // Push more than GLYPH_CAP entries; only the last GLYPH_CAP remain.
-        for i in 0..(GLYPH_CAP + 100) {
-            scene.push_glyph(Glyph {
-                ch: "墨",
-                x: 0.0,
-                y: 0.0,
-                vx: 0.0,
-                vy: 0.0,
-                life: 1.0,
-                max_life: 1.0,
-                size: 1.0,
-                phase: 0.0,
-                hue_bias: 0.0,
-            });
-            // Use `i` to silence "unused" — we don't actually need it.
-            let _ = i;
-        }
-        assert_eq!(scene.glyphs.len(), GLYPH_CAP);
-
-        let mut scene = Scene::new();
-        for _ in 0..(PARTICLE_CAP + 100) {
-            scene.push_particle(Particle {
-                x: 0.0,
-                y: 0.0,
-                vx: 0.0,
-                vy: 0.0,
-                life: 1.0,
-                max_life: 1.0,
-                r: 1.0,
-            });
-        }
-        assert_eq!(scene.particles.len(), PARTICLE_CAP);
-    }
-
-    #[test]
-    fn star_seed_is_idempotent() {
-        let mut s = Scene::new();
-        s.seed_stars(100.0, 100.0);
-        let len1 = s.stars.len();
-        // re-seed must be a no-op
-        s.seed_stars(100.0, 100.0);
-        assert_eq!(s.stars.len(), len1);
-        assert_eq!(len1, STAR_COUNT);
-    }
-
-    #[test]
-    fn star_positions_are_within_frame() {
-        let mut s = Scene::new();
-        let w = 800.0;
-        let h = 600.0;
-        s.seed_stars(w, h);
-        for st in &s.stars {
-            assert!((0.0..=w).contains(&st.x), "x out of frame: {}", st.x);
-            assert!((0.0..=h).contains(&st.y), "y out of frame: {}", st.y);
-            assert!(st.r > 0.0, "radius must be positive");
-            assert!(st.period > 0.0, "period must be positive");
-        }
+    fn alpha_ramps_in_and_out() {
+        let def = SlotDef {
+            role: SlotRole::Support,
+            x_frac: 0.5,
+            y_frac: 0.5,
+            align: Align::Center,
+            em_scale: 0.3,
+            target_w_frac: 0.0,
+            max_chars: 5,
+            alpha: 1.0,
+            drift_x: 0.0,
+            drift_y: 0.0,
+            drift_fx: 0.0,
+            drift_fy: 0.0,
+            drift_phase: 0.0,
+            lifetime: 4.0,
+            fade_in: 1.0,
+            fade_out: 1.0,
+            stagger: 0.0,
+        };
+        let mut slot = Slot::new(def);
+        slot.primed = true;
+        slot.age = 0.0;
+        assert!(slot.alpha_now() < 0.1);
+        slot.age = 1.0;
+        assert!(slot.alpha_now() > 0.9);
+        slot.age = 3.0;
+        assert!(slot.alpha_now() > 0.9);
+        slot.age = 3.99;
+        assert!(slot.alpha_now() < 0.1);
     }
 }

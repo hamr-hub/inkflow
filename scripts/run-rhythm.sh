@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# rhythmic phrase redesign: sparse, legible, beat-driven phrases
+set -uo pipefail
+cd "$HOME/codespace/inkflow"
+export PATH="$HOME/.nvm/versions/node/v22.22.1/bin:$PATH"
+export CARGO_TARGET_DIR=/mnt/ssd/codespace/.cargo-target/inkflow-zero
+mkdir -p state
+exec > >(tee -a state/rhythm.log) 2>&1
+echo "===== rhythm redesign start $(date -Is) ====="
+
+cat > state/rhythm_prompt.txt <<'EOF'
+Redesign the "inkflow" presentation (zero-dep Rust, DRM dumb-buffer software render,
+embedded CJK font). The user rejected the current look: glyphs are densely packed
+clutter and you cannot read anything. Replace the dense ambient field entirely.
+
+NEW CONCEPT — "poetic phrases on a beat":
+1. SPARSE & LEGIBLE: only ONE hero phrase at a time plus optionally one faint echo.
+   At most ~8 characters visible. Huge negative space. Phrase chars are large, crisp,
+   high-contrast and clearly readable (improve glyph anti-aliasing/contrast).
+2. MEANING PER SCREEN: show short Chinese poetic fragments of 2-8 chars with actual
+   sense, grouped with proper spacing and alignment (e.g. centered or composed on a
+   grid), never scattered isolated single chars. Curate a phrase bank of evocative
+   fragments (月色入海 / 风过无声 / 万物静默如谜 …, many, Chinese) and accept LLM phrases.
+   Pick a new phrase each beat.
+3. RHYTHM & PUNCH: drive a steady beat (tempo). On each beat the phrase ENTERS with a
+   readable animation (type-on left→right, or scale-pop with overshoot, or slide),
+   HOLDS long enough to read (~2-4s), then EXITS cleanly. Add a subtle pulse/glow on the
+   beat. Touch: a tap accentuates the beat (bounce/flash/particle burst); sustained touch
+   warms the palette and can speed the tempo. It must feel alive and rhythmic.
+4. BACKGROUND: remove the wall of glyphs. Keep only restrained, beautiful depth —
+   soft gradient/nebula, vignette, a few layered dust particles that don't fight the text.
+5. COMPOSITION: intentional layout (center or rule-of-thirds), consistent baseline,
+   elegant color treatment tied to phrase mood/touch warmth.
+
+PROCESS — verify by seeing it:
+- Ensure a headless harness renders the SAME production path to state/rhythm-N.png;
+  capture a sequence across several beats (entrance/hold/exit + touch accent).
+- Implement, then self-critique the frames; iterate 3-6 rounds until each captured frame
+  clearly reads a phrase and the clutter complaint is gone.
+- Each green step: cargo fmt && cargo clippy --release -- -D warnings && cargo build
+  --release; git commit -m "rhythm: <change>". Do NOT push.
+
+Constraints: std-only/zero crates; works with no ollama (curated bank); fixed-size, no
+per-frame alloc; RAM tight (~0.5-0.9GB, wait/retry, never force OOM); do not disturb the
+running user inkflow.service or systemd; keep --drm-test. End with summary + frame paths.
+EOF
+
+timeout 3000 claude --dangerously-skip-permissions --print < state/rhythm_prompt.txt
+echo "===== rhythm end rc=$? $(date -Is) ====="
