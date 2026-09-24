@@ -125,6 +125,23 @@ pub(crate) fn voice_max_life_mul(voice: &str) -> f32 {
     }
 }
 
+/// Per-voice touch-burst count. Each curatorial voice responds to
+/// touch in its own way: 豪放 shouts with 4 particles per contact
+/// (惊雷), 稚拙 bounces with 2 (弹跳), 婉约 / 禅寂 / 苍茫 each
+/// emit a single careful mark. The piece's tactile response is
+/// now part of the voice identity — a viewer touching the screen
+/// during 豪放 vs 禅寂 gets a completely different feedback.
+pub(crate) fn voice_touch_burst_n(voice: &str) -> u32 {
+    match voice {
+        "婉约" => 1, // single careful mark
+        "豪放" => 4, // energetic burst
+        "禅寂" => 1, // austere — single mark, no fanfare
+        "稚拙" => 2, // bouncy — double-mark
+        "苍茫" => 1, // vast — single mark
+        _ => 1,      // unknown → single (safe default)
+    }
+}
+
 /// Spawn-rate accumulator. The frame loop accumulates `dt * base_rate`
 /// and pops whole glyphs each time the accumulator crosses 1.0.
 #[derive(Default)]
@@ -369,7 +386,20 @@ fn spawn_particles(
             sources.push((m.x * fb_w as f32, m.y * fb_h as f32));
         }
     }
-    let n_per = if energy > 0.6 { 3 } else { 1 };
+    // Per-voice burst count: each voice responds to touch with
+    // its own number of particles. The energy-only formula
+    // (n_per = if energy > 0.6 { 3 } else { 1 }) was replaced
+    // because touch feedback is now part of the voice identity,
+    // not just a function of how hard the user pressed.
+    let voice = crate::net_ollama::style_for(frame.warmth, frame.effective_energy());
+    let voice_burst = voice_touch_burst_n(voice);
+    // Energy still nudges the burst — high-energy 豪放 gets an
+    // even bigger burst, while quiet 禅寂 stays at 1.
+    let n_per = if energy > 0.6 {
+        voice_burst + 1
+    } else {
+        voice_burst
+    };
     for &(px, py) in &sources {
         for k in 0..n_per {
             let ang = lcg(tick.wrapping_add(k as u64 * 31)) * core::f32::consts::TAU;
@@ -574,6 +604,35 @@ mod tests {
         // An unknown voice name shouldn't panic; falling back to
         // 1.0 (no change) is correct.
         assert_eq!(voice_max_life_mul("???"), 1.0);
+    }
+
+    #[test]
+    fn voice_touch_burst_n_distinguishes_loud_from_quiet() {
+        // Per ARTIFACT.md the touch response must match the
+        // curatorial voice: 豪放 shouts (4 particles), 稚拙
+        // bounces (2), the rest stay at 1.
+        assert_eq!(voice_touch_burst_n("豪放"), 4);
+        assert_eq!(voice_touch_burst_n("稚拙"), 2);
+        assert_eq!(voice_touch_burst_n("婉约"), 1);
+        assert_eq!(voice_touch_burst_n("禅寂"), 1);
+        assert_eq!(voice_touch_burst_n("苍茫"), 1);
+    }
+
+    #[test]
+    fn voice_touch_burst_n_bounded_against_runaway() {
+        // Even 豪放 + high energy stays at 5 particles per touch
+        // per frame (4 base + 1 energy bump). Above that and the
+        // particle pool saturates; below 1 and the touch feels
+        // dead.
+        for v in ["婉约", "豪放", "禅寂", "稚拙", "苍茫"] {
+            let n = voice_touch_burst_n(v);
+            assert!((1..=8).contains(&n), "{v} touch burst {n} out of band");
+        }
+    }
+
+    #[test]
+    fn voice_touch_burst_n_unknown_falls_back_safely() {
+        assert_eq!(voice_touch_burst_n("???"), 1);
     }
 
     #[test]
