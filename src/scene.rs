@@ -213,6 +213,14 @@ pub struct Composition {
     /// round-robin supporting refresh — slot index that should refresh on
     /// the next hero beat.
     pub next_support_to_refresh: usize,
+    /// True once the first `on_hero_beat` for a *pinned* poem group has
+    /// fired. On that first beat the supporting slots preserve their
+    /// initial negative `stagger` age so they fade in AFTER the hero, in
+    /// reading order — calligraphic inscription, not static plaque. On
+    /// subsequent pinned beats the slots sit at mid-life so the
+    /// inscription is fixed at peak alpha. Set/checked only inside the
+    /// pinned branch of `on_hero_beat`.
+    pub first_pinned_beat_done: bool,
 }
 
 impl Composition {
@@ -258,6 +266,8 @@ impl Composition {
             //   continuation of the hero — heaviest of the supporting
             //   echoes, carrying the concrete answer (《言师采药去》) before
             //   the verse starts to dissolve.
+            //   Stagger 0.18s so it fades in just after the hero lands —
+            //   the second stroke of the calligraphic inscription.
             SlotDef {
                 role: SlotRole::Support,
                 x_frac: 0.50,
@@ -276,19 +286,22 @@ impl Composition {
                 lifetime: 12.0,
                 fade_in: 0.55,
                 fade_out: 0.7,
-                stagger: 0.0,
+                stagger: 0.18,
             },
-            // 2 — Upper right (small body, right-aligned).  Anchored near
-            //   the rule-of-thirds intersection (0.84, 0.22) so the upper
-            //   echo sits in deliberate tension with the lower-left at
-            //   (0.14, 0.82): the diagonal midpoint falls at the visual
-            //   centre and top/bottom margins are balanced.  Mid-weight:
-            //   the quatrain's location hint is already a step further
-            //   from certainty than the subtitle.
+            // 2 — Upper right (small body, right-aligned). Pulled inward
+            //   from (0.84, 0.22) to (0.80, 0.28) so the upper echo sits
+            //   at the rule-of-thirds intersection (≈(0.67, 0.33)) rather
+            //   than as a corner satellite. The diagonal midpoint with
+            //   the lower-left at (0.18, 0.74) stays at ≈(0.49, 0.51) —
+            //   right at the optical centre — and top/bottom margins
+            //   remain balanced (≈170 px vs ≈180 px). Mid-weight: the
+            //   quatrain's location hint is already a step further from
+            //   certainty than the subtitle.
+            //   Stagger 0.34s so it fades in third, after the subtitle.
             SlotDef {
                 role: SlotRole::Support,
-                x_frac: 0.84,
-                y_frac: 0.22,
+                x_frac: 0.80,
+                y_frac: 0.28,
                 align: Align::Right,
                 em_scale: 0.30,
                 target_w_frac: 0.0,
@@ -303,17 +316,24 @@ impl Composition {
                 lifetime: 12.0,
                 fade_in: 0.6,
                 fade_out: 0.7,
-                stagger: 0.0,
+                stagger: 0.34,
             },
             // 3 — Lower left (small body, left-aligned). The "far-faint"
             //   closing echo — the verse's last line (《云深不知处》) is
             //   already a confession of not-knowing, so the ink itself
             //   should dissolve into the mist rather than hold its
             //   ground.  This is the bottom of the brush-weight gradient.
+            //   Pulled inward from (0.14, 0.82) to (0.18, 0.74) to mirror
+            //   the upper-right's new anchor — both echoes now sit near
+            //   the rule-of-thirds intersections rather than as far
+            //   corner satellites, so the four lines of 《寻隐者不遇》
+            //   read as one calligraphic inscription.
+            //   Stagger 0.50s so it fades in last, the final stroke of
+            //   the inscription.
             SlotDef {
                 role: SlotRole::Support,
-                x_frac: 0.14,
-                y_frac: 0.82,
+                x_frac: 0.18,
+                y_frac: 0.74,
                 align: Align::Left,
                 em_scale: 0.30,
                 target_w_frac: 0.0,
@@ -328,7 +348,7 @@ impl Composition {
                 lifetime: 12.0,
                 fade_in: 0.6,
                 fade_out: 0.7,
-                stagger: 0.0,
+                stagger: 0.50,
             },
         ];
         let slots: Vec<Slot> = defs.into_iter().map(Slot::new).collect();
@@ -337,6 +357,7 @@ impl Composition {
             hero_idx: 0,
             beats_since_theme: 0,
             next_support_to_refresh: 1, // skip the hero
+            first_pinned_beat_done: false,
         }
     }
 
@@ -451,10 +472,17 @@ impl Composition {
                 slot.phrase = &phrase::PHRASES[line_idx as usize];
                 slot.last_idx = line_idx;
                 slot.primed = true;
-                // Sit at mid-life so the slot lives at peak alpha forever;
-                // the composition breathes around a fixed inscription.
-                slot.age = (slot.def.lifetime * 0.5).max(0.0);
+                // On the FIRST pinned beat, leave the slot's age alone — the
+                // initial `-stagger` set in `Scene::new` keeps the line
+                // invisible until its turn arrives, so the quatrain unfurls
+                // in reading order (hero → subtitle → upper-right →
+                // lower-left). On subsequent pinned beats, sit at mid-life
+                // so the inscription is fixed at peak alpha.
+                if self.first_pinned_beat_done {
+                    slot.age = (slot.def.lifetime * 0.5).max(0.0);
+                }
             }
+            self.first_pinned_beat_done = true;
         } else if !support_indices.is_empty() {
             let pos = (beat_index as usize) % support_indices.len();
             let slot_idx = support_indices[pos];
