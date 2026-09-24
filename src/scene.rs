@@ -947,6 +947,13 @@ pub fn paint_hero(
     let glow_color = mix(color::ink::GLOW, color::ink::WARM, warmth * 0.6);
     let beat_glow = phrase.glow;
     let glow_alpha = (0.10 + 0.18 * pulse + 0.06 * warmth + beat_glow * 0.10).clamp(0.0, 0.55);
+    // Secondary wider bloom — same glyph drawn at slightly larger scale and
+    // very low alpha so the focal line reads as a moonlit light source, not
+    // just cream text on a gradient. ART_DIRECTION mandates "bloom only on
+    // the focal line"; this pass is hero-only — supporting slots skip it
+    // (see `paint_supporting_slot`).
+    let bloom_scale_q8: u32 = ((scale_q8.max(1) as f32) * 1.06).round() as u32;
+    let bloom_alpha = (0.04 + 0.04 * pulse + 0.02 * warmth + beat_glow * 0.03).clamp(0.0, 0.12);
 
     let overshoot = if matches!(beat.phase, Phase::Entrance) {
         let p = beat.entrance_progress();
@@ -980,6 +987,37 @@ pub fn paint_hero(
         let char_scale = ((scale_q8 as f32) * micro) as u32;
         let fx = pen_x_q8;
         let fy = baseline_y * 256;
+
+        // Soft moonlit bleed — drawn first so the tight outline glow and
+        // glyph itself sit on top. Per-char stagger still applies so the
+        // bloom unfurls with the entrance.  The bloom pen is shifted so the
+        // larger glyph is centred on the original glyph — without the shift
+        // it naturally drifts down-right because the pen sits at the
+        // left/bottom of the bbox and a bigger glyph drawn at the same pen
+        // extends past those edges unevenly.
+        let info = glyph::HERO_TABLE[glyph_idx as usize];
+        let bx_i = info.bearing_x as i32;
+        let by_i = info.bearing_y as i32;
+        let bw_i = info.w as i32;
+        let bh_i = info.h as i32;
+        let diff_q8 = char_scale as i32 - bloom_scale_q8 as i32; // negative
+        let bloom_fx = fx + diff_q8 * (bx_i + bw_i / 2);
+        let bloom_fy = fy - diff_q8 * (by_i - bh_i / 2);
+        let bloom_alpha_local = bloom_alpha * char_alpha;
+        if bloom_alpha_local > 0.01 {
+            glyph::draw_glyph(
+                fb,
+                w as usize,
+                h as usize,
+                glyph_idx,
+                glow_color,
+                glow_color,
+                bloom_fx,
+                bloom_fy,
+                bloom_scale_q8,
+                bloom_alpha_local,
+            );
+        }
 
         let glow_alpha_local = glow_alpha * char_alpha;
         if glow_alpha_local > 0.01 {
