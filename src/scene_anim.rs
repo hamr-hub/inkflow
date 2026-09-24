@@ -121,13 +121,14 @@ fn spawn_glyphs(
     t: f32,
 ) {
     let energy = frame.effective_energy();
-    // Meditative cadence with enough density to read like a piece
-    // not a screensaver — ~1.7 chars/sec at idle, climbing to ~3.0
+    // Meditative cadence — ~0.85 chars/sec at idle, climbing to ~1.6
     // when energy / contacts push. With ~10 s life that means
-    // 17–30 glyphs in flight at any moment. The poetry cursor
-    // still inserts a 2.4 s silence between phrases, so the
-    // piece breathes between couplets rather than buzzing.
-    accum.glyph_acc += dt * (1.7 + energy * 1.4);
+    // 8–16 glyphs in flight at any moment. Spread across the full
+    // canvas (x_jitter 0.80·fb_w) so adjacent glyphs never
+    // overlap on the horizontal axis. The poetry cursor still
+    // inserts a 2.4 s silence between phrases so the piece breathes
+    // rather than buzzing.
+    accum.glyph_acc += dt * (0.85 + energy * 0.7);
     while accum.glyph_acc >= 1.0 && !poetry.is_breathing() {
         accum.glyph_acc -= 1.0;
         // Top stream falls slower so the breath reads as "ink rising +

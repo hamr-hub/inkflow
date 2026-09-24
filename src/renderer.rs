@@ -310,10 +310,13 @@ pub fn draw_and_step_glyphs(
         // glyphs. Two stacked layers: a tight saturated core and a
         // wider feathery halo. Both share the fg hue so the drip
         // belongs to its glyph rather than feeling painted-on.
+        // Height is intentionally short (~0.35 × draw_size) so
+        // adjacent glyphs spawned in the same band don't visually
+        // overlap their drips — clarity over drama.
         let drip_color = fg;
-        let drip_core_w = draw_size * 0.06;
-        let drip_halo_w = draw_size * 0.22;
-        let drip_h = draw_size * 1.15;
+        let drip_core_w = draw_size * 0.05;
+        let drip_halo_w = draw_size * 0.18;
+        let drip_h = draw_size * 0.35;
         let drip_top_y = g.y + draw_size * 0.42;
         // Slight per-glyph phase so consecutive drips don't line up
         // into a grid. Width tapers top→bottom via two stacked rects.

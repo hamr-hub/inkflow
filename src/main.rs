@@ -23,6 +23,7 @@ mod fontdata;
 mod llm_loop;
 mod mood;
 mod net_ollama;
+mod phrases_raw;
 mod poetry;
 mod renderer;
 mod scene;
