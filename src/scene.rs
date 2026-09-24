@@ -108,6 +108,14 @@ pub struct SlotDef {
     pub max_chars: usize,
     /// Baseline alpha (0..1).
     pub alpha: f32,
+    /// Brush-weight tint: how far the ink colour is mixed toward `ink::SHADOW`
+    /// before drawing (0 = pure cream, 1 = pure shadow). Layers the alpha
+    /// gradient so supporting slots also have a brush-weight gradient —
+    /// the subtitle sits close to the focal line and stays near-cream,
+    /// the corner echoes are mid-weight, the farthest one is a deeper
+    /// shadow tone that reads as brush dissolving into mist. The hero
+    /// slot ignores this and uses its own warm cream glow palette.
+    pub shadow_mix: f32,
     /// Drift amplitude in pixels for x/y sinusoid sway.
     pub drift_x: f32,
     pub drift_y: f32,
@@ -235,6 +243,7 @@ impl Composition {
                 target_w_frac: 0.55,
                 max_chars: 8,
                 alpha: 1.0,
+                shadow_mix: 0.0,
                 drift_x: 3.0,
                 drift_y: 2.0,
                 drift_fx: 0.18,
@@ -258,6 +267,7 @@ impl Composition {
                 target_w_frac: 0.0,
                 max_chars: 7,
                 alpha: 0.86,
+                shadow_mix: 0.10,
                 drift_x: 3.0,
                 drift_y: 1.5,
                 drift_fx: 0.21,
@@ -284,6 +294,7 @@ impl Composition {
                 target_w_frac: 0.0,
                 max_chars: 5,
                 alpha: 0.66,
+                shadow_mix: 0.30,
                 drift_x: 3.0,
                 drift_y: 2.0,
                 drift_fx: 0.15,
@@ -308,6 +319,7 @@ impl Composition {
                 target_w_frac: 0.0,
                 max_chars: 5,
                 alpha: 0.50,
+                shadow_mix: 0.55,
                 drift_x: 3.0,
                 drift_y: 2.0,
                 drift_fx: 0.13,
@@ -869,9 +881,17 @@ fn paint_supporting_slot(fb: &mut [u32], w: u32, h: u32, slot: &Slot, time: f32,
     let baseline_y = baseline_y0 + dy as i32;
 
     // Supporting lines use a calmer ink colour than the hero — a touch
-    // shadow-toned so the hero always reads as the focal point.
-    let base_color = mix(color::ink::CREAM, color::ink::SHADOW, 0.25);
-    let glow_color = mix(color::ink::GLOW, color::ink::SHADOW, 0.4);
+    // shadow-toned so the hero always reads as the focal point. The
+    // shadow_mix is a per-slot brush-weight: the subtitle (closest to the
+    // hero) stays near-cream, the upper-right is mid-weight, and the
+    // lower-left pulls further into shadow so the verse reads as ink
+    // dissolving into mist (ART_DIRECTION §三 "near-crisp / far-faint").
+    let base_color = mix(color::ink::CREAM, color::ink::SHADOW, slot.def.shadow_mix);
+    let glow_color = mix(
+        color::ink::GLOW,
+        color::ink::SHADOW,
+        0.4 + slot.def.shadow_mix * 0.2,
+    );
 
     // Per-character alpha is the slot alpha (no per-char stagger for
     // supporting lines — they reveal as a single line).
@@ -1226,6 +1246,7 @@ mod tests {
             target_w_frac: 0.0,
             max_chars: 5,
             alpha: 1.0,
+            shadow_mix: 0.0,
             drift_x: 0.0,
             drift_y: 0.0,
             drift_fx: 0.0,
