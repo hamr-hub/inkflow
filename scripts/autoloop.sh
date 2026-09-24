@@ -29,22 +29,23 @@ SHOT=state/screen.png
 tail -n 12 state/telemetry.jsonl > state/tel_tail.txt 2>/dev/null || true
 
 cat > state/claude_prompt.txt <<'EOF'
-You are the unattended maintainer of "inkflow" (now a ZERO-DEP, std-only Rust binary).
-Read these in order each turn: ZERO_DEP.md, PRODUCTION.md, then state/tel_tail.txt and
-state/screen.png. Rendering is DRM/KMS dumb-buffer + software 32bpp; evdev touch via
-raw ioctl; ollama over hand-written TCP; embedded CJK bitmap font. It must never go dark.
+You are the unattended maintainer of "inkflow" (a ZERO-DEP, std-only Rust binary that is also
+a generative art piece).
 
-Do ONE bounded improvement/maintenance turn, autonomously.
+Read these in order each turn:
+  1. ARTIFACT.md     ← the work's artistic statement; READ FIRST. Every change must make the
+                        piece "more like what it insists on being".
+  2. ZERO_DEP.md     ← binding spec for the zero-dependency contract.
+  3. PRODUCTION.md   ← what is already proven; do not regress.
+  4. state/tel_tail.txt and state/screen.png  ← current state of the piece.
 
-PRIMARY MISSION NOW: make this PRODUCTION-GRADE. Read PRODUCTION.md and work down
-its checklist, highest-impact unverified item first. Priority order:
-  1. stability/memory (RSS limits, object pools vs per-frame alloc, no leaks)
-  2. real frame-rate/frame-time correctness and CPU ceiling
-  3. true fullscreen + resolution adapt + unattended boot-to-piece
-  4. LLM resilience + real measured tok/s + graceful fallback/backoff
-  5. touch hotplug, log rotation, disk caps
-After each change, capture REAL EVIDENCE in your commit message and (if useful)
-append to PRODUCTION.md checkboxes using measured numbers from telemetry/journal.
+Rendering is DRM/KMS dumb-buffer + software 32bpp; evdev touch via raw ioctl; ollama over
+hand-written TCP; embedded CJK bitmap font. It must never go dark.
+
+PRIMARY MISSION: hold the contract from ARTIFACT.md. Every change should be defensible as
+an aesthetic decision, not just a bug-fix. Ask, before editing: "does this make the piece
+more like itself?" If the answer is "kind of, but mostly it fixes a bug", prefer a smaller
+change that is purely an aesthetic improvement.
 
 Default selection rules when reading state/tel_tail.txt and state/screen.png:
 pick exactly ONE small, high-value step per turn. Keep the calm ambience; no menus,
@@ -56,7 +57,7 @@ Hard rules for every turn:
      cargo clippy --release -- -D warnings
      cargo build --release
 - If build passes: systemctl --user restart inkflow.service
-  then commit: git add -A && git commit -m "auto: <one-line change w/ measured evidence>"
+  then commit: git add -A && git commit -m "auto: <one-line change — how this makes the piece more like itself>"
   (pre-commit hook enforces fmt+build). Do NOT push.
 - If anything fails: revert your edits (`git checkout -- .`), leave the running
   service untouched, and append what failed to state/autoloop.log.
