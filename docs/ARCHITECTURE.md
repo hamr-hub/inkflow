@@ -10,7 +10,7 @@ src/
 ├── fallback.rs       — 静态词库 + warm/cool/slow/fast picker (zero-alloc)
 ├── mood.rs           — touch → (warmth, energy, idle) envelope
 ├── llm_loop.rs       — LLM worker thread + Shared queue
-├── scene_anim.rs     — per-frame spawn logic (glyphs + particles)
+├── scene_anim.rs     — per-frame spawn logic (glyphs + particles) + ink_current_x(t)
 ├── renderer.rs       — per-frame drawing (clear → nebula → moon → stars → particles → glyphs → fog)
 ├── surface.rs        — Surface enum: DRM / fb0 / Headless unified API
 ├── screenshot.rs     — 60s PPM/PNG frame capture (off-thread)
@@ -37,7 +37,8 @@ src/
         ├─► llm_loop::publish_mood(mood_state, &frame)
         │       └► LLM worker sees the new (warmth, energy) on its next generate()
         │
-        ├─► scene_anim::spawn_for_frame(scene, accum, frame, touch, shared, ...)
+        ├─► scene_anim::spawn_for_frame(scene, accum, frame, touch, shared, ..., t)
+        │       ├─► ink_current_x(t) → cluster column x (留白 composition)
         │       ├─► llm_loop::pop_char → if Some(c) → font::char_key → Glyph
         │       │   else → fallback::local_glyph(warmth, energy, tick) → Glyph
         │       └─► Per-contact particles + ambient drift particles
