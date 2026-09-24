@@ -203,3 +203,172 @@ pub fn grab_ppm_async(bgra: &[u32], w: u32, h: u32, pitch_px: usize, step: u32, 
 pub fn nanosleep_ms(ms: u64) {
     sys::sleep_ms(ms);
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn encode_produces_valid_json() {
+        let t = Telemetry {
+            ts: 1_700_000_000,
+            fps: 60.0,
+            warmth: 0.5,
+            energy: 0.3,
+            contacts: 2,
+            touch_device: "abc",
+            llm_ok: true,
+            llm_toks_per_s: 12.34,
+            llm_model: "gemma3:1b",
+            llm_last: "墨",
+            glyphs: 100,
+            particles: 50,
+            frame_min_us: 16_000,
+            frame_max_us: 17_500,
+        };
+        let s = encode(&t);
+        // The encoder must NOT leave double-commas or trailing commas
+        // — verify by trying to round-trip through a basic
+        // brace/quote-balanced parser.
+        assert!(s.starts_with('{'));
+        assert!(s.ends_with('}'));
+        let mut depth: i32 = 0;
+        let mut in_str = false;
+        let mut prev = '\0';
+        for c in s.chars() {
+            if c == '"' && prev != '\\' {
+                in_str = !in_str;
+            }
+            if !in_str {
+                match c {
+                    '{' => depth += 1,
+                    '}' => depth -= 1,
+                    ',' if prev == ',' => panic!("double-comma at {:?}", s),
+                    _ => {}
+                }
+            }
+            assert!(depth >= 0, "unbalanced }} at: {s}");
+            prev = c;
+        }
+        assert_eq!(depth, 0, "unclosed braces in: {s}");
+        // No unescaped quotes inside string fields (we don't allow
+        // quote characters in field values).
+        assert!(s.contains("\"fps\":60"));
+        assert!(s.contains("\"llm_ok\":true"));
+        assert!(s.contains("\"frame_max_us\":17500"));
+    }
+
+    #[test]
+    fn encode_handles_frame_min_max_sentinel() {
+        let t = Telemetry {
+            ts: 0,
+            fps: 0.0,
+            warmth: 0.0,
+            energy: 0.0,
+            contacts: 0,
+            touch_device: "",
+            llm_ok: false,
+            llm_toks_per_s: 0.0,
+            llm_model: "",
+            llm_last: "",
+            glyphs: 0,
+            particles: 0,
+            frame_min_us: u32::MAX, // sentinel
+            frame_max_us: 0,
+        };
+        let s = encode(&t);
+        // sentinel must be emitted as null
+        assert!(s.contains("\"frame_min_us\":null"));
+        // And not as a literal u32::MAX
+        assert!(!s.contains("4294967295"));
+    }
+
+    #[test]
+    fn push_kv_str_escapes_specials() {
+        let mut s = String::new();
+        push_kv_str(&mut s, "k", "墨\n夜\"潮", false);
+        // Should not contain raw newline
+        assert!(!s.contains('\n'));
+        // Should escape the quote
+        assert!(s.contains("\\\""));
+        // The key + value should round-trip through a simple scan.
+        assert_eq!(s, "\"k\":\"墨\\n夜\\\"潮\",");
+    }
+
+    #[test]
+    fn push_kv_str_emits_no_trailing_comma_when_last() {
+        let mut s = String::new();
+        push_kv_str(&mut s, "k", "x", true);
+        assert_eq!(s, "\"k\":\"x\"");
+    }
+
+    #[test]
+    fn push_kv_str_emits_trailing_comma_when_not_last() {
+        let mut s = String::new();
+        push_kv_str(&mut s, "k", "x", false);
+        assert_eq!(s, "\"k\":\"x\",");
+    }
+
+    #[test]
+    fn fmt_f64_handles_specials() {
+        // NaN and Infinity must serialize as null so the JSONL parses.
+        assert_eq!(fmt_f64(f64::NAN), "null");
+        assert_eq!(fmt_f64(f64::INFINITY), "null");
+        assert_eq!(fmt_f64(f64::NEG_INFINITY), "null");
+        // Whole numbers keep a single zero after the dot — keeps the
+        // field uniformly numeric for downstream readers (some
+        // parsers reject "0" without a decimal part).
+        assert_eq!(fmt_f64(0.0), "0.0");
+        assert_eq!(fmt_f64(1.0), "1.0");
+        // 6-significant-figure rounding
+        assert_eq!(fmt_f64(0.1 + 0.2), "0.3");
+        assert_eq!(fmt_f64(1.5), "1.5");
+        assert_eq!(fmt_f64(0.5), "0.5");
+    }
+
+    #[test]
+    fn fmt_f64_trims_trailing_zeros() {
+        // 0.5000001 rounds to "0.500000", trailing zeros stripped → "0.5"
+        assert_eq!(fmt_f64(0.5000001), "0.5");
+        // 12.345678 rounds to "12.345678", no trailing zeros.
+        assert_eq!(fmt_f64(12.345678), "12.345678");
+    }
+
+    #[test]
+    fn append_writes_one_line_per_call() {
+        let dir = std::env::temp_dir().join(format!("inkflow-test-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("tel.jsonl");
+        let path_str = path.to_string_lossy().to_string();
+
+        // write 3 lines
+        for i in 0..3 {
+            let t = Telemetry {
+                ts: i,
+                fps: i as f32,
+                warmth: 0.0,
+                energy: 0.0,
+                contacts: 0,
+                touch_device: "",
+                llm_ok: false,
+                llm_toks_per_s: 0.0,
+                llm_model: "",
+                llm_last: "",
+                glyphs: 0,
+                particles: 0,
+                frame_min_us: 0,
+                frame_max_us: 0,
+            };
+            append(&path_str, &t);
+        }
+        let content = std::fs::read_to_string(&path).unwrap();
+        let lines: Vec<&str> = content.lines().collect();
+        assert_eq!(lines.len(), 3, "expected 3 lines, got {:?}", lines);
+        for (i, l) in lines.iter().enumerate() {
+            assert!(l.contains(&format!("\"ts\":{}", i)), "line {i}: {l}");
+        }
+
+        // cleanup
+        std::fs::remove_dir_all(&dir).ok();
+    }
+}

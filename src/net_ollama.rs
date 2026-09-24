@@ -136,6 +136,32 @@ impl OllamaClient {
 
 // ---------- prompt ----------
 
+/// Five-style picker for the LLM system prompt. Per ARTIFACT.md:
+/// 婉约 (graceful), 豪放 (bold), 禅寂 (zen), 稚拙 (naive), 苍茫 (vast).
+///
+/// The choice depends on the (warmth, energy) reading. High-energy
+/// gets 豪放, low-energy + warm gets 婉约, low-energy + cool gets
+/// 禅寂, mid-energy + extreme warmth or cool picks 苍茫, mid-energy
+/// plus neutral picks 稚拙. The picker is deterministic so the same
+/// mood always produces the same style.
+fn style_for(warmth: f32, energy: f32) -> &'static str {
+    if energy > 0.6 {
+        "豪放"
+    } else if energy < 0.2 {
+        if warmth > 0.6 {
+            "婉约"
+        } else if warmth < 0.4 {
+            "禅寂"
+        } else {
+            "稚拙"
+        }
+    } else if (warmth - 0.5).abs() > 0.25 {
+        "苍茫"
+    } else {
+        "稚拙"
+    }
+}
+
 fn build_prompt(warmth: f32, energy: f32) -> String {
     let mood = if energy > 0.6 {
         if warmth > 0.55 {
@@ -154,9 +180,9 @@ fn build_prompt(warmth: f32, energy: f32) -> String {
     } else {
         "幽深、寂静"
     };
+    let style = style_for(warmth, energy);
     format!(
-        "你是一件数字艺术品的氛围文字源。用中文，只输出 30-60 个字，\
-         写一段{mood}的意象碎片，像梦话，不解释，不断句成诗行，无标点堆砌，允许短句。"
+        "你是一件数字艺术品的氛围文字源。风格：{style}。用中文，只输出 30-60 个字，写一段{mood}的意象碎片，像梦话，不解释，不断句成诗行，无标点堆砌，允许短句。"
     )
 }
 
@@ -333,7 +359,6 @@ fn scan_bool_field(line: &[u8], key: &[u8], want: bool) -> bool {
             while j < line.len() && (line[j] == b' ' || line[j] == b'\t') {
                 j += 1;
             }
-            let _truth = want as usize;
             if j + 4 < line.len() && &line[j..j + 4] == b"true" {
                 return want;
             }
@@ -383,4 +408,150 @@ fn decode_utf8_one(b: &[u8]) -> Option<(char, usize)> {
         return char::from_u32(cp).map(|c| (c, 4));
     }
     None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn find_newline_finds_zero_byte() {
+        let buf = b"abc\ndef";
+        assert_eq!(find_newline(buf), Some(3));
+    }
+
+    #[test]
+    fn find_newline_returns_none_when_absent() {
+        let buf = b"abcdef";
+        assert_eq!(find_newline(buf), None);
+        let buf: &[u8] = b"";
+        assert_eq!(find_newline(buf), None);
+    }
+
+    #[test]
+    fn scan_response_extracts_ascii() {
+        let line: &[u8] = b"{\"response\":\"hello world\"}\n";
+        assert_eq!(scan_response(line), Some("hello world".to_string()));
+    }
+
+    #[test]
+    fn scan_response_extracts_cjk() {
+        let line: &[u8] = "{\"response\":\"墨夜潮\"}\n".as_bytes();
+        assert_eq!(scan_response(line), Some("墨夜潮".to_string()));
+    }
+
+    #[test]
+    fn scan_response_handles_escaped_quote() {
+        let line: &[u8] = b"{\"response\":\"a\\\"b\"}\n";
+        assert_eq!(scan_response(line), Some("a\"b".to_string()));
+    }
+
+    #[test]
+    fn scan_response_returns_none_for_missing_field() {
+        let line: &[u8] = b"{\"model\":\"x\"}\n";
+        assert_eq!(scan_response(line), None);
+    }
+
+    #[test]
+    fn scan_done_true() {
+        let line: &[u8] = b"{\"done\":true,\"response\":\"x\"}";
+        assert!(scan_done(line));
+    }
+
+    #[test]
+    fn scan_done_false() {
+        let line: &[u8] = b"{\"done\":false,\"response\":\"\\xE5\\xA2\\xA8\"}";
+        assert!(!scan_done(line));
+    }
+
+    #[test]
+    fn scan_done_returns_false_when_missing() {
+        let line: &[u8] = b"{\"response\":\"x\"}";
+        assert!(!scan_done(line));
+    }
+
+    #[test]
+    fn escape_json_handles_specials() {
+        let s = "墨\n夜\"潮\\汐";
+        let esc = escape_json(s);
+        assert!(esc.contains("\\n"));
+        assert!(esc.contains("\\\""));
+        assert!(esc.contains("\\\\"));
+        // round-trip: the unescaped string should equal the original.
+        assert_eq!(
+            esc.replace("\\\\", "\x00ESC")
+                .replace("\\\"", "\"")
+                .replace("\\n", "\n")
+                .replace("\x00ESC", "\\"),
+            s
+        );
+    }
+
+    #[test]
+    fn u32_from_hex_decodes() {
+        assert_eq!(u32_from_hex(b"0041"), Ok(0x41));
+        assert_eq!(u32_from_hex(b"10FF"), Ok(0x10FF));
+        assert_eq!(u32_from_hex(b"abcd"), Ok(0xABCD));
+        assert!(u32_from_hex(b"xyz").is_err());
+    }
+
+    #[test]
+    fn decode_utf8_handles_2_3_4_byte() {
+        // ASCII
+        assert_eq!(decode_utf8_one(b"a"), Some(('a', 1)));
+        // 2-byte: é (U+00E9) = 0xC3 0xA9
+        assert_eq!(decode_utf8_one(&[0xC3, 0xA9]), Some(('é', 2)));
+        // 3-byte: 墨 (U+58A8) = 0xE5 0xA2 0xA8
+        assert_eq!(decode_utf8_one(&[0xE5, 0xA2, 0xA8]), Some(('墨', 3)));
+        // 4-byte: 𝕊 (U+1D54A)
+        assert_eq!(
+            decode_utf8_one(&[0xF0, 0x9D, 0x95, 0x8A]),
+            Some(('\u{1D54A}', 4))
+        );
+        // Invalid
+        assert_eq!(decode_utf8_one(&[0xFF]), None);
+    }
+
+    #[test]
+    fn build_body_has_required_fields() {
+        let b = build_body("gemma3:1b", "test");
+        let s = String::from_utf8(b).unwrap();
+        assert!(s.contains("\"model\":\"gemma3:1b\""));
+        assert!(s.contains("\"prompt\":\"test\""));
+        assert!(s.contains("\"stream\":true"));
+    }
+
+    #[test]
+    fn build_prompt_includes_mood_word() {
+        let p = build_prompt(0.9, 0.9);
+        // high energy + high warmth → 炽烈、奔涌
+        assert!(p.contains("炽烈") || p.contains("奔涌"));
+        let p = build_prompt(0.1, 0.1);
+        // low everything → 幽深、寂静
+        assert!(p.contains("幽深") || p.contains("寂静"));
+    }
+
+    #[test]
+    fn build_prompt_includes_style() {
+        // All five styles must be reachable, mapping to ARTIFACT.md.
+        // 豪放: high energy regardless of warmth
+        assert!(build_prompt(0.9, 0.9).contains("豪放"));
+        // 禅寂: low energy + cool
+        assert!(build_prompt(0.1, 0.1).contains("禅寂"));
+        // 婉约: low energy + warm
+        assert!(build_prompt(0.9, 0.1).contains("婉约"));
+        // 苍茫: mid energy + extreme warmth/cool
+        assert!(build_prompt(0.05, 0.5).contains("苍茫"));
+        // 稚拙: mid energy + neutral
+        assert!(build_prompt(0.5, 0.5).contains("稚拙"));
+    }
+
+    #[test]
+    fn style_for_is_deterministic() {
+        for w in (0..10).map(|i| i as f32 * 0.1) {
+            for e in (0..10).map(|i| i as f32 * 0.1) {
+                assert_eq!(style_for(w, e), style_for(w, e));
+            }
+        }
+    }
 }

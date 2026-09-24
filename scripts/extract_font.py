@@ -22,20 +22,7 @@ GLYPH_H = 48
 # Built from the POOLS in main.rs + the visible ASCII range + a handful of
 # poetic extras. Every char here costs ~1.2 KB in the binary (48*48/2 bytes).
 SUBSET = (
-    # quiet pool (静)
-    "雾月夜潮呼吸微光深处沉睡鲸落尘埃影钟摆雨前纸页苔林木叶泉"
-    "雪落远钟云根幽径落花鸿影薄暮清露听蝉听雪"
-    # moving pool (动)
-    "风焰河奔裂帛星陨心跳浪尖闪电迁徙鼓惊鸟火渡口弦雷潮涌雷鸣"
-    "烟火龙吟震颤飞溅雪崩迸裂翻涌流火疾行"
-    # cold pool (冷)
-    "雪蓝冰星霜铁墨深空孤井石英冬海沟玻璃月背银寒朔风凝霜寒潭"
-    "远岭苍凛薄冰星河落雪静海"
-    # warm pool (暖)
-    "灯橘麦陶体温琥珀黄昏花信茧炊烟蜜绒烛岸掌心茶暖炉火夕照"
-    "茶烟旧书木质余温棉晨曦晚风"
-    # poetic extras
-    "诗无云川焦"
+    """雾月夜潮呼吸微光深处沉睡鲸落尘埃影钟摆雨前纸页苔林木叶泉雪落远钟云根幽径落花鸿影薄暮清露听蝉听雪风焰河奔裂帛星陨心跳浪尖闪电迁徙鼓惊鸟火渡口弦雷潮涌雷鸣烟火龙吟震颤飞溅雪崩迸裂翻涌流火疾行雪蓝冰星霜铁墨深空孤井石英冬海沟玻璃月背银寒朔风凝霜寒潭远岭苍凛薄冰星河落雪静海灯橘麦陶体温琥珀黄昏花信茧炊烟蜜绒烛岸掌心茶暖炉火夕照茶烟旧书木质余温棉晨曦晚风诗无云川焦梦远岸声落潮声微风声水声古泉山径水墨山水夕阳残月晓风暮雨朝露春雪秋霜雁归鸟啼虫鸣钟鼓琴瑟琵琶舟帆桨灯塔渔火石阶长亭古道远山近水柳絮桃花白鹤苍鹰云海烟波礁石沙岸松林竹林枫叶梧桐海棠莲花菊梅花兰墨色留白气韵神思幽怀旷远清寂萧索苍茫空蒙寂静灼灼皎皎泠泠澹澹溶溶幽幽杳杳绵绵迢迢盈盈呼吸光影晨昏明暗冷暖动静远近高低深浅浓淡疏密虚实天地日月星辰云雨霜雪雷电山海川湖草木花鸟春夏秋冬寒暑冷热朝暮昼夜晴阴晦明人世间家国故土乡愁归途客旅行吟心魂意气神思情梦忆念感悟纸笔墨砚琴棋书画诗酒茶风骨气节魂魄血骨肉鸿蒙混沌玄黄宇宙洪荒白黑青赤黄玄素虚无空明静定禅一瞬刹那永恒长久"""
 )
 SUBSET = "".join(dict.fromkeys(SUBSET))  # dedupe, preserve order
 
@@ -47,9 +34,8 @@ def render_glyph(font, ch):
     """Render one char into a GLYPH_W × GLYPH_H grayscale image, return a list of
     4bpp values (0..15) packed two per byte."""
     img = Image.new("L", (GLYPH_W, GLYPH_H), 0)
-    drw = ImageDraw = None
     from PIL import ImageDraw as _ID
-    drw = _ID.Draw(img)
+    _ID.Draw(img)
     # Anchor the glyph at the visual baseline of the cell. Pillow's default
     # bitmap font drawing places text with its top-left at (0, 0), so we
     # pre-rasterise onto a wider canvas and crop the cell so glyphs sit

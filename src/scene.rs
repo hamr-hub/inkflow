@@ -144,3 +144,84 @@ pub fn lcg(seed: u64) -> f32 {
 pub fn hue_rgba(h: f32, s: f32, l: f32) -> Rgba {
     Rgba::from_hsl(h, s, l)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn lcg_is_in_unit_interval() {
+        for seed in [0u64, 1, 42, 1_000_000, u64::MAX] {
+            let v = lcg(seed);
+            assert!((0.0..=1.0).contains(&v), "seed={seed} -> {v}");
+        }
+    }
+
+    #[test]
+    fn lcg_is_deterministic() {
+        for seed in 0..256u64 {
+            assert_eq!(lcg(seed), lcg(seed));
+        }
+    }
+
+    #[test]
+    fn scene_pools_hard_cap() {
+        let mut scene = Scene::new();
+        // Push more than GLYPH_CAP entries; only the last GLYPH_CAP remain.
+        for i in 0..(GLYPH_CAP + 100) {
+            scene.push_glyph(Glyph {
+                ch: "墨",
+                x: 0.0,
+                y: 0.0,
+                vx: 0.0,
+                vy: 0.0,
+                life: 1.0,
+                max_life: 1.0,
+                size: 1.0,
+                phase: 0.0,
+            });
+            // Use `i` to silence "unused" — we don't actually need it.
+            let _ = i;
+        }
+        assert_eq!(scene.glyphs.len(), GLYPH_CAP);
+
+        let mut scene = Scene::new();
+        for _ in 0..(PARTICLE_CAP + 100) {
+            scene.push_particle(Particle {
+                x: 0.0,
+                y: 0.0,
+                vx: 0.0,
+                vy: 0.0,
+                life: 1.0,
+                max_life: 1.0,
+                r: 1.0,
+            });
+        }
+        assert_eq!(scene.particles.len(), PARTICLE_CAP);
+    }
+
+    #[test]
+    fn star_seed_is_idempotent() {
+        let mut s = Scene::new();
+        s.seed_stars(100.0, 100.0);
+        let len1 = s.stars.len();
+        // re-seed must be a no-op
+        s.seed_stars(100.0, 100.0);
+        assert_eq!(s.stars.len(), len1);
+        assert_eq!(len1, STAR_COUNT);
+    }
+
+    #[test]
+    fn star_positions_are_within_frame() {
+        let mut s = Scene::new();
+        let w = 800.0;
+        let h = 600.0;
+        s.seed_stars(w, h);
+        for st in &s.stars {
+            assert!((0.0..=w).contains(&st.x), "x out of frame: {}", st.x);
+            assert!((0.0..=h).contains(&st.y), "y out of frame: {}", st.y);
+            assert!(st.r > 0.0, "radius must be positive");
+            assert!(st.period > 0.0, "period must be positive");
+        }
+    }
+}

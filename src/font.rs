@@ -14,7 +14,6 @@
 #![allow(dead_code)]
 
 use crate::fontdata::{GLYPHS, GLYPH_H, GLYPH_W};
-use core::cmp::Ordering;
 
 #[derive(Copy, Clone, Default)]
 pub struct Rgba(pub u8, pub u8, pub u8, pub u8);
@@ -269,13 +268,43 @@ pub fn fill_rect(
     }
 }
 
-#[inline]
-pub fn clamp(v: f32, lo: f32, hi: f32) -> f32 {
-    match v.partial_cmp(&lo) {
-        Some(Ordering::Less) => lo,
-        _ => match v.partial_cmp(&hi) {
-            Some(Ordering::Greater) => hi,
-            _ => v,
-        },
+/// Look up the static key string for a single char that has a bitmap
+/// in the embedded font. Returns `"墨"` (the sentinel character) if
+/// the char is missing, so the renderer can keep painting even when
+/// the LLM sends something exotic. The returned `&'static str` aliases
+/// into the compiled GLYPHS table — no allocation.
+pub fn char_key(c: char) -> &'static str {
+    let mut buf = [0u8; 4];
+    let s: &str = c.encode_utf8(&mut buf);
+    static_key_for(s).unwrap_or("墨")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn char_key_returns_sentinel_for_unknown() {
+        assert_eq!(char_key('\u{20000}'), "墨");
+    }
+
+    #[test]
+    fn char_key_returns_self_for_ascii() {
+        // ASCII printable chars are always in the embedded font.
+        assert_eq!(char_key('A'), "A");
+        assert_eq!(char_key(' '), " ");
+        assert_eq!(char_key('z'), "z");
+    }
+
+    #[test]
+    fn f32_clamp_method_behaves() {
+        // We rely on f32::clamp (Rust ≥1.50) everywhere. Sanity check
+        // the standard library contract — the helper module removed
+        // its custom clamp in v0.2.1.
+        assert_eq!((-1.0f32).clamp(0.0, 1.0), 0.0);
+        assert_eq!(2.0f32.clamp(0.0, 1.0), 1.0);
+        assert_eq!(0.5f32.clamp(0.0, 1.0), 0.5);
+        assert_eq!(0.0f32.clamp(0.0, 1.0), 0.0);
+        assert_eq!(1.0f32.clamp(0.0, 1.0), 1.0);
     }
 }

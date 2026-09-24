@@ -37,6 +37,7 @@ pub struct InputEvent {
 pub const EV_SYN: u16 = 0x00;
 #[allow(dead_code)]
 pub const EV_KEY: u16 = 0x01;
+pub const EV_REL: u16 = 0x02;
 pub const EV_ABS: u16 = 0x03;
 pub const ABS_MT_SLOT: u16 = 0x2f;
 pub const ABS_MT_POSITION_X: u16 = 0x35;
@@ -44,6 +45,14 @@ pub const ABS_MT_POSITION_Y: u16 = 0x36;
 pub const ABS_MT_TRACKING_ID: u16 = 0x39;
 pub const ABS_X: u16 = 0x00;
 pub const ABS_Y: u16 = 0x01;
+pub const REL_X: u16 = 0x00;
+pub const REL_Y: u16 = 0x01;
+pub const REL_WHEEL: u16 = 0x08;
+pub const BTN_LEFT: u16 = 0x110;
+#[allow(dead_code)]
+pub const BTN_RIGHT: u16 = 0x111;
+#[allow(dead_code)]
+pub const BTN_MIDDLE: u16 = 0x112;
 pub const BTN_TOUCH: u16 = 0x14a;
 
 pub const EVIOCGBIT: u64 = 0x8004_5d22; // _IOC(0, 'E', 0x22, 128)
@@ -105,6 +114,11 @@ pub struct Contact {
 
 pub struct TouchState {
     pub contacts: Vec<Contact>,
+    /// Synthetic contact synthesized from a USB mouse: cursor position
+    /// when BTN_LEFT is held. Lives alongside the multi-touch slots so
+    /// dev hosts without a touchscreen can still drive the piece. On
+    /// release the contact disappears (no ghost trail).
+    pub mouse: Option<Contact>,
     pub energy: f32,
     pub warmth: f32,
     pub last: Option<std::time::Instant>,
@@ -115,6 +129,7 @@ impl Default for TouchState {
     fn default() -> Self {
         Self {
             contacts: Vec::with_capacity(8),
+            mouse: None,
             energy: 0.0,
             warmth: 0.5,
             last: None,
@@ -143,6 +158,22 @@ pub fn is_touch_device(path: &str) -> bool {
     let x = bit_set(&bits, ABS_X);
     let btn_touch = bit_set(&bits, BTN_TOUCH);
     (mt_x && mt_slot) || (x && btn_touch)
+}
+
+/// A mouse: EV_REL + REL_X/Y + BTN_LEFT. We don't care about wheels
+/// or extra buttons — the cursor position + left button is enough to
+/// synthesize a single touch contact. Touchscreens and mice never
+/// overlap on the same /dev/input/event* node, so this is exclusive.
+pub fn is_mouse_device(path: &str) -> bool {
+    let Ok(fd) = sys::open_ro(path) else {
+        return false;
+    };
+    let r = eviocgbit(fd, 0).ok();
+    sys::close_fd(fd);
+    let Some(bits) = r else { return false };
+    let rel = bit_set(&bits, REL_X) && bit_set(&bits, REL_Y);
+    let btn = bit_set(&bits, BTN_LEFT);
+    rel && btn
 }
 
 fn axis_window(fd: c_int) -> (i32, i32, i32, i32) {
@@ -215,10 +246,15 @@ fn scan_and_spawn(dir: &str, st: &Arc<Mutex<TouchState>>) {
             continue;
         }
         let path_str = p.to_string_lossy().to_string();
-        if !is_touch_device(&path_str) {
-            continue;
+        // Mouse takes priority over touch detection (a USB mouse that
+        // happens to also expose ABS bits — rare — would still be
+        // routed here first). Touch / mouse readers are exclusive on
+        // a single device node.
+        if is_mouse_device(&path_str) {
+            spawn_mouse_reader(path_str, st.clone());
+        } else if is_touch_device(&path_str) {
+            spawn_reader(path_str, st.clone());
         }
-        spawn_reader(path_str, st.clone());
     }
 }
 
@@ -374,4 +410,130 @@ fn read_device_name(fd: c_int) -> Option<String> {
 #[allow(dead_code)]
 fn _align_check() {
     let _ = mem::size_of::<InputEvent>() == 24;
+}
+
+// ---------- mouse reader ----------
+//
+// On a dev box without a touchscreen, a USB mouse is the only way to
+// drive the piece. We synthesize a single virtual touch contact from
+// the cursor position while BTN_LEFT is held; release clears it. The
+// cursor starts at the center of the screen and accumulates REL_X /
+// REL_Y counts into a normalized [0,1] position.
+
+fn spawn_mouse_reader(path: String, st: Arc<Mutex<TouchState>>) {
+    if already_running(&path) {
+        return;
+    }
+    std::thread::spawn(move || mouse_reader_loop(path, st));
+}
+
+fn mouse_reader_loop(path: String, st: Arc<Mutex<TouchState>>) {
+    loop {
+        match run_mouse_once(&path, &st) {
+            Ok(()) => { /* device closed cleanly */ }
+            Err(_) => {
+                sys::sleep_ms(1500);
+            }
+        }
+    }
+}
+
+fn run_mouse_once(path: &str, st: &Arc<Mutex<TouchState>>) -> Result<(), Errno> {
+    let fd = sys::open_ro(path)?;
+    {
+        let mut s = st.lock().unwrap();
+        if s.device.is_empty() {
+            s.device = format!(
+                "mouse:{}",
+                read_device_name(fd).unwrap_or_else(|| path.into())
+            );
+        }
+    }
+
+    // Per-event cursor position (normalized 0..1). Start at the
+    // geometric center so the first click lands mid-screen rather
+    // than in a corner.
+    let mut cx: f32 = 0.5;
+    let mut cy: f32 = 0.5;
+    let mut pressed = false;
+
+    // REL counts per event are typically in [-50, 50] for a high-DPI
+    // mouse, larger for a slow movement. We need each event to feel
+    // like a small but visible motion: 0.0030 / count ≈ a full
+    // screen sweep after a couple of inches of mouse travel.
+    let motion_scale = 0.0030f32;
+
+    let mut buf = [0u8; 256];
+    let event_size = mem::size_of::<InputEvent>();
+    loop {
+        let n = sys::read_some(fd, &mut buf)?;
+        if n == 0 {
+            sys::sleep_ms(2);
+            continue;
+        }
+        let mut changed = false;
+        let mut i = 0usize;
+        while i + event_size <= n {
+            let ev: InputEvent =
+                unsafe { core::ptr::read_unaligned(buf.as_ptr().add(i) as *const InputEvent) };
+            i += event_size;
+            match ev.type_ {
+                EV_REL => match ev.code {
+                    REL_X => {
+                        cx = (cx + (ev.value as f32) * motion_scale).clamp(0.0, 1.0);
+                        changed = true;
+                    }
+                    REL_Y => {
+                        cy = (cy + (ev.value as f32) * motion_scale).clamp(0.0, 1.0);
+                        changed = true;
+                    }
+                    REL_WHEEL => {}
+                    _ => {}
+                },
+                EV_KEY if ev.code == BTN_LEFT => {
+                    pressed = ev.value != 0;
+                    changed = true;
+                }
+                EV_KEY => {}
+                _ => {}
+            }
+        }
+        if !changed {
+            continue;
+        }
+
+        let mut s = st.lock().unwrap();
+        s.mouse = if pressed {
+            Some(Contact { x: cx, y: cy })
+        } else {
+            None
+        };
+
+        // Synthesize a single touch contact in slot 0 so the
+        // existing spawn_particles path picks up the cursor
+        // without any new wiring. We replace slot 0 if it exists
+        // (so we don't accidentally displace a real multitouch
+        // slot added by a touchscreen), and clear slot 0 on
+        // release.
+        if pressed {
+            let contact = Contact { x: cx, y: cy };
+            if let Some(slot) = s.contacts.first_mut() {
+                *slot = contact;
+            } else {
+                s.contacts.push(contact);
+            }
+            // Mouse-driven energy bump so a held click visibly
+            // ignites the scene even with no motion. The decay in
+            // mood::tick pulls it back down within ~0.5 s of release.
+            s.energy = (s.energy + 0.30).min(1.0);
+            s.warmth = (s.warmth * 0.92 + cx * 0.08).clamp(0.2, 0.8);
+            s.last = Some(std::time::Instant::now());
+        } else {
+            // Release: keep `last` fresh so the stale filter in
+            // mood::tick doesn't immediately wipe our other
+            // contacts, but don't touch s.contacts — the stale
+            // filter (or the next press) will reconcile.
+            s.last = Some(std::time::Instant::now());
+        }
+    }
 }
