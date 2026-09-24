@@ -753,10 +753,16 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
 
     // Soft horizon mist — a faint warm glow that grounds the inscription
     // like distant mountains catching the last warm light at twilight.
-    // Bell-curve from v≈0.55 to v≈1.00 peaking around v≈0.78; the hero
-    // sits at v≈0.42 so this never touches the focal line. Amplitude
-    // stays ≤ 0.12 so it reads as atmospheric depth, not a horizon line
-    // (ART_DIRECTION §四 "高光只落在主句"). The warmth drives the mist
+    // Bell-curve from v≈0.50 to v≈1.00 peaking around v≈0.75; the hero
+    // sits at v≈0.42 and the upper-right at v≈0.28, both clear of the
+    // bell so the focal bloom keeps its exclusive claim on the light
+    // (ART_DIRECTION §四 "高光只落在主句"). The peak now sits at the
+    // lower-left echo (v≈0.74), so 云深不知处 reads as ink dissolving
+    // into the warm horizon rather than floating over empty dark, and
+    // the subtitle (v≈0.66) catches a softer share of the same band —
+    // the two lower strokes feel grounded by one atmosphere rather
+    // than each on its own patch of dark. Amplitude stays ≤ 0.12 so it
+    // reads as atmospheric depth, not a horizon line. Warmth drives the
     // tint so a touched-warm scene breathes amber, an idle-cool scene
     // breathes dusk.
     let horizon_color = mix(rgb(58, 38, 28), rgb(128, 86, 54), warmth);
@@ -764,8 +770,12 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
     for y in 0..h {
         let v = y as f32 / (h_f - 1.0).max(1.0);
         let base = color::grad3(nebula_top, nebula_mid, nebula_bot, v);
-        // Parabolic bell: 0 at v=0.55, peaks ≈0.253 at v≈0.775, 0 at v=1.0.
-        let horizon_glow = ((v - 0.55) * (1.0 - v) * 5.0).clamp(0.0, 1.0);
+        // Parabolic bell: 0 at v=0.50, peaks ≈0.313 at v≈0.75, 0 at v=1.0.
+        // Shifted from v=0.55→0.50 start so the mist anchors the
+        // inscription's two lower strokes (subtitle + lower-left) on a
+        // shared warm horizon, while leaving the hero and upper-right
+        // clear of the band.
+        let horizon_glow = ((v - 0.50) * (1.0 - v) * 5.0).clamp(0.0, 1.0);
         for x in 0..w {
             let dx = x as f32 - cx;
             let dy = y as f32 - cy;
