@@ -81,8 +81,11 @@ fn spawn_glyphs(
     dt: f32,
 ) {
     let energy = frame.effective_energy();
-    // ~16 glyphs/sec at idle (energy=0.05), climbing to ~30 at high energy.
-    accum.glyph_acc += dt * (8.0 + energy * 22.0);
+    // ~22 glyphs/sec at idle (energy=0.05), climbing to ~40 at high
+    // energy. Slower drift speed (35-115 vs old 55-185 px/s) so
+    // each char spends ~30 s in flight — every horizontal band
+    // always has visible ink instead of wave-troughs.
+    accum.glyph_acc += dt * (12.0 + energy * 28.0);
     while accum.glyph_acc >= 1.0 {
         accum.glyph_acc -= 1.0;
         // Top stream falls slower so the breath reads as "ink rising +
@@ -115,7 +118,7 @@ fn spawn_glyphs(
                 .wrapping_add(131)
                 .wrapping_add(scene.glyphs.len() as u64))
                 * 0.36;
-        let speed = (55.0 + energy * 130.0) * speed_jitter;
+        let speed = (35.0 + energy * 80.0) * speed_jitter;
         let size_jitter = 0.88
             + lcg(tick
                 .wrapping_add(113)
