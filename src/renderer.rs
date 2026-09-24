@@ -128,8 +128,11 @@ pub fn draw_nebula(pixels: &mut [u32], pitch_px: usize, fb_w: i32, fb_h: i32, t:
 /// wash. Drifts on a 320 s horizontal sine and a 480 s vertical cosine
 /// — different periods from the nebula drift so the composition never
 /// re-aligns. Alpha is intentionally low (~0.10 outer / ~0.06 inner):
-/// the moon is a hint of presence, never a focal point that competes
-/// with the glyphs.
+/// Alphas (0.22 outer halo / 0.14 inner core) — higher than the
+/// earlier 0.10 / 0.06 because the moon is the only true anchor of
+/// composition and a too-shy moon does not register. Still well below
+/// the glyphs' peak alpha (~0.95) so it does not compete with the
+/// character stream.
 pub fn draw_moon(pixels: &mut [u32], pitch_px: usize, fb_w: i32, fb_h: i32, t: f32, hue: f32) {
     // Upper-right anchor, slowly drifting between ~0.62 and ~0.72 of width.
     let cx = fb_w as f32 * (0.66 + 0.05 * (t * 0.020).sin());
@@ -290,7 +293,7 @@ pub fn draw_and_step_glyphs(
             g.y + draw_size * 0.3,
             draw_size * 0.7,
             halo_color,
-            halo_strength * 0.18 * top_fade * bottom_fade,
+            halo_strength * 0.07 * top_fade * bottom_fade,
         );
         let fg = Rgba::from_hsl(row_hue, 0.50, 0.92);
         // Foreground ink must read as the primary content, not as
@@ -462,10 +465,12 @@ mod portrait_tests {
     fn self_portrait_matches_artifacts_visual_contract() {
         let w: i32 = 1280;
         let h: i32 = 800;
-        // 600 frames at 60 fps = 10 seconds of simulated piece time.
-        // Long enough for the ink current to have moved and the moon
-        // to have drifted.
-        let frames: u32 = 600;
+        // 300 frames at 60 fps = 5 seconds of simulated piece time.
+        // Long enough that ~30+ glyphs are visible at any vertical
+        // band (drift 35-115 px/s × 5 s ≈ 175-575 px) and the moon
+        // has drifted a touch; short enough that the snapshot doesn't
+        // collapse into 'many historical clusters'.
+        let frames: u32 = 300;
         let pixels = render_portrait(w, h, frames);
         write_ppm(PORTRAIT_PATH, w, h, &pixels);
 
