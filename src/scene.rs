@@ -907,11 +907,32 @@ fn place_slot(def: &SlotDef, w: u32, h: u32, char_count: usize) -> (i32, i32, u3
 }
 
 /// Paint one supporting slot — fade-in/out ramps, drift, no per-char stagger.
-fn paint_supporting_slot(fb: &mut [u32], w: u32, h: u32, slot: &Slot, time: f32, warmth: f32) {
-    let alpha = slot.alpha_now();
-    if alpha < 0.01 {
+fn paint_supporting_slot(
+    fb: &mut [u32],
+    w: u32,
+    h: u32,
+    slot: &Slot,
+    time: f32,
+    warmth: f32,
+    pulse: f32,
+) {
+    let base_alpha = slot.alpha_now();
+    if base_alpha < 0.01 {
         return;
     }
+    // Subtle inscribed-breath — supporting lines inhale with the rhythm
+    // engine's pulse so the four lines of one poem read as one
+    // calligraphic inscription breathing under one light, not as three
+    // drifting labels. Scaled by (1 - shadow_mix) so the brush-weight
+    // gradient also governs how much each line participates: the
+    // subtitle (closest to focal, shadow_mix 0.10) catches the most
+    // breath, the upper-right (0.26) less, the far-faint (0.42) the
+    // least — same hierarchy that already governs their ink density,
+    // now extending to motion. Amplitude is small (≤ 4 %) so the
+    // supporting lines stay subordinate and never bloom; restraint
+    // (ART_DIRECTION §四) holds.
+    let breath = 1.0 + 0.04 * pulse * (1.0 - slot.def.shadow_mix);
+    let alpha = (base_alpha * breath).clamp(0.0, 1.0);
     let chars: Vec<char> = slot.phrase.text.chars().collect();
     let n = chars.len();
     if n == 0 {
@@ -1167,7 +1188,7 @@ pub fn paint_composition(
     // Paint supporting slots first so the hero sits on top.
     for slot in &scene.composition.slots {
         if matches!(slot.def.role, SlotRole::Support) {
-            paint_supporting_slot(fb, w, h, slot, time, warmth);
+            paint_supporting_slot(fb, w, h, slot, time, warmth, pulse);
         }
     }
     if let Some(b) = beat {
