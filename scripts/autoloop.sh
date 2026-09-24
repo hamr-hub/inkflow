@@ -3,7 +3,7 @@
 set -uo pipefail
 cd "$HOME/codespace/inkflow" || exit 0
 export PATH="$HOME/.nvm/versions/node/v22.22.1/bin:$PATH"
-export CARGO_TARGET_DIR=/mnt/ssd/codespace/.cargo-target/inkflow
+export CARGO_TARGET_DIR=/mnt/ssd/codespace/.cargo-target/inkflow-zero
 LOG=state/autoloop.log
 mkdir -p state
 echo "===== $(date -Is) tick =====" >> "$LOG"
