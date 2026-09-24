@@ -55,7 +55,10 @@ Hard rules for every turn:
 - Edit src/ and/or scripts/, then ALL must pass:
      cargo fmt
      cargo clippy --release -- -D warnings
-     cargo build --release
+     cargo test --release    ← the visual-contract test (portrait
+                              invariant) lives here; without this,
+                              aesthetic regressions gate the audit
+                              instead of being caught at commit
 - If build passes: systemctl --user restart inkflow.service
   then commit: git add -A && git commit -m "auto: <one-line change — how this makes the piece more like itself>"
   (pre-commit hook enforces fmt+build). Do NOT push.
