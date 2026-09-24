@@ -36,8 +36,23 @@ Read these in order each turn:
   1. ARTIFACT.md     ← the work's artistic statement; READ FIRST. Every change must make the
                         piece "more like what it insists on being".
   2. ZERO_DEP.md     ← binding spec for the zero-dependency contract.
-  3. PRODUCTION.md   ← what is already proven; do not regress.
+  3. PRODUCTION.md   ← what is already proven; do not regress. The 'Aesthetic Contract'
+                        section (added in v0.2.1) is the binding list of art-direction
+                        testable invariants — read it like a checklist.
   4. state/tel_tail.txt and state/screen.png  ← current state of the piece.
+
+SELF-MONITORING (new in v0.2.1): before picking a change, look at
+the last 30 entries of state/telemetry.jsonl and check the
+'voice' field distribution. If one voice has been dominant
+(> 70 % of the recent window) for the last 10 minutes, this
+cycle's edit must push the picker toward variety — even if
+you'd otherwise have picked a different aesthetic refinement.
+A healthy piece cycles through 婉约 / 豪放 / 禅寂 / 稚拙 / 苍茫;
+a stuck piece drifts toward monotonic voice. The function
+`telemetry::voice_drift_check` is gated to #[cfg(test)] right
+now; the equivalent shell is
+  jq -r '.voice' state/telemetry.jsonl | tail -30 | sort | uniq -c | sort -rn
+which tells you the same thing.
 
 Rendering is DRM/KMS dumb-buffer + software 32bpp; evdev touch via raw ioctl; ollama over
 hand-written TCP; embedded CJK bitmap font. It must never go dark.
