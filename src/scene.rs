@@ -886,7 +886,14 @@ fn paint_supporting_slot(fb: &mut [u32], w: u32, h: u32, slot: &Slot, time: f32,
     // hero) stays near-cream, the upper-right is mid-weight, and the
     // lower-left pulls further into shadow so the verse reads as ink
     // dissolving into mist (ART_DIRECTION §三 "near-crisp / far-faint").
-    let base_color = mix(color::ink::CREAM, color::ink::SHADOW, slot.def.shadow_mix);
+    // Warmth then tints the result toward the palette's warm family — scaled
+    // by (1 - shadow_mix) so the subtitle leans warmest (closest to the
+    // focal line) and the far-faint echo stays nearly cool as it dissolves.
+    // The temperature gradient mirrors the brush-weight gradient, so the
+    // four lines of 《寻隐者不遇》 read as one palette thinning with distance.
+    let raw_base = mix(color::ink::CREAM, color::ink::SHADOW, slot.def.shadow_mix);
+    let warmth_tint = warmth * (1.0 - slot.def.shadow_mix) * 0.30;
+    let base_color = mix(raw_base, color::ink::WARM, warmth_tint);
     let glow_color = mix(
         color::ink::GLOW,
         color::ink::SHADOW,
@@ -920,8 +927,8 @@ fn paint_supporting_slot(fb: &mut [u32], w: u32, h: u32, slot: &Slot, time: f32,
             char_alpha,
         );
     }
-    // Tinted by warmth so the supporting lines follow the same hue family.
-    let _ = warmth;
+    // Supporting lines are now tinted toward the warm palette family by the
+    // `warmth_tint` computed above (scaled by 1 - shadow_mix).
 }
 
 /// Paint the hero slot using the existing rhythm-engine `Beat` (entrance /
