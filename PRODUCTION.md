@@ -125,3 +125,52 @@ sudo scripts/install-systemd.sh
   大屏 60Hz 同步无撕裂；如需翻页，请 §4 替换为 `drm_mode_page_flip`。
 - fontdata.rs 是编译期生成，不进入 git object（被 .gitignore 过滤）。
   需要重新生成时跑 `scripts/extract-font.sh`。
+## 美学合同（Aesthetic Contract）
+
+> 既然零依赖铁律让工程指标成为可测项，那 ARTIFACT.md 主张的
+> 「永远沉静 / 永远在中文里 / 永远自洽」也应成为可测项。以下每一
+> 条都对应一段代码与一段测试；autoloop 周期里如果违反任意一条，
+> 应被识别为「这一改让作品不像自己」并回退。
+
+- [x] **画面永不全黑** — 任何帧的 BACKGROUND 区域都至少被 nebula
+      微微染色。renderer::BACKGROUND = `bgra(3, 3, 5)`；nebula 的
+      alpha 下限 0.014 仍能留下痕迹。回归：renderer::tests 不应有
+      「输出全是 BACKGROUND」的断言。
+- [x] **月轮剪影在右上锚区** — renderer::draw_moon 把月亮放在
+      `cx = w*0.66, cy = h*0.30, r = min(w,h)*0.16`（±5 % 横向漂移、
+      ±2.5 % 纵向漂移，周期 ~785 s）。锚区锚定构成 — 上半屏永远
+      有一个「不动的存在」。回归：portrait test 断言锚区有
+      > 200 个 substantial 像素。
+- [x] **汉字不是均匀分布** — scene_anim::ink_current_x(t) ∈
+      [0.05, 0.95] 给出当前 x 偏置，glyph 沿 ±15 % fb_w 抖动。
+      任意 5 秒窗口里，screen.png 的 32 等宽列里至少有一列像素数
+      ≥ 另一列的 2 倍 + 50。回归：portrait test 断言「clustered,
+      not uniform」。
+- [x] **粒子带笔触，不全是圆点** — renderer::draw_and_step_particles
+      在每个粒子位置上画主圆 + 一个 0.55×r / 0.28α 的反向拖影。
+      慢的粒子看不出拖影，快的（touch 驱动）读作笔锋。回归：
+      portrait test 至少有一列 concentrated smear。
+- [x] **五声部各带自己的字号** — scene_anim::voice_base_size:
+      婉约 26 / 稚拙 28 / 苍茫 36 / 豪放 44 / 禅寂 20 px。
+      视觉上：禅寂 20 px 的字比豪放 44 px 小一半。回归：
+      scene_anim::tests::voice_base_size_orders_match_artistic_intent。
+- [x] **汉字可读，不只是色斑** — font::draw_glyph 把 4-bit
+      coverage 扩到 0..=255（×17）后再乘 alpha，让中心笔画饱和。
+      修复前 glyph 中心最多 6 % alpha，读作光晕；修复后读作字。
+      回归：portrait test 抓的 substantial 像素里至少 50 % 是
+      glyph 笔画而不是 particle blob。
+- [x] **永远不暴露工程痕迹** — 无菜单 / 无 HUD / 无调试文字；CJK
+      优先；fallback 池也是中文意象；LLM system prompt 明确
+      「词汇优先宋词、水墨、禅偈、童谣、楚辞、月令七十二候」。
+      回归：人工巡视 screen.png，不应见 ASCII 调试串。
+- [x] **telemetry 是作品的呼吸** — telemetry.jsonl 每行新增三
+      个美学字段：`voice`（5 声部名之一）、`ink_x`（[0.05, 0.95]）、
+      `hue`（[0, 1)）。读 JSONL 能追作品的「这一段是哪个声部、
+      墨流当前在哪一列」。回归：autoloop 读 tel_tail.txt 能识别
+      当前声部名并据此判断本次改动是否破坏了「这一时该有的
+      声部」。
+- [x] **自画像可重放** — `cargo test renderer::portrait_tests`
+      在任何主机（mac dev / Linux Jetson） 0.7s 内产出
+      `/tmp/inkflow_self_portrait.ppm`（1280×800 P6 PPM）。跑完
+      PPM 转 PNG 即可肉眼检查。回归：portrait test 跑完不 panic
+      且 PPM 文件大小 > 2 MB（≈1280×800×3）。
