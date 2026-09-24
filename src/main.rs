@@ -165,7 +165,9 @@ fn run_drm_test(_args: &[String]) -> ! {
     let mut display = match drm::open_first() {
         Ok(d) => d,
         Err(e) => {
-            eprintln!("drm-test: open_first failed ({e}); falling back to dumb-buffer-only surface");
+            eprintln!(
+                "drm-test: open_first failed ({e}); falling back to dumb-buffer-only surface"
+            );
             match drm::open_dumb_only(1280, 720) {
                 Ok(d) => {
                     eprintln!("drm-test: dumb-only surface ready (no connector to scan out to)");
@@ -184,7 +186,12 @@ fn run_drm_test(_args: &[String]) -> ! {
     let pitch_px = (display.pitch / 4) as usize;
     eprintln!(
         "drm-test: {}x{} pitch={} fb_id={} crtc_id={} modeset_ok={}",
-        display.width, display.height, display.pitch, display.fb_id, display.crtc_id, display.modeset_ok
+        display.width,
+        display.height,
+        display.pitch,
+        display.fb_id,
+        display.crtc_id,
+        display.modeset_ok
     );
 
     // ----- draw test pattern -----
@@ -199,15 +206,15 @@ fn run_drm_test(_args: &[String]) -> ! {
             *px = bg.0 as u32 | ((bg.1 as u32) << 8) | ((bg.2 as u32) << 16) | 0xFF000000;
         }
         let bars: [Rgba; 6] = [
-            Rgba(255,  80,  60, 255), // red
-            Rgba(255, 200,  60, 255), // amber
-            Rgba( 90, 220,  90, 255), // green
-            Rgba( 80, 200, 255, 255), // cyan
-            Rgba(120,  90, 240, 255), // indigo
+            Rgba(255, 80, 60, 255),   // red
+            Rgba(255, 200, 60, 255),  // amber
+            Rgba(90, 220, 90, 255),   // green
+            Rgba(80, 200, 255, 255),  // cyan
+            Rgba(120, 90, 240, 255),  // indigo
             Rgba(240, 100, 220, 255), // magenta
         ];
         let bar_h = h / 6;
-        for i in 0..6usize {
+        for (i, &color) in bars.iter().enumerate() {
             fill_rect(
                 pixels,
                 pitch_px,
@@ -217,7 +224,7 @@ fn run_drm_test(_args: &[String]) -> ! {
                 (i as i32) * bar_h,
                 w,
                 bar_h,
-                bars[i],
+                color,
                 0.85,
             );
         }
@@ -259,7 +266,7 @@ fn run_drm_test(_args: &[String]) -> ! {
             );
         }
         // header line so the PNG is self-describing.
-        let _ = draw_glyph(
+        draw_glyph(
             pixels,
             pitch_px,
             w,
@@ -308,14 +315,7 @@ fn run_drm_test(_args: &[String]) -> ! {
 
     // Convert to PNG with whatever ffmpeg is on PATH.
     let ff = std::process::Command::new("ffmpeg")
-        .args([
-            "-y",
-            "-loglevel",
-            "error",
-            "-i",
-            &ppm_path,
-            &png_path,
-        ])
+        .args(["-y", "-loglevel", "error", "-i", &ppm_path, &png_path])
         .status();
     match ff {
         Ok(s) if s.success() => eprintln!("drm-test: wrote {png_path}"),
@@ -330,7 +330,7 @@ fn run_drm_test(_args: &[String]) -> ! {
 
     eprintln!(
         "drm-test: done (modeset_ok={})",
-        matches!(std::fs::metadata(&png_path), Ok(_))
+        std::fs::metadata(&png_path).is_ok()
     );
     std::process::exit(0);
 }

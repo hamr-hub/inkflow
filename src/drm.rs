@@ -30,31 +30,32 @@ const fn iowr(nr: u32, size: usize) -> u64 {
 }
 
 // DRM command numbers (must match /usr/include/drm/drm.h).
-const NR_VERSION:        u32 = 0x00;
-const NR_GETRESOURCES:   u32 = 0xA0;
-const NR_GETCRTC:        u32 = 0xA1;
-const NR_SETCRTC:        u32 = 0xA2;
-const NR_GETENCODER:     u32 = 0xA6;
-const NR_GETCONNECTOR:   u32 = 0xA7;
-const NR_ADDFB:          u32 = 0xAE;
-const NR_RMFB:           u32 = 0xAF;
-const NR_CREATE_DUMB:    u32 = 0xB2;
-const NR_MAP_DUMB:       u32 = 0xB3;
-const NR_DESTROY_DUMB:   u32 = 0xB4;
+const NR_VERSION: u32 = 0x00;
+const NR_GETRESOURCES: u32 = 0xA0;
+const NR_GETCRTC: u32 = 0xA1;
+const NR_SETCRTC: u32 = 0xA2;
+const NR_GETENCODER: u32 = 0xA6;
+const NR_GETCONNECTOR: u32 = 0xA7;
+const NR_ADDFB: u32 = 0xAE;
+const NR_RMFB: u32 = 0xAF;
+const NR_CREATE_DUMB: u32 = 0xB2;
+const NR_MAP_DUMB: u32 = 0xB3;
+const NR_DESTROY_DUMB: u32 = 0xB4;
 
 // Computed at compile time from mem::size_of::<T>() so they cannot drift from
 // the struct layout. Touch the type below and the magic numbers follow.
-const DRM_IOCTL_VERSION:          u64 = iowr(NR_VERSION,        mem::size_of::<DrmVersion>());
-const DRM_IOCTL_MODE_GETRESOURCES:u64 = iowr(NR_GETRESOURCES,   mem::size_of::<DrmModeRes>());
-const DRM_IOCTL_MODE_GETCRTC:     u64 = iowr(NR_GETCRTC,        mem::size_of::<DrmModeCrtc>());
-const DRM_IOCTL_MODE_SETCRTC:     u64 = iowr(NR_SETCRTC,        mem::size_of::<DrmModeCrtc>());
-const DRM_IOCTL_MODE_GETENCODER:  u64 = iowr(NR_GETENCODER,     mem::size_of::<DrmModeEncoder>());
-const DRM_IOCTL_MODE_GETCONNECTOR:u64 = iowr(NR_GETCONNECTOR,   mem::size_of::<DrmModeConnector>());
-const DRM_IOCTL_MODE_ADDFB:       u64 = iowr(NR_ADDFB,          mem::size_of::<DrmModeFbCmd>());
-const DRM_IOCTL_MODE_RMFB:        u64 = iowr(NR_RMFB,           mem::size_of::<u32>());
-const DRM_IOCTL_MODE_CREATE_DUMB: u64 = iowr(NR_CREATE_DUMB,    mem::size_of::<DrmModeCreateDumb>());
-const DRM_IOCTL_MODE_MAP_DUMB:    u64 = iowr(NR_MAP_DUMB,       mem::size_of::<DrmModeMapDumb>());
-const DRM_IOCTL_MODE_DESTROY_DUMB:u64 = iowr(NR_DESTROY_DUMB,   mem::size_of::<DrmModeDestroyDumb>());
+const DRM_IOCTL_VERSION: u64 = iowr(NR_VERSION, mem::size_of::<DrmVersion>());
+const DRM_IOCTL_MODE_GETRESOURCES: u64 = iowr(NR_GETRESOURCES, mem::size_of::<DrmModeRes>());
+const DRM_IOCTL_MODE_GETCRTC: u64 = iowr(NR_GETCRTC, mem::size_of::<DrmModeCrtc>());
+const DRM_IOCTL_MODE_SETCRTC: u64 = iowr(NR_SETCRTC, mem::size_of::<DrmModeCrtc>());
+const DRM_IOCTL_MODE_GETENCODER: u64 = iowr(NR_GETENCODER, mem::size_of::<DrmModeEncoder>());
+const DRM_IOCTL_MODE_GETCONNECTOR: u64 = iowr(NR_GETCONNECTOR, mem::size_of::<DrmModeConnector>());
+const DRM_IOCTL_MODE_ADDFB: u64 = iowr(NR_ADDFB, mem::size_of::<DrmModeFbCmd>());
+const DRM_IOCTL_MODE_RMFB: u64 = iowr(NR_RMFB, mem::size_of::<u32>());
+const DRM_IOCTL_MODE_CREATE_DUMB: u64 = iowr(NR_CREATE_DUMB, mem::size_of::<DrmModeCreateDumb>());
+const DRM_IOCTL_MODE_MAP_DUMB: u64 = iowr(NR_MAP_DUMB, mem::size_of::<DrmModeMapDumb>());
+const DRM_IOCTL_MODE_DESTROY_DUMB: u64 =
+    iowr(NR_DESTROY_DUMB, mem::size_of::<DrmModeDestroyDumb>());
 
 // Pixel formats (kept for reference; we use XRGB8888 via ADDFB)
 #[allow(dead_code)]
@@ -247,7 +248,9 @@ pub fn open_dumb_only(w: u32, h: u32) -> Result<Display, String> {
             }
         }
     }
-    Err(format!("no /dev/dri/card* supports dumb buffers: {last_err}"))
+    Err(format!(
+        "no /dev/dri/card* supports dumb buffers: {last_err}"
+    ))
 }
 
 fn build_dumb_only(card_fd: c_int, w: u32, h: u32) -> Result<Display, String> {
@@ -335,9 +338,15 @@ impl Display {
         self.pixels_mut()
     }
 
-    pub fn width(&self) -> u32 { self.width }
-    pub fn height(&self) -> u32 { self.height }
-    pub fn pitch(&self) -> u32 { self.pitch }
+    pub fn width(&self) -> u32 {
+        self.width
+    }
+    pub fn height(&self) -> u32 {
+        self.height
+    }
+    pub fn pitch(&self) -> u32 {
+        self.pitch
+    }
 
     pub fn present(&self) {
         // legacy SET_CRTC to push the next frame. For a single fixed mode
@@ -441,11 +450,10 @@ pub fn probe(card_idx: usize) -> Result<ProbeResult, String> {
     ver.name = name_buf.as_ptr() as *mut c_char;
     ver.date = date_buf.as_ptr() as *mut c_char;
     ver.desc = desc_buf.as_ptr() as *mut c_char;
-    sys::ioctl_struct(card_fd, DRM_IOCTL_VERSION, &mut ver)
-        .map_err(|e| {
-            sys::close_fd(card_fd);
-            format!("DRM_IOCTL_VERSION failed: errno={e}")
-        })?;
+    sys::ioctl_struct(card_fd, DRM_IOCTL_VERSION, &mut ver).map_err(|e| {
+        sys::close_fd(card_fd);
+        format!("DRM_IOCTL_VERSION failed: errno={e}")
+    })?;
     r.driver = std::str::from_utf8(&name_buf[..name_buf.len().min(ver.name_len as usize)])
         .unwrap_or("")
         .trim_end_matches('\0')
@@ -477,7 +485,8 @@ pub fn probe(card_idx: usize) -> Result<ProbeResult, String> {
         if let Some(c) = query_connector(card_fd, *cid) {
             if c.connection == DRM_MODE_CONNECTED {
                 let mode_count = c.count_modes;
-                r.connected.push((c.connector_id, c.connector_type, mode_count));
+                r.connected
+                    .push((c.connector_id, c.connector_type, mode_count));
             }
         }
     }
@@ -617,7 +626,8 @@ fn build_display(card_fd: c_int, path: &str) -> Result<Display, String> {
     );
 
     // Pull modes array.
-    let mut modes: Vec<DrmModeModeInfo> = vec![DrmModeModeInfo::default(); conn.count_modes as usize];
+    let mut modes: Vec<DrmModeModeInfo> =
+        vec![DrmModeModeInfo::default(); conn.count_modes as usize];
     {
         let mut c2 = conn;
         c2.modes_ptr = modes.as_mut_ptr() as u64;
@@ -647,10 +657,11 @@ fn build_display(card_fd: c_int, path: &str) -> Result<Display, String> {
 
     // Find an encoder that supports this connector and at least one CRTC.
     let mut chosen_enc: Option<u32> = None;
-    for off in 0..conn.count_encoders as usize {
-        let enc_id = enc_arr[off];
-        let mut enc = DrmModeEncoder::default();
-        enc.encoder_id = enc_id;
+    for &enc_id in &enc_arr[..conn.count_encoders as usize] {
+        let mut enc = DrmModeEncoder {
+            encoder_id: enc_id,
+            ..DrmModeEncoder::default()
+        };
         if sys::ioctl_struct(card_fd, DRM_IOCTL_MODE_GETENCODER, &mut enc).is_err() {
             continue;
         }
@@ -810,16 +821,46 @@ const _USED: (u32, usize) = (mem::size_of::<u32>() as u32, mem::size_of::<usize>
 // ioctl magic numbers are regenerated automatically.
 #[allow(dead_code)]
 const _: () = {
-    assert!(mem::size_of::<DrmVersion>()       == 64, "drm_version must be 64B on aarch64");
-    assert!(mem::size_of::<DrmModeRes>()       == 64, "drm_mode_card_res must be 64B");
-    assert!(mem::size_of::<DrmModeModeInfo>()  == 68, "drm_mode_modeinfo must be 68B");
-    assert!(mem::size_of::<DrmModeCrtc>()      == 104, "drm_mode_crtc must be 104B");
-    assert!(mem::size_of::<DrmModeEncoder>()   == 20, "drm_mode_get_encoder must be 20B");
-    assert!(mem::size_of::<DrmModeConnector>() == 80, "drm_mode_get_connector must be 80B");
-    assert!(mem::size_of::<DrmModeFbCmd>()     == 28, "drm_mode_fb_cmd must be 28B");
-    assert!(mem::size_of::<DrmModeCreateDumb>()== 32, "drm_mode_create_dumb must be 32B");
-    assert!(mem::size_of::<DrmModeMapDumb>()   == 16, "drm_mode_map_dumb must be 16B");
-    assert!(mem::size_of::<DrmModeDestroyDumb>()== 4, "drm_mode_destroy_dumb must be 4B");
+    assert!(
+        mem::size_of::<DrmVersion>() == 64,
+        "drm_version must be 64B on aarch64"
+    );
+    assert!(
+        mem::size_of::<DrmModeRes>() == 64,
+        "drm_mode_card_res must be 64B"
+    );
+    assert!(
+        mem::size_of::<DrmModeModeInfo>() == 68,
+        "drm_mode_modeinfo must be 68B"
+    );
+    assert!(
+        mem::size_of::<DrmModeCrtc>() == 104,
+        "drm_mode_crtc must be 104B"
+    );
+    assert!(
+        mem::size_of::<DrmModeEncoder>() == 20,
+        "drm_mode_get_encoder must be 20B"
+    );
+    assert!(
+        mem::size_of::<DrmModeConnector>() == 80,
+        "drm_mode_get_connector must be 80B"
+    );
+    assert!(
+        mem::size_of::<DrmModeFbCmd>() == 28,
+        "drm_mode_fb_cmd must be 28B"
+    );
+    assert!(
+        mem::size_of::<DrmModeCreateDumb>() == 32,
+        "drm_mode_create_dumb must be 32B"
+    );
+    assert!(
+        mem::size_of::<DrmModeMapDumb>() == 16,
+        "drm_mode_map_dumb must be 16B"
+    );
+    assert!(
+        mem::size_of::<DrmModeDestroyDumb>() == 4,
+        "drm_mode_destroy_dumb must be 4B"
+    );
 };
 
 // ---------- headless fallback ----------

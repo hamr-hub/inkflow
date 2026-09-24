@@ -23,7 +23,33 @@ pub struct Telemetry<'a> {
     pub particles: usize,
 }
 
+// Telemetry JSONL is appended every 10 s (≈ 8.6 K lines/day, ≈ 1.8 MB/day on
+// this build's ~210-byte rows). On 24×7 production a single file would grow
+// without bound, eventually filling whatever partition holds INKFLOW_STATE_DIR
+// (usually /var/lib on the target). We bound the live file at 2 MiB and rotate
+// to `<path>.1` (overwriting the previous `.1`) on every append that finds it
+// over the cap. Two files × 2 MiB = 4 MiB total ceiling per state dir.
+//
+// Stat is one syscall per 10 s telemetry tick — negligible — and we only run
+// it through the slow path (rotate) when actually over budget.
+const TELEMETRY_MAX_BYTES: u64 = 2 * 1024 * 1024;
+
+fn rotate_if_needed(path: &str) {
+    let Ok(meta) = std::fs::metadata(path) else {
+        return;
+    };
+    if meta.len() <= TELEMETRY_MAX_BYTES {
+        return;
+    }
+    let backup = format!("{path}.1");
+    // Move current to .1 (overwriting old). On any failure just leave the
+    // oversize file in place — next tick will retry, telemetry never blocks
+    // the render loop.
+    let _ = std::fs::rename(path, &backup);
+}
+
 pub fn append(path: &str, t: &Telemetry<'_>) {
+    rotate_if_needed(path);
     let line = encode(t);
     if let Ok(mut f) = OpenOptions::new().create(true).append(true).open(path) {
         let _ = writeln!(f, "{}", line);
