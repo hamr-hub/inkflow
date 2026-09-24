@@ -1,0 +1,26 @@
+[Unit]
+Description=inkflow (zero-dep) — generative ambient Chinese text + particles
+Documentation=https://github.com/local/inkflow
+After=systemd-tmpfiles-setup.service
+Conflicts=display-manager.service gdm.service lightdm.service xorg.service
+# Run before any user-display session so we claim the framebuffer first.
+Before=graphical.target
+
+[Service]
+ExecStart=/usr/local/bin/inkflow
+Restart=always
+RestartSec=3
+# Cap at 4 GiB so the piece can never OOM-kill the system. The binary is
+# std-only and keeps all buffers pre-allocated, so RSS tops out well below
+# 200 MB; the cap is only here as a safety net.
+MemoryMax=4G
+MemoryHigh=1G
+# DRM/KMS + evdev need the device nodes + CAP_SYS_RAWIO bits. The two
+# supplementary groups below cover this on most distros; adjust on the
+# install command line if your distro uses different group names.
+SupplementaryGroups=video input render
+StandardOutput=append:/var/log/inkflow.log
+StandardError=append:/var/log/inkflow.log
+
+[Install]
+WantedBy=multi-user.target
