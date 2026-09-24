@@ -304,6 +304,60 @@ pub fn draw_and_step_glyphs(
         draw_glyph(
             pixels, pitch_px, fb_w, fb_h, g.x, g.y, draw_size, g.ch, fg, fg_alpha, rot,
         );
+
+        // 墨流 drip — thin vertical streak below each glyph so the
+        // piece reads as ink running on rice paper, not as printed
+        // glyphs. Two stacked layers: a tight saturated core and a
+        // wider feathery halo. Both share the fg hue so the drip
+        // belongs to its glyph rather than feeling painted-on.
+        let drip_color = fg;
+        let drip_core_w = draw_size * 0.06;
+        let drip_halo_w = draw_size * 0.22;
+        let drip_h = draw_size * 1.15;
+        let drip_top_y = g.y + draw_size * 0.42;
+        // Slight per-glyph phase so consecutive drips don't line up
+        // into a grid. Width tapers top→bottom via two stacked rects.
+        let drip_phase = (g.phase.sin() * 0.5 + 0.5);
+        let taper = 0.6 + 0.4 * drip_phase;
+        fill_rect(
+            pixels,
+            pitch_px,
+            fb_w,
+            fb_h,
+            (g.x - drip_halo_w * taper) as i32,
+            drip_top_y as i32,
+            (drip_halo_w * 2.0 * taper) as i32,
+            (drip_h * 0.55) as i32,
+            drip_color,
+            fg_alpha * 0.32 * bottom_fade,
+        );
+        fill_rect(
+            pixels,
+            pitch_px,
+            fb_w,
+            fb_h,
+            (g.x - drip_core_w) as i32,
+            drip_top_y as i32,
+            (drip_core_w * 2.0) as i32,
+            (drip_h * 0.85) as i32,
+            drip_color,
+            fg_alpha * 0.55 * bottom_fade,
+        );
+        // Drip terminal — small falling "drop" at the bottom of the
+        // streak, slightly ahead in time, so the ink looks like it's
+        // actively running, not statically suspended.
+        let drop_y = drip_top_y + drip_h * 0.9;
+        fill_circle(
+            pixels,
+            pitch_px,
+            fb_w,
+            fb_h,
+            g.x,
+            drop_y,
+            drip_core_w * 1.6,
+            drip_color,
+            fg_alpha * 0.45 * bottom_fade,
+        );
     }
     glyphs.retain(|g| g.life > 0.0 && g.y > -40.0);
 }
@@ -390,6 +444,7 @@ fn render_portrait(w: i32, h: i32, frames: u32) -> Vec<u32> {
     let shared = std::sync::Arc::new(std::sync::Mutex::new(crate::llm_loop::Shared::new()));
     let touch = std::sync::Arc::new(std::sync::Mutex::new(crate::evdev::TouchState::default()));
     let mut accum = crate::scene_anim::SpawnAccum::default();
+    let mut poetry = crate::poetry::PoetryCursor::new();
     let frame = crate::mood::FrameMood {
         warmth: 0.5,
         energy: 0.05,
@@ -402,9 +457,14 @@ fn render_portrait(w: i32, h: i32, frames: u32) -> Vec<u32> {
     let pitch_px = w as usize;
     for tick in 0..frames {
         let t = tick as f32 * dt;
+        poetry.tick_breath(dt);
+        if !poetry.is_breathing() {
+            poetry.advance_after_silence();
+        }
         crate::scene_anim::spawn_for_frame(
             &mut scene,
             &mut accum,
+            &mut poetry,
             &frame,
             &touch,
             &shared,

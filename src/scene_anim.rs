@@ -20,9 +20,9 @@
 // telemetry.
 
 use crate::evdev::TouchState;
-use crate::fallback;
 use crate::llm_loop;
 use crate::mood::FrameMood;
+use crate::poetry::PoetryCursor;
 use crate::scene::{lcg, Glyph, Particle, Scene};
 use std::sync::{Arc, Mutex};
 
@@ -77,6 +77,7 @@ pub(crate) fn ink_current_x(t: f32) -> f32 {
 pub fn spawn_for_frame(
     scene: &mut Scene,
     accum: &mut SpawnAccum,
+    poetry: &mut PoetryCursor,
     frame: &FrameMood,
     touch: &Arc<Mutex<TouchState>>,
     shared: &Arc<Mutex<llm_loop::Shared>>,
@@ -86,22 +87,31 @@ pub fn spawn_for_frame(
     dt: f32,
     t: f32,
 ) {
-    spawn_glyphs(scene, accum, frame, shared, fb_w, fb_h, tick, dt, t);
+    spawn_glyphs(scene, accum, poetry, frame, shared, fb_w, fb_h, tick, dt, t);
     spawn_particles(scene, frame, touch, fb_w, fb_h, tick);
 }
 
-/// Drain the LLM queue, top up with fallback glyphs, push into the
-/// Scene at the per-frame spawn rate.
+/// Drain the LLM queue, top up with **classical poetry** when LLM is
+/// quiet, push into the Scene at the per-frame spawn rate.
 ///
-/// Two interleaved streams (rising from the bottom, falling from the
-/// top — picked by tick parity so they don't sync into a single pulse)
-/// keep the screen reading as a deliberate layered piece instead of
-/// a sparse demo. Combined spawn rate lands ~50–90 chars visible at
-/// idle and climbs with energy + contact pressure.
+/// Text source priority:
+///   1. live LLM char queue (when ollama is streaming)
+///   2. curated Tang/Song phrase corpus, walked one char at a time
+///      with a 2.4 s silence between phrases
+///   3. (no third tier — the random-pool fallback was removed; the
+///      piece no longer reads as random-character noise)
+///
+/// Spawn cadence:
+///   - poetry cadence: ~1 char/sec when idle, climbing to ~1.7/s
+///     when energy / contacts are high
+///   - 1.7 chars/sec × 12 s life = ~20 chars in flight steady state
+///   - phrase-to-phrase silence is honored by `is_breathing()` so the
+///     viewer gets a deliberate breath between couplets
 #[allow(clippy::too_many_arguments)]
 fn spawn_glyphs(
     scene: &mut Scene,
     accum: &mut SpawnAccum,
+    poetry: &mut PoetryCursor,
     frame: &FrameMood,
     shared: &Arc<Mutex<llm_loop::Shared>>,
     fb_w: u32,
@@ -111,27 +121,29 @@ fn spawn_glyphs(
     t: f32,
 ) {
     let energy = frame.effective_energy();
-    // ~22 glyphs/sec at idle (energy=0.05), climbing to ~40 at high
-    // energy. Slower drift speed (35-115 vs old 55-185 px/s) so
-    // each char spends ~30 s in flight — every horizontal band
-    // always has visible ink instead of wave-troughs.
-    accum.glyph_acc += dt * (12.0 + energy * 28.0);
-    while accum.glyph_acc >= 1.0 {
+    // Meditative cadence with enough density to read like a piece
+    // not a screensaver — ~1.7 chars/sec at idle, climbing to ~3.0
+    // when energy / contacts push. With ~10 s life that means
+    // 17–30 glyphs in flight at any moment. The poetry cursor
+    // still inserts a 2.4 s silence between phrases, so the
+    // piece breathes between couplets rather than buzzing.
+    accum.glyph_acc += dt * (1.7 + energy * 1.4);
+    while accum.glyph_acc >= 1.0 && !poetry.is_breathing() {
         accum.glyph_acc -= 1.0;
         // Top stream falls slower so the breath reads as "ink rising +
         // ash falling", not two synchronized streams.
         let descend = (tick.wrapping_add(scene.glyphs.len() as u64) & 1) == 0;
-        // Pop one LLM-derived char under the lock; if none, fall
-        // back to the static pool. The fallback string is
-        // `&'static str` so it aliases into our static pools.
+        // Source priority: live LLM char → curated poetry line.
+        // The old random 4-pool fallback is gone — the piece no
+        // longer reads as random-character noise.
         let (from_llm, ch) = {
             let llm_char_str = llm_loop::pop_char(shared).map(crate::font::char_key);
             let ch = llm_char_str.unwrap_or_else(|| {
-                fallback::local_glyph(
-                    frame.warmth,
-                    energy,
-                    tick.wrapping_add(scene.glyphs.len() as u64),
-                )
+                // Walk the corpus one char at a time. When the line
+                // is exhausted the cursor sets its own breath timer;
+                // the surrounding `while !is_breathing()` makes sure
+                // we don't emit during the silence.
+                poetry.pop().unwrap_or("墨")
             });
             (llm_char_str.is_some(), ch)
         };
@@ -158,26 +170,32 @@ fn spawn_glyphs(
                 .wrapping_add(131)
                 .wrapping_add(scene.glyphs.len() as u64))
                 * 0.36;
-        let speed = (35.0 + energy * 80.0) * speed_jitter;
+        let speed = (28.0 + energy * 60.0) * speed_jitter;
         let size_jitter = 0.88
             + lcg(tick
                 .wrapping_add(113)
                 .wrapping_add(scene.glyphs.len() as u64))
                 * 0.24;
-        let max_life = (fb_h as f32 + 40.0) / speed + 1.5;
+        // ~10-14 s on screen so each char has time to be read. The
+        // phrase-to-phrase silence in the poetry cursor is the
+        // dominant pacing — individual char life is just "long
+        // enough to settle into a reading position".
+        let max_life = 10.0 + energy * 4.0;
         let (spawn_y, vy) = if descend {
             (fb_h as f32 + 20.0, -speed)
         } else {
             (-20.0, speed * 0.55)
         };
-        // Ink current — glyphs cluster around ink_current_x(t) rather
-        // than spawning uniformly across fb_w. ±15 % of fb_w jitter
-        // gives the stream a deliberate rhythm: dense in one region,
-        // empty in the other. Per ARTIFACT.md 'Composition asymmetry'
-        // + 'Song-dynasty 留白'.
+        // Composition: each glyph picks its own x across the full
+        // width (lcg-driven), with a soft pull toward the current
+        // ink band. The previous "anchor + 30 % jitter" formula was
+        // heavily right-biased because the band drifted to ~0.6 of
+        // fb_w; widening to 0.80 of fb_w + light band pull keeps the
+        // 留白 (negative space) Song-dynasty composition while
+        // spreading glyphs across the full horizontal canvas.
         let current = ink_current_x(t);
         let anchor_x = current * fb_w as f32;
-        let x_jitter = (lcg(tick.wrapping_add(11)) - 0.5) * fb_w as f32 * 0.30;
+        let x_jitter = (lcg(tick.wrapping_add(11)) - 0.5) * fb_w as f32 * 0.80;
         let x = (anchor_x + x_jitter).clamp(2.0, fb_w as f32 - 2.0);
         scene.push_glyph(Glyph {
             ch,
@@ -193,6 +211,27 @@ fn spawn_glyphs(
                 .wrapping_add(scene.glyphs.len() as u64))
                 * core::f32::consts::TAU,
         });
+
+        // Ink burst at the spawn point — 4 small motes in a
+        // deterministic fan so each new char announces itself with
+        // a tiny explosion rather than fading in silently. The
+        // motes' short life means they dissolve before the
+        // glyph settles, keeping the screen from feeling cluttered.
+        let burst_n = 4u32;
+        for k in 0..burst_n {
+            let ku = k as u64;
+            let ang = lcg(tick.wrapping_add(ku.wrapping_mul(47))) * core::f32::consts::TAU;
+            let sp = 40.0 + 30.0 * lcg(tick.wrapping_add(ku.wrapping_mul(89)));
+            scene.push_particle(Particle {
+                x,
+                y: spawn_y,
+                vx: ang.cos() * sp,
+                vy: ang.sin() * sp,
+                life: 0.9,
+                max_life: 1.4,
+                r: 1.6 + lcg(tick.wrapping_add(ku.wrapping_mul(13))) * 1.4,
+            });
+        }
     }
 }
 

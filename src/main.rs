@@ -23,6 +23,7 @@ mod fontdata;
 mod llm_loop;
 mod mood;
 mod net_ollama;
+mod poetry;
 mod renderer;
 mod scene;
 mod scene_anim;
@@ -102,6 +103,7 @@ fn main() {
     let mut scene = Scene::new();
     scene.seed_stars(fb_w as f32, fb_h as f32);
     let mut spawn_acc = scene_anim::SpawnAccum::default();
+    let mut poetry_cursor = poetry::PoetryCursor::new();
     let mut tick: u64 = 0;
     let mut last_tel = Instant::now();
     let mut last_shot = Instant::now();
@@ -140,9 +142,14 @@ fn main() {
         llm_loop::publish_mood(&mood_state, &frame);
 
         // ----- spawn glyphs + particles -----
+        poetry_cursor.tick_breath(dt);
+        if !poetry_cursor.is_breathing() {
+            poetry_cursor.advance_after_silence();
+        }
         scene_anim::spawn_for_frame(
             &mut scene,
             &mut spawn_acc,
+            &mut poetry_cursor,
             &frame,
             &touch,
             &shared,
