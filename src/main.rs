@@ -520,11 +520,20 @@ async fn main() {
     let (mood_tx, mood_rx) = channel();
     let (llm_chars, llm_health) = start_llm(model.clone(), mood_rx);
 
-    let mut glyphs: Vec<Glyph> = vec![];
-    let mut particles: Vec<Particle> = vec![];
+    // Hoist & pre-size the live object buffers at their hard caps so the
+    // steady-state loop never reallocates. Caps live just above the runtime
+    // ceilings (260) so the Vecs can hold the working set plus a transient
+    // tail without ever needing to grow. Avoids an alloc every spawn burst
+    // and keeps RSS bounded over multi-hour unattended runs.
+    let mut glyphs: Vec<Glyph> = Vec::with_capacity(270);
+    let mut particles: Vec<Particle> = Vec::with_capacity(270);
     // Starfield can't be built until after the first frame surfaces real
     // screen dimensions, so we lazy-init on the first loop iteration.
     let mut stars: Vec<Star> = vec![];
+    // Reused scratch buffer for finger/pointer pixel positions each frame.
+    // Capacity sized for typical multi-touch slots (1-5) plus one mouse
+    // fallback entry, so the loop fills without reallocating.
+    let mut sources: Vec<(f32, f32)> = Vec::with_capacity(8);
     let mut tick: u64 = 0;
     let mut spawn_acc = 0f32;
     let mut last_tel = Instant::now();
@@ -654,16 +663,20 @@ async fn main() {
             }
         }
 
-        // spawn particles at contacts / pointer
-        let pts: Vec<(f32, f32)> = {
+        // spawn particles at contacts / pointer — reuses the hoisted
+        // scratch buffer so per-frame allocations stay at zero in steady
+        // state instead of paying a fresh Vec every loop iteration.
+        sources.clear();
+        {
             let s = touch.lock().unwrap();
-            s.contacts.iter().map(|c| (c.x * sw, c.y * sh)).collect()
-        };
-        let mut sources = pts;
+            for c in s.contacts.iter() {
+                sources.push((c.x * sw, c.y * sh));
+            }
+        }
         if mouse_down {
             sources.push((mx, my));
         }
-        for (px, py) in sources {
+        for &(px, py) in &sources {
             let n = if eff_energy > 0.6 { 3 } else { 1 };
             for k in 0..n {
                 let ang = rand_fast(tick.wrapping_add(k as u64 * 31)) * std::f32::consts::TAU;
