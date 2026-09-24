@@ -397,6 +397,9 @@ struct Particle {
 // Each star owns its own phase + period so the field reads as a soft,
 // non-uniform shimmer rather than a single synchronised pulse. Base alpha
 // stays well below the nebula so they never compete with the foreground.
+// `hue_offset` lets each star pick its own sliver of the palette so the
+// field joins the global warm/cool breath (mirrors per-glyph `row_hue`
+// and per-particle `p_hue`).
 #[derive(Clone, Copy)]
 struct Star {
     x: f32,
@@ -405,6 +408,7 @@ struct Star {
     base: f32,
     phase: f32,
     period: f32,
+    hue_offset: f32,
 }
 
 const STAR_COUNT: usize = 90;
@@ -420,6 +424,10 @@ fn build_stars(sw: f32, sh: f32) -> Vec<Star> {
             phase: rand_fast(i as u64 + 4001) * std::f32::consts::TAU,
             // 4..14s twinkle period — long enough to feel ambient, not blinky
             period: 4.0 + rand_fast(i as u64 + 5003) * 10.0,
+            // ±0.12 hue offset — wide enough that neighbours pick noticeably
+            // different temperatures across the warm/cool drift, narrow
+            // enough that every star still sits inside the unified palette
+            hue_offset: (rand_fast(i as u64 + 6007) - 0.5) * 0.24,
         })
         .collect()
 }
@@ -730,7 +738,13 @@ async fn main() {
         // frame before screen dims arrive).
         for s in stars.iter() {
             let k = 0.5 + 0.5 * (t / s.period * std::f32::consts::TAU + s.phase).sin();
-            let mut c = Color::new(0.85, 0.88, 0.95, 1.);
+            // per-star hue: each star reads the global warm/cool palette
+            // plus its own deterministic offset, so the field breathes with
+            // the rest of the composition instead of staying a flat
+            // white-blue wash. Saturation kept high + lightness high so
+            // the stars still read as distant, near-white pinpoint light
+            // rather than coloured dots.
+            let mut c = hsl_to_rgb((hue + s.hue_offset).rem_euclid(1.0), 0.35, 0.88);
             c.a = s.base * (0.25 + 0.75 * k);
             draw_circle(s.x, s.y, s.r, c);
         }
