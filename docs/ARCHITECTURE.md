@@ -11,7 +11,7 @@ src/
 ├── mood.rs           — touch → (warmth, energy, idle) envelope
 ├── llm_loop.rs       — LLM worker thread + Shared queue
 ├── scene_anim.rs     — per-frame spawn logic (glyphs + particles)
-├── renderer.rs       — per-frame drawing (clear → nebula → stars → particles → glyphs → fog)
+├── renderer.rs       — per-frame drawing (clear → nebula → moon → stars → particles → glyphs → fog)
 ├── surface.rs        — Surface enum: DRM / fb0 / Headless unified API
 ├── screenshot.rs     — 60s PPM/PNG frame capture (off-thread)
 ├── telemetry.rs      — JSONL writer + 2 MiB rotation
@@ -47,6 +47,7 @@ src/
         ├─► renderer::draw_frame(&mut surface, glyphs, particles, stars, dt, t, hue)
         │       ├─ clear         (pixels.fill(BACKGROUND))
         │       ├─ nebula        (2 × 5 concentric circles, slow drift)
+        │       ├─ moon          (single silhouette, complementary hue, anchors composition)
         │       ├─ stars         (90 twinkles, per-star phase)
         │       ├─ particles     (step + draw, retain alive)
         │       ├─ glyphs        (step + draw, retain alive)

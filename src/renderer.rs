@@ -2,7 +2,7 @@
 //
 // All drawing primitives the frame loop composes into a single frame.
 // Pulled out of `main.rs` so the per-frame body becomes a top-down
-// sequence of named phases (clear → nebula → stars → particles →
+// sequence of named phases (clear → nebula → moon → stars → particles →
 // glyphs → horizon fog → present) rather than a wall of inline math.
 //
 // The renderer never allocates. Every call takes the pixel buffer by
@@ -77,8 +77,8 @@ pub fn clear(pixels: &mut [u32]) {
 /// (one rotated by 0.5) and slightly different center positions so
 /// the wash breathes left↔right.
 pub fn draw_nebula(pixels: &mut [u32], pitch_px: usize, fb_w: i32, fb_h: i32, t: f32, hue: f32) {
-    let neb_a_alpha = 0.035 + 0.02 * (t * 0.05).sin();
-    let neb_b_alpha = 0.025 + 0.018 * (t * 0.04 + 1.7).cos();
+    let neb_a_alpha = 0.022 + 0.012 * (t * 0.05).sin();
+    let neb_b_alpha = 0.016 + 0.010 * (t * 0.04 + 1.7).cos();
     let na_x = fb_w as f32 * (0.5 + 0.28 * (t * 0.018).sin());
     let na_y = fb_h as f32 * (0.5 + 0.20 * (t * 0.013).cos());
     let nb_x = fb_w as f32 * (0.5 + 0.28 * (t * 0.017).cos());
@@ -117,6 +117,45 @@ pub fn draw_nebula(pixels: &mut [u32], pitch_px: usize, fb_w: i32, fb_h: i32, t:
             neb_b_alpha * fall,
         );
     }
+}
+
+// ----- moon -----
+
+/// Single slow-drifting moon silhouette — anchors the composition and
+/// evokes the Song-dynasty 月景 (moon-scape) tradition. Reads as a
+/// body, not a glow: a faint outer halo plus a slightly brighter core,
+/// both in a complementary hue so it sits apart from the cool nebula
+/// wash. Drifts on a 320 s horizontal sine and a 480 s vertical cosine
+/// — different periods from the nebula drift so the composition never
+/// re-aligns. Alpha is intentionally low (~0.10 outer / ~0.06 inner):
+/// the moon is a hint of presence, never a focal point that competes
+/// with the glyphs.
+pub fn draw_moon(pixels: &mut [u32], pitch_px: usize, fb_w: i32, fb_h: i32, t: f32, hue: f32) {
+    // Upper-right anchor, slowly drifting between ~0.62 and ~0.72 of width.
+    let cx = fb_w as f32 * (0.66 + 0.05 * (t * 0.020).sin());
+    // Upper third, very small vertical wobble.
+    let cy = fb_h as f32 * (0.30 + 0.025 * (t * 0.013).cos());
+    // Radius scales with the smaller screen dimension so 4:3 and 16:9
+    // both feel proportioned like a moon rather than a sticker.
+    let r = fb_w.min(fb_h) as f32 * 0.16;
+    // Complementary to the background hue: warmth side of the wheel
+    // when the rest of the frame is cool, and vice versa.
+    let moon_color = Rgba::from_hsl((hue + 0.5).rem_euclid(1.0), 0.45, 0.62);
+    // Outer halo — softer, larger.
+    fill_circle(pixels, pitch_px, fb_w, fb_h, cx, cy, r, moon_color, 0.10);
+    // Inner core — slightly brighter, smaller. The two-layer trick is
+    // what makes it read as a body rather than a glow.
+    fill_circle(
+        pixels,
+        pitch_px,
+        fb_w,
+        fb_h,
+        cx,
+        cy,
+        r * 0.7,
+        moon_color,
+        0.06,
+    );
 }
 
 // ----- stars -----
@@ -284,6 +323,7 @@ pub fn draw_frame(
 
     clear(pixels);
     draw_nebula(pixels, pitch_px, fb_w, fb_h, t, hue);
+    draw_moon(pixels, pitch_px, fb_w, fb_h, t, hue);
     draw_stars(pixels, pitch_px, fb_w, fb_h, scene_stars, t, hue);
     draw_and_step_particles(pixels, pitch_px, fb_w, fb_h, scene_particles, dt, t, hue);
     draw_and_step_glyphs(pixels, pitch_px, fb_w, fb_h, scene_glyphs, dt, t, hue);
@@ -294,3 +334,42 @@ pub fn draw_frame(
 // Re-export of VecDeque so `main.rs` doesn't have to import it just
 // for the renderer call site.
 pub use std::collections::VecDeque;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn draw_moon_does_not_panic_on_small_buffer() {
+        let mut pixels = vec![0xFF_05_03_03u32; 64 * 64];
+        draw_moon(&mut pixels, 64, 64, 64, 1.0, 0.5);
+        let mut touched = false;
+        for &px in &pixels[20 * 64..22 * 64] {
+            if px != 0xFF_05_03_03 {
+                touched = true;
+                break;
+            }
+        }
+        assert!(touched, "moon should have altered at least one pixel");
+    }
+
+    #[test]
+    fn draw_moon_drifts_within_bounds() {
+        for t in (0..1000).map(|i| i as f32) {
+            let fb_w = 1280.0;
+            let fb_h = 800.0;
+            let cx = fb_w * (0.66 + 0.05 * (t * 0.020).sin());
+            let cy = fb_h * (0.30 + 0.025 * (t * 0.013).cos());
+            assert!((0.0..=fb_w).contains(&cx), "t={t} cx={cx}");
+            assert!((0.0..=fb_h).contains(&cy), "t={t} cy={cy}");
+        }
+    }
+
+    #[test]
+    fn draw_moon_radius_scales_with_screen() {
+        for &(w, h) in &[(640u32, 480u32), (1280, 800), (1920, 1080), (1024, 1024)] {
+            let r = w.min(h) as f32 * 0.16;
+            assert!(r > 0.0 && r < w.min(h) as f32, "{}x{} r={r}", w, h);
+        }
+    }
+}
