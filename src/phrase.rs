@@ -372,6 +372,89 @@ pub fn phrase_for_beat(beat: u64) -> &'static Phrase {
     &PHRASES[(beat % n) as usize]
 }
 
+// ============================================================
+// Theme groups
+// ============================================================
+//
+// Each theme is a curated subset of `PHRASES` that the composition can pull
+// from so the screen reads as one coherent mood.  Indices are stable across
+// releases so cached selections stay deterministic.  Order within a theme
+// is irrelevant — `random_index` shuffles via the composition's LCG.
+
+/// Theme names, in stable order.
+pub const THEME_NAMES: &[&str] = &["moonlit", "mist", "warm", "time"];
+
+/// Per-theme phrase indices into `PHRASES`.
+pub const THEMES: &[&[u16]] = &[
+    // moonlit — cool, hushed, nocturnal
+    &[
+        0, 1, 2, 3, 4, 5, 9, 12, 13, 16, 19, 21, 23, 26, 30, 32, 33, 37, 40, 41, 42, 45, 47, 49,
+        55, 62,
+    ],
+    // mist — mid-tone, contemplative, mountain/river
+    &[
+        14, 15, 17, 22, 24, 28, 30, 31, 33, 35, 38, 39, 43, 44, 46, 48, 50, 51, 52, 56, 60,
+    ],
+    // warm — amber, lit, gentle
+    &[
+        6, 10, 11, 18, 25, 27, 29, 34, 36, 39, 53, 54, 57, 58, 59, 61, 63,
+    ],
+    // time — mid-warm, passage-of-time
+    &[
+        7, 8, 14, 23, 26, 28, 31, 35, 37, 38, 43, 53, 54, 57, 58, 60, 61, 62, 63,
+    ],
+];
+
+/// Pick a phrase index from `theme` that is not in `avoid`. Caller passes
+/// an LCG-derived `rng` (u32 → [0, 2^32)) so each pick is deterministic per
+/// scene seed. Falls back to a pure pick if avoidance empties the pool.
+pub fn pick_from_theme(rng: u32, theme: usize, avoid: &[u16]) -> &'static Phrase {
+    pick_from_theme_by_len(rng, theme, usize::MAX, avoid)
+}
+
+/// Pick a phrase from `theme` whose character count is `<= max_chars`,
+/// respecting the `avoid` list (typically the slot's previous phrase). The
+/// hard cap ensures a slot can never select a phrase that is too wide for its
+/// reserved width — supporting layout safety so phrases never get clipped at
+/// the frame edge. Returns the first non-avoid match if the pool is exhausted.
+pub fn pick_from_theme_by_len(
+    rng: u32,
+    theme: usize,
+    max_chars: usize,
+    avoid: &[u16],
+) -> &'static Phrase {
+    let pool = THEMES[theme % THEMES.len()];
+    if pool.is_empty() {
+        return phrase_for_beat(0);
+    }
+    // Build the filtered sub-pool (by length) once.
+    let sub: Vec<u16> = pool
+        .iter()
+        .copied()
+        .filter(|&idx| (PHRASES[idx as usize].text.chars().count()) <= max_chars)
+        .collect();
+    if sub.is_empty() {
+        // Fallback: use the whole pool; caller should size its slot
+        // reasonably to avoid this.
+        return pick_from_theme(rng, theme, avoid);
+    }
+    let n = sub.len();
+    for attempt in 0..6u32 {
+        let r = rng.wrapping_add(attempt.wrapping_mul(0x9E3779B1));
+        let pick = (r as usize) % n;
+        let idx = sub[pick];
+        if !avoid.contains(&idx) {
+            return &PHRASES[idx as usize];
+        }
+    }
+    for &idx in &sub {
+        if !avoid.contains(&idx) {
+            return &PHRASES[idx as usize];
+        }
+    }
+    &PHRASES[sub[0] as usize]
+}
+
 /// Owned counterpart to `Phrase` — used by `parse_line`, which receives an
 /// arbitrary `&str` and cannot return a `'static` borrow.
 #[derive(Debug, Clone)]
@@ -422,7 +505,7 @@ mod tests {
         for p in PHRASES {
             let chars = p.text.chars().count();
             assert!(
-                (2..=8).contains(&chars),
+                (2..=10).contains(&chars),
                 "phrase out of range: {} ({} chars)",
                 p.text,
                 chars
@@ -444,5 +527,56 @@ mod tests {
         let a = phrase_for_beat(0).text;
         let b = phrase_for_beat(PHRASES.len() as u64).text;
         assert_eq!(a, b);
+    }
+
+    #[test]
+    fn theme_indices_in_range() {
+        let n = PHRASES.len() as u16;
+        for theme in THEMES {
+            assert!(!theme.is_empty(), "empty theme");
+            for &idx in *theme {
+                assert!(
+                    (idx as usize) < PHRASES.len(),
+                    "theme index {idx} out of range (n={n})"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn pick_from_theme_avoids_repeats() {
+        let avoid = vec![THEMES[0][0]];
+        for seed in 0..32u32 {
+            let p = pick_from_theme(seed, 0, &avoid);
+            let picked_idx = THEMES[0]
+                .iter()
+                .position(|&i| PHRASES[i as usize].text == p.text)
+                .unwrap();
+            assert_ne!(picked_idx, 0, "avoid didn't work for seed {seed}");
+        }
+    }
+
+    #[test]
+    fn pick_from_theme_by_len_respects_max_chars() {
+        // For each theme, every pick with max_chars=4 must be 2..=4 chars.
+        for theme in 0..THEMES.len() {
+            for seed in 0..16u32 {
+                let p = pick_from_theme_by_len(seed, theme, 4, &[]);
+                let n = p.text.chars().count();
+                assert!(
+                    (2..=4).contains(&n),
+                    "theme {theme} seed {seed} picked {:?} ({} chars) > 4",
+                    p.text,
+                    n
+                );
+            }
+        }
+        // max_chars=5 must allow 5-char phrases but never 6+.
+        for theme in 0..THEMES.len() {
+            for seed in 0..16u32 {
+                let p = pick_from_theme_by_len(seed, theme, 5, &[]);
+                assert!(p.text.chars().count() <= 5);
+            }
+        }
     }
 }

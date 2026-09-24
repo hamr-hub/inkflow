@@ -3,13 +3,16 @@
 //! Three modes:
 //!   * `--headless [N]`    — render N frames into state/rhythm-N.png using the
 //!     *same* paint path as the live renderer.
+//!   * `--layout-test [N]` — render N frames into state/layout-N.png capturing
+//!     the full composition (initial populate, several staggered refreshes,
+//!     touch accent) so density/legibility can be inspected by vision.
 //!   * `--gfx2-test [N]`   — render N frames into state/gfx2-N.png on a flat
 //!     dark surface, using the SAME `glyph::draw_phrase` entry that the live
 //!     renderer uses, so the captured frames are faithful glyph-quality
 //!     previews.  Useful when iterating on the font atlas / renderer.
 //!   * `--drm-test`        — try `/dev/dri/card0`, `/dev/dri/card1`, or
 //!     `/dev/fb0` in turn; if one opens, run the live loop until killed.
-//!     Headless harness skips this. (Both modes share `Scene`.)
+//!     Headless harness skips this. (All modes share `Scene`.)
 //!   * `--width=W --height=H` — render size (default 1280x720).
 
 use std::env;
@@ -20,7 +23,7 @@ use inkflow::color;
 use inkflow::glyph::{self, Bucket, Point};
 use inkflow::phrase;
 use inkflow::rhythm::{Engine, Phase};
-use inkflow::scene::{self, Echo, Scene};
+use inkflow::scene::{self, Scene};
 use inkflow::surface::Surface;
 
 const DEFAULT_W: u32 = 1280;
@@ -30,6 +33,8 @@ const DEFAULT_FRAMES: usize = 12;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Mode {
     Headless,
+    LayoutTest,
+    ComposeTest,
     Gfx2Test,
     DrmTest,
     Help,
@@ -46,12 +51,26 @@ fn parse_args() -> (Mode, u32, u32, usize, String) {
             mode = Mode::DrmTest;
         } else if a == "--gfx2-test" {
             mode = Mode::Gfx2Test;
+        } else if a == "--layout-test" {
+            mode = Mode::LayoutTest;
+        } else if a == "--compose-test" {
+            mode = Mode::ComposeTest;
         } else if a == "--help" || a == "-h" {
             mode = Mode::Help;
         } else if a == "--headless" {
             mode = Mode::Headless;
         } else if let Some(v) = a.strip_prefix("--headless=") {
             mode = Mode::Headless;
+            if let Ok(n) = v.parse::<usize>() {
+                frames = n;
+            }
+        } else if let Some(v) = a.strip_prefix("--layout-test=") {
+            mode = Mode::LayoutTest;
+            if let Ok(n) = v.parse::<usize>() {
+                frames = n;
+            }
+        } else if let Some(v) = a.strip_prefix("--compose-test=") {
+            mode = Mode::ComposeTest;
             if let Ok(n) = v.parse::<usize>() {
                 frames = n;
             }
@@ -87,13 +106,18 @@ fn print_help() {
         "inkflow — poetic phrases on a beat (zero-dep Rust, DRM/fb0/headless)
 
 Usage:
-  inkflow --headless[=N]   render N frames to state/rhythm-{{N}}.png (default 12)
-  inkflow --gfx2-test[=N]  render N frames to state/gfx2-{{N}}.png on a flat dark
-                           surface, via the same glyph::draw_phrase entry
-  inkflow --drm-test       run the live renderer against the real display stack
+  inkflow --headless[=N]    render N frames to state/rhythm-{{N}}.png (default 12)
+  inkflow --layout-test[=N] render N frames to state/layout-{{N}}.png — full
+                            composition with staggered refreshes (default 24)
+  inkflow --compose-test[=N] render N frames to state/compose-{{N}}.png — clean
+                            multi-phrase composition (hero + 3 supporting);
+                            default 12
+  inkflow --gfx2-test[=N]   render N frames to state/gfx2-{{N}}.png on a flat
+                            dark surface, via the same glyph::draw_phrase entry
+  inkflow --drm-test        run the live renderer against the real display stack
   inkflow --width=W --height=H  output resolution (default 1280x720)
-  inkflow --out=DIR        output directory for headless frames
-  inkflow --help           show this help
+  inkflow --out=DIR         output directory for headless frames
+  inkflow --help            show this help
 
 The headless harness uses the SAME paint path as the live renderer so the
 captured PNGs are faithful previews of what the live device shows.",
@@ -123,6 +147,16 @@ fn main() -> ExitCode {
         Mode::Headless => {
             let _ = std::fs::create_dir_all(&out_dir);
             run_headless(w, h, frames, &out_dir, t0, started_ms);
+            ExitCode::SUCCESS
+        }
+        Mode::LayoutTest => {
+            let _ = std::fs::create_dir_all(&out_dir);
+            run_layout_test(w, h, frames.max(1), &out_dir);
+            ExitCode::SUCCESS
+        }
+        Mode::ComposeTest => {
+            let _ = std::fs::create_dir_all(&out_dir);
+            run_compose_test(w, h, frames.max(1), &out_dir);
             ExitCode::SUCCESS
         }
         Mode::Gfx2Test => {
@@ -167,7 +201,7 @@ fn render_frame(
     surf: &mut inkflow::surface::Surface,
     scene: &mut Scene,
     engine: &mut Engine,
-    beat_index_for_echo: u64,
+    _beat_index_for_echo: u64,
     dt: f32,
 ) {
     let (w, h) = (surf.width, surf.height);
@@ -175,51 +209,40 @@ fn render_frame(
     let pulse = tempo.pulse;
     let warmth = tempo.warmth;
 
-    // 1) step simulation
-    scene.step(dt, warmth, pulse);
-
-    // 2) advance rhythm, get current beat (if any)
+    // 1) advance rhythm first so we can detect a fresh beat.
     let beat = engine.advance(dt);
+    let mut proposed_theme = scene.theme_idx;
+    if let Some(b) = beat.as_ref() {
+        if matches!(b.phase, Phase::Entrance) && b.t_in_phase < 0.05 {
+            // A new beat just started — refresh one supporting slot in the
+            // composition and possibly rotate the theme.
+            proposed_theme = scene.composition.on_hero_beat(
+                engine.beat_count.saturating_sub(1),
+                scene.rng.next(),
+                b.phrase,
+                scene.theme_idx,
+            );
+        }
+    }
 
-    // 3) ensure echo fades in *after* the first beat starts.
-    let echo = if beat.is_some() {
-        scene.echo.as_ref()
-    } else {
-        None
-    };
+    // 2) step simulation (dust, sparks, composition ages).
+    scene.step(dt, warmth, pulse);
+    scene.theme_idx = proposed_theme;
 
-    // 4) paint background
+    // 3) paint background
     scene::paint_background(&mut surf.pixels, w, h, scene, pulse, warmth);
 
-    // 5) paint echo (faint) behind the hero
-    if let Some(e) = echo {
-        scene::paint_echo(&mut surf.pixels, w, h, e, pulse);
-    }
-
-    // 6) paint hero phrase
-    if let Some(b) = beat {
-        scene::paint_phrase(&mut surf.pixels, w, h, &b, warmth, pulse, b.phrase.mood);
-        // After Exit begins, snapshot the *current* (about-to-disappear) phrase
-        // as the next echo so it lingers softly.
-        if matches!(b.phase, Phase::Exit) && b.t_in_phase < 0.05 {
-            let prev = phrase::phrase_for_beat(beat_index_for_echo);
-            scene.echo = Some(Echo {
-                phrase: prev,
-                alpha: 0.55,
-                dx: 6.0,
-                dy: 4.0,
-                scale: 0.96,
-            });
-        }
-    } else {
-        // fade echo when no beat is on screen.
-        if let Some(e) = scene.echo.as_mut() {
-            e.alpha -= dt * 0.45;
-            if e.alpha <= 0.02 {
-                scene.echo = None;
-            }
-        }
-    }
+    // 4) paint the composition — supporting slots first, then hero.
+    scene::paint_composition(
+        &mut surf.pixels,
+        w,
+        h,
+        scene,
+        beat.as_ref(),
+        warmth,
+        pulse,
+        scene.ambient_pulse,
+    );
 }
 
 // ============================================================
@@ -246,7 +269,7 @@ fn run_gfx2_test(w: u32, h: u32, frames: usize, out_dir: &str) {
             *px = bg;
         }
 
-        match frame_idx % 4 {
+        match frame_idx % 5 {
             0 => {
                 // Short hero phrase — biggest, smoothest.
                 let phrase = "月色";
@@ -320,6 +343,37 @@ fn run_gfx2_test(w: u32, h: u32, frames: usize, out_dir: &str) {
                     0.85,
                 );
             }
+            3 => {
+                // DEBUG: render a few supporting-size (0.30 em) phrases at
+                // fixed pixel positions to inspect glyph quality at the
+                // small supporting scale.  Each char is ~38 px tall at
+                // scale_q8=77; phrase is drawn char-by-char via draw_glyph.
+                let phrases = ["松下问童子", "万物静默", "寒山", "静夜"];
+                let scale_q8: u32 = 77; // 0.30 * 256
+                let y_start = 100;
+                for (i, ph) in phrases.iter().enumerate() {
+                    let mut pen_x_q8 = 80 * 256;
+                    let py = y_start + (i as i32) * 70;
+                    let fy = py * 256;
+                    for ch in ph.chars() {
+                        let idx = glyph::index_for(ch as u32) as usize;
+                        let adv = glyph::HERO_TABLE[idx].advance as i32;
+                        glyph::draw_glyph(
+                            &mut surf.pixels,
+                            w as usize,
+                            h as usize,
+                            idx as u8,
+                            ink,
+                            ink,
+                            pen_x_q8,
+                            fy,
+                            scale_q8,
+                            1.0,
+                        );
+                        pen_x_q8 += adv * (scale_q8 as i32);
+                    }
+                }
+            }
             _ => {
                 // Body-only strip — show several body-sized phrases vertically.
                 let phrases = ["春去秋来", "山高月小", "水落石出"];
@@ -376,13 +430,12 @@ fn run_headless(w: u32, h: u32, frames: usize, out_dir: &str, t0: Instant, start
 
     // Use a fixed dt so frames are reproducible across machines.
     let dt = 0.10_f32; // 100 ms per step → 10 fps logical
-    let mut beat_idx_for_echo = 0u64;
 
     // Schedule a touch tap during the hold of the first beat for a touch frame.
     let mut touched = false;
 
     for i in 0..frames {
-        render_frame(&mut surf, &mut scene, &mut engine, beat_idx_for_echo, dt);
+        render_frame(&mut surf, &mut scene, &mut engine, 0, dt);
 
         // Mid-hold touch: schedule a tap on the second captured frame.
         if i == 2 && !touched {
@@ -390,10 +443,6 @@ fn run_headless(w: u32, h: u32, frames: usize, out_dir: &str, t0: Instant, start
             engine.tempo.touch(0.8);
             touched = true;
         }
-
-        // Capture current beat index *after* the frame so the next frame's
-        // echo points at the phrase that just exited.
-        beat_idx_for_echo = engine.beat_count;
 
         let path = format!("{out_dir}/rhythm-{i}.png");
         if let Err(e) = surf.write_png(&path) {
@@ -413,6 +462,130 @@ fn run_headless(w: u32, h: u32, frames: usize, out_dir: &str, t0: Instant, start
     );
 }
 
+/// Run a layout verification suite — render a longer sequence capturing the
+/// initial populate, several staggered refreshes, and a touch accent. Output
+/// goes to `state/layout-N.png`.
+fn run_layout_test(w: u32, h: u32, frames: usize, out_dir: &str) {
+    let mut surf = inkflow::surface::Surface::memory(w, h);
+    let mut scene = Scene::new(w, h);
+    let mut engine = Engine::new();
+    engine.force_beat();
+    let dt = 0.10_f32;
+
+    let mut touched = false;
+    let mut reported = false;
+    for i in 0..frames {
+        render_frame(&mut surf, &mut scene, &mut engine, 0, dt);
+
+        // Mid-sequence touch — around the middle of the captured run.
+        if i == frames / 2 && !touched {
+            scene.touch(w as f32 * 0.5, h as f32 * 0.55, 0.9);
+            engine.tempo.touch(0.9);
+            touched = true;
+        }
+
+        let path = format!("{out_dir}/layout-{i}.png");
+        if let Err(e) = surf.write_png(&path) {
+            eprintln!("inkflow: write {}: {}", path, e);
+        } else if !reported {
+            eprintln!("inkflow: wrote {path}");
+            reported = true;
+        }
+    }
+
+    // Print a density summary so the report can quote it.
+    let mut phrase_count = 0usize;
+    let mut visible_chars = 0usize;
+    for slot in &scene.composition.slots {
+        let n = slot.phrase.text.chars().count();
+        let a = slot.alpha_now();
+        if a > 0.04 {
+            visible_chars += n;
+            phrase_count += 1;
+        }
+        eprintln!(
+            "  slot[{:?}] alpha={:.2} phrase={:?}",
+            slot.def.role, a, slot.phrase.text
+        );
+    }
+    eprintln!(
+        "inkflow: layout suite — {} frames, {} visible phrases ({} chars), theme={:?}",
+        frames,
+        phrase_count,
+        visible_chars,
+        phrase::THEME_NAMES[scene.theme_idx]
+    );
+}
+
+/// Run a clean multi-phrase composition verification — render a sequence of
+/// frames to `state/compose-N.png` capturing: the initial populate (every
+/// slot fading in cleanly), a full composition hold, two refreshes after the
+/// rhythm engine fires a new hero beat, and a touch accent.  Uses the SAME
+/// production paint path as the live renderer (no separate preview path).
+///
+/// Default 12 frames at 0.40 s/step = ~4.8 s, covering one hero beat +
+/// entrance of a second beat.  Tune with `--compose-test=N`.
+fn run_compose_test(w: u32, h: u32, frames: usize, out_dir: &str) {
+    let mut surf = inkflow::surface::Surface::memory(w, h);
+    let mut scene = Scene::new(w, h);
+    let mut engine = Engine::new();
+    // Kick the engine — frame 0 already shows the entrance.
+    engine.force_beat();
+    // Slower dt so we can see the entrance + hold + touch + refresh across
+    // the captured run.  Each step = 0.4 s.
+    let dt = 0.40_f32;
+
+    // Touch happens near the end so the captured touch frame is meaningful.
+    let touch_frame = frames.saturating_sub(3).max(2);
+    let mut touched = false;
+    let mut reported = false;
+
+    // Pre-touch: ensure we have a beat running so warmth/pulse ride along.
+    for i in 0..frames {
+        render_frame(&mut surf, &mut scene, &mut engine, 0, dt);
+
+        if i == touch_frame && !touched {
+            // Tap near the upper-right corner slot — accent it.
+            let (tw, th) = (w as f32, h as f32);
+            scene.touch(tw * 0.86, th * 0.18, 0.9);
+            engine.tempo.touch(0.9);
+            touched = true;
+        }
+
+        let path = format!("{out_dir}/compose-{i}.png");
+        if let Err(e) = surf.write_png(&path) {
+            eprintln!("inkflow: write {}: {}", path, e);
+        } else if !reported {
+            eprintln!("inkflow: wrote {path}");
+            reported = true;
+        }
+    }
+
+    // Density summary — verifies every phrase is fully visible at the end.
+    let mut phrase_count = 0usize;
+    let mut visible_chars = 0usize;
+    for slot in &scene.composition.slots {
+        let n = slot.phrase.text.chars().count();
+        let a = slot.alpha_now();
+        let marker = if a > 0.04 { "✓" } else { "·" };
+        eprintln!(
+            "  {marker} slot[{:?}] alpha={:.2} chars={} phrase={:?}",
+            slot.def.role, a, n, slot.phrase.text
+        );
+        if a > 0.04 {
+            visible_chars += n;
+            phrase_count += 1;
+        }
+    }
+    eprintln!(
+        "inkflow: compose suite — {} frames, {} visible phrases ({} chars), theme={:?}",
+        frames,
+        phrase_count,
+        visible_chars,
+        phrase::THEME_NAMES[scene.theme_idx]
+    );
+}
+
 // ============================================================
 // Live renderer (DRM dumb / fb0)
 // ============================================================
@@ -421,7 +594,6 @@ fn run_live(surf: &mut inkflow::surface::Surface, t0: Instant, started_ms: u128)
     let mut scene = Scene::new(surf.width, surf.height);
     let mut engine = Engine::new();
     let mut last = Instant::now();
-    let mut beat_idx_for_echo = 0u64;
     // try to tap a touch device lazily — best effort, ignore failure.
     let _touch_path = "/dev/input/event0";
     let mut next_simulated_touch_at: f32 = 6.0;
@@ -430,8 +602,7 @@ fn run_live(surf: &mut inkflow::surface::Surface, t0: Instant, started_ms: u128)
         let now = Instant::now();
         let dt = (now - last).as_secs_f32().min(0.05); // clamp to 50ms
         last = now;
-        render_frame(surf, &mut scene, &mut engine, beat_idx_for_echo, dt);
-        beat_idx_for_echo = engine.beat_count;
+        render_frame(surf, &mut scene, &mut engine, 0, dt);
 
         // Best-effort simulated touch every 6 seconds (real touch would come
         // from /dev/input via evdev; we keep zero-dep and skip parsing).

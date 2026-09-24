@@ -32,8 +32,10 @@ pub use crate::glyph_table::{
 
 /// Q8 fixed-point scale at which the body bucket is the native rendering size.
 /// With hero=128 and body=72, body native = 256 * 72 / 128 = 144.
-/// Threshold is the midpoint between hero (256) and body (144): 200.
-const BODY_BUCKET_THRESHOLD_Q8: u32 = 200;
+/// We default to using the hero bucket for everything — its 128 px native
+/// glyphs downsample cleanly to supporting sizes, while body bucket glyphs
+/// show positioning artifacts at small scale_q8 values.
+const BODY_BUCKET_THRESHOLD_Q8: u32 = 60;
 
 /// Pre-rendered bucket the caller wants to draw from.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -177,6 +179,7 @@ pub fn draw_glyph(
 ///
 /// `alpha` modulates per-pixel ink coverage (already-AAd ink is scaled).
 /// `color` is the ink colour.
+#[allow(clippy::too_many_arguments)]
 pub fn draw_phrase(
     fb: &mut [u32],
     w: usize,
@@ -202,7 +205,9 @@ pub fn draw_phrase(
     for ch in phrase.chars() {
         let slot = index_for(ch as u32) as usize;
         let (g, _) = lookup(bucket, slot);
-        composite_glyph(fb, w, h, g, data, bucket, color, pen_x_q8, fy, scale_q8, alpha);
+        composite_glyph(
+            fb, w, h, g, data, bucket, color, pen_x_q8, fy, scale_q8, alpha,
+        );
         // Advance pen by glyph.advance scaled to the bucket's native em.
         pen_x_q8 += (g.advance as i32) * (scale_q8 as i32);
     }
@@ -265,7 +270,15 @@ fn composite_glyph(
     }
 
     // The source-space step between adjacent source pixels in Q8 units.
-    let src_step_q8 = 256i32 * hero_em / bucket_em;
+    // Each source pixel occupies `scale_q8 / (hero_em / bucket_em)` Q8 in
+    // screen space — at scale_q8=256 (full hero em), one source pixel equals
+    // one output pixel (256 Q8). At scale_q8=77 (0.30 em) each source pixel
+    // equals 0.30 output pixels (77 Q8) so area sampling can average ~3.3
+    // source pixels per output pixel. Earlier versions used a fixed
+    // 256*hero_em/bucket_em which forced 1:1 sampling at every scale and
+    // truncated the bottom of every downscaled glyph to the top rows of the
+    // atlas — explaining the "fragment only at the top" look.
+    let src_step_q8 = (scale_q8 as i32) * hero_em / bucket_em;
 
     let gw = g.w as i32;
     let gh = g.h as i32;
@@ -314,7 +327,8 @@ fn composite_glyph(
                         if x_lo < x_hi {
                             let rx = (x_hi - x_lo) as i64;
                             // 8-bit coverage — no unpacking needed.
-                            let cov = data[data_base + (iy as usize) * (gw as usize) + (ix as usize)];
+                            let cov =
+                                data[data_base + (iy as usize) * (gw as usize) + (ix as usize)];
                             cov_sum += cov as i64 * rx * ry;
                             area += rx * ry;
                         }
@@ -368,10 +382,18 @@ mod tests {
 
     #[test]
     fn bucket_threshold_sensible() {
-        // scale_q8 = 256 → hero, scale_q8 = 144 → body, midpoint → either but
-        // pick_for_scale must never pick body when scale_q8 >= 200.
+        // The threshold (60) is set so we always use the Hero bucket — its
+        // 128 px native glyphs area-sample down to small scales cleanly. Body
+        // bucket glyphs (72 px native) are kept in the atlas for future use
+        // but the auto-picker should never choose them at the scales we use
+        // today. Verify a few representative scales.
         assert_eq!(Bucket::pick_for_scale(256), Bucket::Hero);
-        assert_eq!(Bucket::pick_for_scale(144), Bucket::Body);
         assert_eq!(Bucket::pick_for_scale(200), Bucket::Hero);
+        assert_eq!(Bucket::pick_for_scale(144), Bucket::Hero);
+        // The threshold picks Body only for very small scales (below 60),
+        // which we don't currently use. Sanity check the picker is monotone.
+        for s in [70u32, 80, 100, 144, 200, 256] {
+            assert_eq!(Bucket::pick_for_scale(s), Bucket::Hero);
+        }
     }
 }
