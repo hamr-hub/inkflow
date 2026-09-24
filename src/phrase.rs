@@ -387,9 +387,12 @@ pub const THEME_NAMES: &[&str] = &["moonlit", "mist", "warm", "time"];
 /// Per-theme phrase indices into `PHRASES`.
 pub const THEMES: &[&[u16]] = &[
     // moonlit — cool, hushed, nocturnal
+    // Includes all four lines of 贾岛《寻隐者不遇》 (40/41/42/43) so the
+    // composition can read as one complete same-moment quatrain when the
+    // moonlit theme is active.
     &[
-        0, 1, 2, 3, 4, 5, 9, 12, 13, 16, 19, 21, 23, 26, 30, 32, 33, 37, 40, 41, 42, 45, 47, 49,
-        55, 62,
+        0, 1, 2, 3, 4, 5, 9, 12, 13, 16, 19, 21, 23, 26, 30, 32, 33, 37, 40, 41, 42, 43, 45, 47,
+        49, 55, 62,
     ],
     // mist — mid-tone, contemplative, mountain/river
     &[
