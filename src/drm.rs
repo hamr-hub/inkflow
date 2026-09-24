@@ -777,13 +777,42 @@ fn build_display(card_fd: c_int, path: &str) -> Result<Display, String> {
         mode_valid: 1,
         mode,
     };
-    let modeset_ok = sys::ioctl_struct(card_fd, DRM_IOCTL_MODE_SETCRTC, &mut crtc_set).is_ok();
+    match sys::ioctl_struct(card_fd, DRM_IOCTL_MODE_SETCRTC, &mut crtc_set) {
+        Ok(_) => {}
+        Err(e) => {
+            // We could not take the scan-out (on this box an unprivileged
+            // user cannot acquire DRM master → EACCES). Hand the allocated
+            // Display to its Drop so the fb/dumb/mmap are released, then
+            // fail out: Surface::open falls through to /dev/fb0, which the
+            // driver scans out without a modeset. Returning Ok here would
+            // leave the piece drawing into an unscanned buffer — a dark
+            // panel that never recovers.
+            let failed = Display {
+                card_fd,
+                crtc_id,
+                conn_id,
+                fb_id: fb.fb_id,
+                dumb_handle: dumb.handle,
+                pitch: dumb.pitch,
+                width: dumb.width,
+                height: dumb.height,
+                bpp: 32,
+                stride: (dumb.pitch / 4) as usize,
+                map_ptr,
+                map_size,
+                modeset_ok: false,
+                saved_crtc: Some(saved_crtc),
+                via_fb0: false,
+            };
+            drop(failed);
+            return Err(format!("SETCRTC (no DRM master): errno={e}"));
+        }
+    }
 
     log!(
-        "drm: mode {}x{} applied={}, fb={}",
+        "drm: mode {}x{} applied=true, fb={}",
         mode.hdisplay,
         mode.vdisplay,
-        modeset_ok,
         fb.fb_id
     );
 
@@ -800,7 +829,7 @@ fn build_display(card_fd: c_int, path: &str) -> Result<Display, String> {
         stride: (dumb.pitch / 4) as usize,
         map_ptr,
         map_size,
-        modeset_ok,
+        modeset_ok: true,
         saved_crtc: Some(saved_crtc),
         via_fb0: false,
     })
@@ -1046,4 +1075,10 @@ impl Headless {
 
 #[allow(unused_macros)]
 macro_rules! log {
-    ($($arg:tt                                                                                                                                                                                                               
+    ($($arg:tt)*) => ({
+        // single sink — the runtime logs to stderr; main.rs swaps in a
+        // file-backed logger after we know the state directory.
+        eprintln!($($arg)*);
+    })
+}
+pub(crate) use log;
