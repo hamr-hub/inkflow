@@ -800,12 +800,20 @@ async fn main() {
             // with the foreground text.
             let halo_age = 1.0 - a; // 0 at birth, 1 at death
             let halo_strength = (halo_age * (1.0 - halo_age) * 4.0).min(1.0);
+            // birth-scale: glyphs emerge at half-size and grow into full
+            // size over the first 7% of life, layered on top of the existing
+            // alpha birth fade. Reads as ink being painted into the paper
+            // rather than a stamp popping on at full size — the brush grows
+            // into the character as the stroke lands. Halo radius and
+            // offset scale together so the wash follows the glyph as it
+            // emerges. Steady midlife + death curves are unchanged.
+            let draw_size = g.size * (0.5 + 0.5 * birth_eased);
             let mut halo = hsl_to_rgb(row_hue, 0.4, 0.45);
             halo.a = halo_strength * 0.12 * top_fade;
-            draw_circle(g.x, g.y + g.size * 0.3, g.size * 0.7, halo);
+            draw_circle(g.x, g.y + draw_size * 0.3, draw_size * 0.7, halo);
             let params = TextParams {
                 font: font.as_ref(),
-                font_size: g.size as u16,
+                font_size: draw_size as u16,
                 color: c,
                 rotation: rot,
                 ..Default::default()
