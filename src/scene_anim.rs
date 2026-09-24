@@ -84,6 +84,26 @@ pub(crate) fn voice_speed_mul(voice: &str) -> f32 {
     }
 }
 
+/// Per-voice spawn-rate multiplier. Each curatorial voice also has
+/// its own characteristic density — 禅寂 is sparse (留白
+/// emphasised), 豪放 is denser (大写意), 稚拙 fills the void with
+/// childlike rapid marks. Combined with voice_speed_mul this gives
+/// each voice its own presence: a 禅寂 frame has 5 chars hanging
+/// slowly in the air, a 豪放 frame has 12 chars marching through.
+///
+/// Bounded to (0.5, 1.5) — sparser than 0.5x makes the piece feel
+/// broken, denser than 1.5x breaks the GLYPH_CAP hard ceiling.
+pub(crate) fn voice_spawn_rate_mul(voice: &str) -> f32 {
+    match voice {
+        "婉约" => 0.85, // lyrical — fewer chars, more 留白
+        "豪放" => 1.15, // bold — denser marks
+        "禅寂" => 0.70, // austere — sparsest (留白 as substance)
+        "稚拙" => 1.10, // naive — bouncy, fills
+        "苍茫" => 1.00, // vast — baseline
+        _ => 1.00,      // unknown → no shift
+    }
+}
+
 /// Spawn-rate accumulator. The frame loop accumulates `dt * base_rate`
 /// and pops whole glyphs each time the accumulator crosses 1.0.
 #[derive(Default)]
@@ -159,14 +179,21 @@ fn spawn_glyphs(
     t: f32,
 ) {
     let energy = frame.effective_energy();
-    // Meditative cadence — ~0.85 chars/sec at idle, climbing to ~1.6
-    // when energy / contacts push. With ~10 s life that means
-    // 8–16 glyphs in flight at any moment. Spread across the full
-    // canvas (x_jitter 0.80·fb_w) so adjacent glyphs never
-    // overlap on the horizontal axis. The poetry cursor still
-    // inserts a 2.4 s silence between phrases so the piece breathes
-    // rather than buzzing.
-    accum.glyph_acc += dt * (0.85 + energy * 0.7);
+    // Voice is per-frame (deterministic on warmth + energy via
+    // style_for). We pick it once at the top of the frame so the
+    // spawn rate and the per-glyph voice (size / hue / tempo /
+    // density) all share the same picker call within a single
+    // frame — cheap, and it makes the per-frame voice identity
+    // unambiguous to the autoloop Claude reading tel_tail.txt.
+    let voice = crate::net_ollama::style_for(frame.warmth, frame.effective_energy());
+    let rate_voice = voice_spawn_rate_mul(voice);
+    // Meditative cadence — ~0.85 chars/sec at idle (禅寂 actually
+    // 0.6, 豪放 0.98), climbing to ~1.6 when energy / contacts push.
+    // With ~10 s life that means 5–12 glyphs in flight at any moment
+    // depending on the voice. The poetry cursor still inserts a
+    // 2.4 s silence between phrases so the piece breathes rather
+    // than buzzing.
+    accum.glyph_acc += dt * (0.85 + energy * 0.7) * rate_voice;
     while accum.glyph_acc >= 1.0 && !poetry.is_breathing() {
         accum.glyph_acc -= 1.0;
         // Top stream falls slower so the breath reads as "ink rising +
@@ -191,7 +218,10 @@ fn spawn_glyphs(
         // its own typographic weight. When the LLM is down or the queue
         // is empty, we still know the voice from (warmth, energy), so
         // even offline glyphs read as the same curatorial voice.
-        let voice = crate::net_ollama::style_for(frame.warmth, frame.effective_energy());
+        // `voice` is computed once per frame at the top of
+        // spawn_for_frame; we reuse it here so the size / hue /
+        // tempo / density all agree on which voice is in play
+        // within a single frame.
         let voice_size = voice_base_size(voice);
         let base_size = if from_llm {
             voice_size
@@ -455,6 +485,39 @@ mod tests {
         // An unknown voice name shouldn't panic; falling back to
         // 1.0 (no tempo change) is correct.
         assert_eq!(voice_speed_mul("???"), 1.0);
+    }
+
+    #[test]
+    fn voice_spawn_rate_mul_distinguishes_dense_from_sparse() {
+        // Per ARTIFACT.md the density must match the curatorial
+        // voice: 禅寂 sparsest, 豪放 densest. 婉约 sits just
+        // above 禅寂 (lyrical — fewer marks, more air), 苍茫 at
+        // baseline, 稚拙 just above 苍茫 (bouncy), 豪放 on top.
+        assert!(voice_spawn_rate_mul("禅寂") < voice_spawn_rate_mul("婉约"));
+        assert!(voice_spawn_rate_mul("婉约") < voice_spawn_rate_mul("苍茫"));
+        assert!(voice_spawn_rate_mul("苍茫") < voice_spawn_rate_mul("稚拙"));
+        assert!(voice_spawn_rate_mul("稚拙") < voice_spawn_rate_mul("豪放"));
+    }
+
+    #[test]
+    fn voice_spawn_rate_mul_magnitude_is_bounded() {
+        // The multiplier must stay in (0.5, 1.5) — sparser than
+        // 0.5x makes the piece feel broken; denser than 1.5x
+        // breaks the GLYPH_CAP hard ceiling at 260 entries.
+        for v in ["婉约", "豪放", "禅寂", "稚拙", "苍茫"] {
+            let m = voice_spawn_rate_mul(v);
+            assert!(
+                (0.5..=1.5).contains(&m),
+                "{v} spawn rate mul {m} out of band"
+            );
+        }
+    }
+
+    #[test]
+    fn voice_spawn_rate_mul_unknown_falls_back_safely() {
+        // An unknown voice name shouldn't panic; falling back to
+        // 1.0 (no change) is correct.
+        assert_eq!(voice_spawn_rate_mul("???"), 1.0);
     }
 
     #[test]
