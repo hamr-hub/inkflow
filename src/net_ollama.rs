@@ -160,12 +160,19 @@ struct VoiceParams {
 }
 
 const VOICE_PARAMS: &[(&str, VoiceParams)] = &[
+    // num_predict dropped from 50-70 → 2-3 chars. On this sandbox
+    // ollama returns each token at ~17s wall, so asking for 70
+    // tokens would block the queue for ~20 minutes per call.
+    // Asking for 2-3 means a fresh gen every ~50-90s while
+    // keeping the LLM-genuine character distinguishable from the
+    // procedural fallback (which also samples from the same
+    // alphabet, but with no semantic content).
     (
         "婉约",
         VoiceParams {
             temperature: 0.85,
             top_p: 0.90,
-            num_predict: 70,
+            num_predict: 2,
         },
     ),
     (
@@ -173,7 +180,7 @@ const VOICE_PARAMS: &[(&str, VoiceParams)] = &[
         VoiceParams {
             temperature: 1.20,
             top_p: 0.92,
-            num_predict: 70,
+            num_predict: 3,
         },
     ),
     (
@@ -181,7 +188,7 @@ const VOICE_PARAMS: &[(&str, VoiceParams)] = &[
         VoiceParams {
             temperature: 0.80,
             top_p: 0.88,
-            num_predict: 50,
+            num_predict: 2,
         },
     ),
     (
@@ -189,7 +196,7 @@ const VOICE_PARAMS: &[(&str, VoiceParams)] = &[
         VoiceParams {
             temperature: 1.25,
             top_p: 0.95,
-            num_predict: 60,
+            num_predict: 3,
         },
     ),
     (
@@ -197,7 +204,7 @@ const VOICE_PARAMS: &[(&str, VoiceParams)] = &[
         VoiceParams {
             temperature: 0.95,
             top_p: 0.88,
-            num_predict: 50,
+            num_predict: 2,
         },
     ),
 ];
@@ -214,7 +221,7 @@ fn voice_params(name: &str) -> VoiceParams {
     VoiceParams {
         temperature: 1.05,
         top_p: 0.92,
-        num_predict: 90,
+        num_predict: 2,
     }
 }
 
@@ -294,8 +301,15 @@ fn build_prompt(warmth: f32, energy: f32) -> String {
         "幽深、寂静"
     };
     let style = style_for(warmth, energy);
+    // Asked for a tiny fragment (1-2 字) instead of a full phrase.
+    // Each ollama call costs ~17s per token on this sandbox, so a
+    // 60-token call would block the worker queue for 17 minutes per
+    // voice. Short fragments stream back fast and the render thread
+    // pops them one at a time into glyph slots, while the procedural
+    // 55 k-phrase corpus carries the rest of the visual rhythm in
+    // between LLM injections.
     format!(
-        "你是一件数字艺术品的氛围文字源。风格：{style}。用中文，只输出 30-60 个字，写一段{mood}的意象碎片，像梦话，不解释，不断句成诗行，无标点堆砌，允许短句。"
+        "你是一件数字艺术品的氛围文字源。风格：{style}。用中文，**只输出 1-2 个字**，写一个{mood}的意象碎片，像梦呓，禁止标点、禁止解释、禁止重复。"
     )
 }
 
