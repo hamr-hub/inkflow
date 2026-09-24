@@ -243,7 +243,7 @@ fn f32_to_json(x: f32) -> String {
 /// 禅寂, mid-energy + extreme warmth or cool picks 苍茫, mid-energy
 /// plus neutral picks 稚拙. The picker is deterministic so the same
 /// mood always produces the same style.
-fn style_for(warmth: f32, energy: f32) -> &'static str {
+pub fn style_for(warmth: f32, energy: f32) -> &'static str {
     if energy > 0.6 {
         "豪放"
     } else if energy < 0.2 {

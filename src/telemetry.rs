@@ -21,6 +21,16 @@ pub struct Telemetry<'a> {
     pub llm_last: &'a str,
     pub glyphs: usize,
     pub particles: usize,
+    // Aesthetic state — what the piece is "saying" right now. Per
+    // ARTIFACT.md 'telemetry.jsonl is the work's visible breath':
+    // voice is the curatorial voice (婉约 / 豪放 / 禅寂 / 稚拙 /
+    // 苍茫), ink_x is the current x-bias that glyphs cluster around
+    // (留白 anchor), hue is the warm/cool palette position. Reading
+    // these in telemetry lets the autoloop verify the art-direction
+    // contract is being held — not just that fps is on target.
+    pub voice: &'a str,
+    pub ink_x: f32,
+    pub hue: f32,
     // Per-window (10 s) frame cadence envelope in microseconds:
     // frame_min_us — fastest interval between consecutive frame starts
     //                 (smallest wall-clock gap the loop achieved)
@@ -86,6 +96,9 @@ fn encode(t: &Telemetry<'_>) -> String {
     push_kv_str(&mut s, "llm_last", t.llm_last, false);
     push_kv_num(&mut s, "glyphs", t.glyphs as f64, false);
     push_kv_num(&mut s, "particles", t.particles as f64, false);
+    push_kv_str(&mut s, "voice", t.voice, false);
+    push_kv_num(&mut s, "ink_x", t.ink_x as f64, false);
+    push_kv_num(&mut s, "hue", t.hue as f64, false);
     // u32::MAX sentinel means "no frames completed in window" — emit as
     // null so consumers don't accidentally average an impossible value.
     // The null literal carries its own trailing comma so the next field
@@ -223,6 +236,9 @@ mod tests {
             llm_last: "墨",
             glyphs: 100,
             particles: 50,
+            voice: "禅寂",
+            ink_x: 0.5,
+            hue: 0.55,
             frame_min_us: 16_000,
             frame_max_us: 17_500,
         };
@@ -273,6 +289,9 @@ mod tests {
             llm_last: "",
             glyphs: 0,
             particles: 0,
+            voice: "稚拙",
+            ink_x: 0.5,
+            hue: 0.5,
             frame_min_us: u32::MAX, // sentinel
             frame_max_us: 0,
         };
@@ -356,6 +375,9 @@ mod tests {
                 llm_last: "",
                 glyphs: 0,
                 particles: 0,
+                voice: "苍茫",
+                ink_x: 0.5,
+                hue: 0.5,
                 frame_min_us: 0,
                 frame_max_us: 0,
             };

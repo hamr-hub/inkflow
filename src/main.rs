@@ -195,6 +195,17 @@ fn main() {
                 frame.touch_device.as_str()
             };
             let (llm_ok, llm_tps, llm_last) = llm_loop::snapshot(&shared);
+            // Aesthetic telemetry — what the piece is "saying" right
+            // now, not just how it's running. Per ARTIFACT.md
+            // 'telemetry is the work's visible breath': voice is
+            // which of the five curatorial voices is currently in
+            // play; ink_x is where the glyph column sits; hue is
+            // where on the warm/cool wheel the palette currently
+            // sits. The autoloop reads these to verify the
+            // art-direction contract is being held.
+            let voice = net_ollama::style_for(frame.warmth, frame.energy);
+            let ink_x = scene_anim::ink_current_x(t);
+            let hue = mood::hue_at(t, frame.warmth);
             telemetry::append(
                 &tel_path,
                 &telemetry::Telemetry {
@@ -210,6 +221,9 @@ fn main() {
                     llm_last: &llm_last,
                     glyphs: scene.glyphs.len(),
                     particles: scene.particles.len(),
+                    voice,
+                    ink_x,
+                    hue,
                     frame_min_us: window_min_us,
                     frame_max_us: window_max_us,
                 },
