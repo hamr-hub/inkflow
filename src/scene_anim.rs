@@ -42,6 +42,23 @@ pub struct SpawnAccum {
     pub glyph_acc: f32,
 }
 
+/// The 'ink current' — a slowly drifting x-bias in (0, 1) that glyphs
+/// cluster around. Sum of two sine waves with coprime-ish periods
+/// (~785 s and ~465 s) so the current never re-aligns with the nebula
+/// or moon drift; over a few minutes it sweeps the full width.
+///
+/// Glyphs spawn within ±15 % of fb_w of the current — the opposite
+/// half of the screen reads as 留白 (intentional emptiness, the
+/// single most important Song-dynasty composition rule).
+///
+/// Output is clamped to [0.05, 0.95] so the current never parks
+/// the entire stream off one side of the canvas.
+pub(crate) fn ink_current_x(t: f32) -> f32 {
+    let a = (t * 0.008).sin() * 0.32;
+    let b = (t * 0.0135 + 1.3).cos() * 0.12;
+    (0.5 + a + b).clamp(0.05, 0.95)
+}
+
 /// Spawn glyphs + particles for one frame, given the current mood,
 /// touch state, and shared LLM queue. Touch state is read under its
 /// own mutex and not held across the spawn.
@@ -56,8 +73,9 @@ pub fn spawn_for_frame(
     fb_h: u32,
     tick: u64,
     dt: f32,
+    t: f32,
 ) {
-    spawn_glyphs(scene, accum, frame, shared, fb_w, fb_h, tick, dt);
+    spawn_glyphs(scene, accum, frame, shared, fb_w, fb_h, tick, dt, t);
     spawn_particles(scene, frame, touch, fb_w, fb_h, tick);
 }
 
@@ -79,6 +97,7 @@ fn spawn_glyphs(
     fb_h: u32,
     tick: u64,
     dt: f32,
+    t: f32,
 ) {
     let energy = frame.effective_energy();
     // ~22 glyphs/sec at idle (energy=0.05), climbing to ~40 at high
@@ -130,9 +149,18 @@ fn spawn_glyphs(
         } else {
             (-20.0, speed * 0.55)
         };
+        // Ink current — glyphs cluster around ink_current_x(t) rather
+        // than spawning uniformly across fb_w. ±15 % of fb_w jitter
+        // gives the stream a deliberate rhythm: dense in one region,
+        // empty in the other. Per ARTIFACT.md 'Composition asymmetry'
+        // + 'Song-dynasty 留白'.
+        let current = ink_current_x(t);
+        let anchor_x = current * fb_w as f32;
+        let x_jitter = (lcg(tick.wrapping_add(11)) - 0.5) * fb_w as f32 * 0.30;
+        let x = (anchor_x + x_jitter).clamp(2.0, fb_w as f32 - 2.0);
         scene.push_glyph(Glyph {
             ch,
-            x: lcg(tick.wrapping_add(11)) * fb_w as f32,
+            x,
             y: spawn_y,
             vx: (lcg(tick.wrapping_add(5)) - 0.5) * (10.0 + energy * 40.0),
             vy,
@@ -235,5 +263,46 @@ mod tests {
         // Just a sanity check that default() == 0.
         let a: SpawnAccum = Default::default();
         assert_eq!(a.glyph_acc, 0.0);
+    }
+
+    #[test]
+    fn ink_current_stays_in_unit_interval() {
+        // The current is clamped to [0.05, 0.95] regardless of t.
+        for t in (0..10_000).map(|i| i as f32 * 0.1) {
+            let c = ink_current_x(t);
+            assert!((0.05..=0.95).contains(&c), "t={t} c={c}");
+        }
+    }
+
+    #[test]
+    fn ink_current_oscillates_within_range() {
+        // The unclamped function covers roughly [0.06, 0.94] over
+        // the full ~785 s dominant period + ~465 s modulation.
+        // Confirm the unclamped max exceeds 0.85 and min drops below
+        // 0.15 (i.e. the current actually moves, it doesn't park at
+        // 0.5). Sample over 3600 s (one full "viewing session") with
+        // 1 s resolution — that's 3600 evaluations, fast.
+        let mut lo = 1.0_f32;
+        let mut hi = 0.0_f32;
+        for t in (0..3_600).map(|i| i as f32) {
+            let c = ink_current_x(t);
+            if c < lo {
+                lo = c;
+            }
+            if c > hi {
+                hi = c;
+            }
+        }
+        assert!(hi > 0.85, "current should reach the right edge: hi={hi}");
+        assert!(lo < 0.15, "current should reach the left edge: lo={lo}");
+    }
+
+    #[test]
+    fn ink_current_is_deterministic() {
+        // Same t always produces the same current — needed for the
+        // (tick, scene length) → same glyph determinism contract.
+        for t in [0.0_f32, 1.0, 13.7, 137.0, 1024.5] {
+            assert_eq!(ink_current_x(t), ink_current_x(t), "t={t}");
+        }
     }
 }

@@ -8,7 +8,7 @@
 // Per-frame body (in `loop {}`):
 //   1. read touch state → FrameMood via `mood::tick`
 //   2. publish mood into the LLM worker so its next prompt is fresh
-//   3. spawn glyphs + particles via `scene_anim::spawn_for_frame`
+//   3. spawn glyphs + particles via `scene_anim::spawn_for_frame` (now clustered around ink_current_x(t))
 //   4. compute hue, draw the frame via `renderer::draw_frame`
 //   5. emit telemetry every 10 s, snapshot screen every 60 s
 //   6. sleep until the next monotonic deadline, skip-ahead if late
@@ -150,6 +150,7 @@ fn main() {
             fb_h,
             tick,
             dt,
+            t,
         );
 
         // ----- compute hue, draw the frame -----
