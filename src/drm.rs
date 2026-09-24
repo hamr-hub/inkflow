@@ -644,7 +644,13 @@ fn build_display(card_fd: c_int, path: &str) -> Result<Display, String> {
         c2.props_ptr = 0;
         c2.encoders_ptr = 0;
         c2.prop_values_ptr = 0;
-        sys::ioctl_struct(card_fd, DRM_IOCTL_MODE_GETCONNECTOR, &mut c2).ok();
+        match sys::ioctl_struct(card_fd, DRM_IOCTL_MODE_GETCONNECTOR, &mut c2) {
+            Ok(_) => eprintln!(
+                "DBG second GETCONN ok modes_ptr={:#x} count_modes={} m0={}x{}",
+                c2.modes_ptr, c2.count_modes, modes[0].hdisplay, modes[0].vdisplay
+            ),
+            Err(e) => eprintln!("DBG second GETCONN err errno={e}"),
+        }
     }
     let mode = modes[0];
     log!(

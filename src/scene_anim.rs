@@ -68,6 +68,22 @@ pub(crate) fn voice_hue_offset(voice: &str) -> f32 {
     }
 }
 
+/// Per-voice drift-speed multiplier. Each curatorial voice has its
+/// own characteristic tempo — 禅寂 drifts slowly (contemplative),
+/// 豪放 drifts fast (energetic). Multiplied into the base drift
+/// speed in spawn_glyphs so the same wall-clock frame interval
+/// produces different per-voice visual rhythm.
+pub(crate) fn voice_speed_mul(voice: &str) -> f32 {
+    match voice {
+        "婉约" => 0.85, // lyrical pacing
+        "豪放" => 1.30, // energetic
+        "禅寂" => 0.70, // contemplative (slowest)
+        "稚拙" => 1.10, // childlike bounce
+        "苍茫" => 1.00, // vast baseline
+        _ => 1.0,       // unknown → no shift
+    }
+}
+
 /// Spawn-rate accumulator. The frame loop accumulates `dt * base_rate`
 /// and pops whole glyphs each time the accumulator crosses 1.0.
 #[derive(Default)]
@@ -193,7 +209,13 @@ fn spawn_glyphs(
                 .wrapping_add(131)
                 .wrapping_add(scene.glyphs.len() as u64))
                 * 0.36;
-        let speed = (28.0 + energy * 60.0) * speed_jitter;
+        // Per-voice tempo: 禅寂 drifts slowest (each character
+        // hangs in the air longer), 豪放 drifts fastest (the line
+        // marches through the screen). Combined with voice_base_size
+        // and voice_hue_offset this gives each voice its own full
+        // typographic identity: size, palette, tempo.
+        let speed_voice = voice_speed_mul(voice);
+        let speed = (28.0 + energy * 60.0) * speed_jitter * speed_voice;
         let size_jitter = 0.88
             + lcg(tick
                 .wrapping_add(113)
@@ -402,6 +424,37 @@ mod tests {
         // is the right conservative default (the glyph will then
         // use only the row_hue jitter).
         assert_eq!(voice_hue_offset("???"), 0.0);
+    }
+
+    #[test]
+    fn voice_speed_mul_distinguishes_fast_from_slow() {
+        // Per ARTIFACT.md the rhythm must match the curatorial voice:
+        // 禅寂 drifts slowest (contemplative), 豪放 drifts fastest
+        // (energetic). 婉约 and 苍茫 sit in the lyrical / vast middle,
+        // 稚拙 sits between 苍茫 and 豪放 because its 'naive'
+        // character wants a touch more pace than 苍茫's vast hush.
+        assert!(voice_speed_mul("禅寂") < voice_speed_mul("婉约"));
+        assert!(voice_speed_mul("婉约") < voice_speed_mul("苍茫"));
+        assert!(voice_speed_mul("苍茫") < voice_speed_mul("稚拙"));
+        assert!(voice_speed_mul("稚拙") < voice_speed_mul("豪放"));
+    }
+
+    #[test]
+    fn voice_speed_mul_magnitude_is_bounded() {
+        // The multiplier must stay in (0.5, 1.6) — slower than 0.5x
+        // makes characters appear frozen, faster than 1.6x makes
+        // them invisible-blink.
+        for v in ["婉约", "豪放", "禅寂", "稚拙", "苍茫"] {
+            let m = voice_speed_mul(v);
+            assert!((0.5..=1.6).contains(&m), "{v} speed mul {m} out of band");
+        }
+    }
+
+    #[test]
+    fn voice_speed_mul_unknown_falls_back_safely() {
+        // An unknown voice name shouldn't panic; falling back to
+        // 1.0 (no tempo change) is correct.
+        assert_eq!(voice_speed_mul("???"), 1.0);
     }
 
     #[test]
