@@ -245,7 +245,10 @@ impl Composition {
                 fade_out: 0.55,
                 stagger: 0.0,
             },
-            // 1 — Subtitle (centred echo, just below hero)
+            // 1 — Subtitle (centred echo, just below hero). The "near-crisp"
+            //   continuation of the hero — heaviest of the supporting
+            //   echoes, carrying the concrete answer (《言师采药去》) before
+            //   the verse starts to dissolve.
             SlotDef {
                 role: SlotRole::Support,
                 x_frac: 0.50,
@@ -254,7 +257,7 @@ impl Composition {
                 em_scale: 0.34,
                 target_w_frac: 0.0,
                 max_chars: 7,
-                alpha: 0.78,
+                alpha: 0.86,
                 drift_x: 3.0,
                 drift_y: 1.5,
                 drift_fx: 0.21,
@@ -269,7 +272,9 @@ impl Composition {
             //   the rule-of-thirds intersection (0.84, 0.22) so the upper
             //   echo sits in deliberate tension with the lower-left at
             //   (0.14, 0.82): the diagonal midpoint falls at the visual
-            //   centre and top/bottom margins are balanced.
+            //   centre and top/bottom margins are balanced.  Mid-weight:
+            //   the quatrain's location hint is already a step further
+            //   from certainty than the subtitle.
             SlotDef {
                 role: SlotRole::Support,
                 x_frac: 0.84,
@@ -278,7 +283,7 @@ impl Composition {
                 em_scale: 0.30,
                 target_w_frac: 0.0,
                 max_chars: 5,
-                alpha: 0.72,
+                alpha: 0.66,
                 drift_x: 3.0,
                 drift_y: 2.0,
                 drift_fx: 0.15,
@@ -289,7 +294,11 @@ impl Composition {
                 fade_out: 0.7,
                 stagger: 0.0,
             },
-            // 3 — Lower left (small body, left-aligned)
+            // 3 — Lower left (small body, left-aligned). The "far-faint"
+            //   closing echo — the verse's last line (《云深不知处》) is
+            //   already a confession of not-knowing, so the ink itself
+            //   should dissolve into the mist rather than hold its
+            //   ground.  This is the bottom of the brush-weight gradient.
             SlotDef {
                 role: SlotRole::Support,
                 x_frac: 0.14,
@@ -298,7 +307,7 @@ impl Composition {
                 em_scale: 0.30,
                 target_w_frac: 0.0,
                 max_chars: 5,
-                alpha: 0.72,
+                alpha: 0.50,
                 drift_x: 3.0,
                 drift_y: 2.0,
                 drift_fx: 0.13,
@@ -954,6 +963,17 @@ pub fn paint_hero(
     // (see `paint_supporting_slot`).
     let bloom_scale_q8: u32 = ((scale_q8.max(1) as f32) * 1.06).round() as u32;
     let bloom_alpha = (0.04 + 0.04 * pulse + 0.02 * warmth + beat_glow * 0.03).clamp(0.0, 0.12);
+    // Tertiary outer halo — an even wider, fainter pass so the moonlit
+    // light diffuses outward into the surrounding ink rather than stopping
+    // at a hard edge. Reads as atmospheric light, not a second copy of the
+    // glyph. Kept extremely low so restraint (ART_DIRECTION §四) holds —
+    // the viewer perceives "the page glows" not "the text has a glow".
+    let bloom2_scale_q8: u32 = ((scale_q8.max(1) as f32) * 1.13).round() as u32;
+    let bloom2_alpha = (0.022 + 0.02 * pulse + 0.01 * warmth + beat_glow * 0.015).clamp(0.0, 0.06);
+    // A touch warmer than the inner bloom so the outer corona reads as
+    // amber lamplight spilling onto the page — closer to ink::WARM than
+    // ink::GLOW, but still inside the cream family.
+    let bloom2_color = mix(glow_color, color::ink::WARM, 0.3);
 
     let overshoot = if matches!(beat.phase, Phase::Entrance) {
         let p = beat.entrance_progress();
@@ -1000,6 +1020,27 @@ pub fn paint_hero(
         let by_i = info.bearing_y as i32;
         let bw_i = info.w as i32;
         let bh_i = info.h as i32;
+        // Outer atmospheric halo — drawn first so the inner bloom and the
+        // glyph sit on top of it. Same centering math, larger scale, very
+        // low alpha. Reads as moonlight diffusing out from the focal line.
+        let diff2_q8 = char_scale as i32 - bloom2_scale_q8 as i32; // negative (larger gap)
+        let bloom2_fx = fx + diff2_q8 * (bx_i + bw_i / 2);
+        let bloom2_fy = fy - diff2_q8 * (by_i - bh_i / 2);
+        let bloom2_alpha_local = bloom2_alpha * char_alpha;
+        if bloom2_alpha_local > 0.004 {
+            glyph::draw_glyph(
+                fb,
+                w as usize,
+                h as usize,
+                glyph_idx,
+                bloom2_color,
+                bloom2_color,
+                bloom2_fx,
+                bloom2_fy,
+                bloom2_scale_q8,
+                bloom2_alpha_local,
+            );
+        }
         let diff_q8 = char_scale as i32 - bloom_scale_q8 as i32; // negative
         let bloom_fx = fx + diff_q8 * (bx_i + bw_i / 2);
         let bloom_fy = fy - diff_q8 * (by_i - bh_i / 2);
