@@ -775,12 +775,10 @@ fn main() {
 }
 
 fn lookup_char(c: char) -> &'static str {
-    let s = c.to_string();
-    if font::bitmap_for(&s).is_some() {
-        Box::leak(s.into_boxed_str()) as &'static str
-    } else {
-        "墨"
-    }
+    // fast path: ASCII byte == a single-char string for the embedded font
+    let mut buf = [0u8; 4];
+    let s: &str = c.encode_utf8(&mut buf);
+    font::static_key_for(s).unwrap_or("墨")
 }
 
 fn llm_worker(

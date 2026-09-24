@@ -53,6 +53,15 @@ pub fn bitmap_for(ch: &str) -> Option<&'static [u8]> {
     GLYPHS.iter().find(|(k, _)| *k == ch).map(|(_, b)| *b)
 }
 
+/// Return the static key string for a char that has a bitmap, or None if
+/// `ch` is not in the embedded font. The returned `&'static str` aliases
+/// into the compiled GLYPHS table — no heap allocation, no leak. Use this
+/// in preference to `String::from(ch)` + `Box::leak` when a caller needs a
+/// long-lived `&'static str` for the same char.
+pub fn static_key_for(ch: &str) -> Option<&'static str> {
+    GLYPHS.iter().find(|(k, _)| *k == ch).map(|(k, _)| *k)
+}
+
 /// Draw a single character with optional rotation (radians) and alpha.
 /// `size` is the *target* pixel height of the cell. The bitmap lives at
 /// GLYPH_W × GLYPH_H; we scale by integer factor closest to size/GLYPH_H.
