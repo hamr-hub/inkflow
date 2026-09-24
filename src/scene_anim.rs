@@ -104,6 +104,27 @@ pub(crate) fn voice_spawn_rate_mul(voice: &str) -> f32 {
     }
 }
 
+/// Per-voice max-lifetime multiplier. Each curatorial voice has its
+/// own sense of "how long a character should linger on screen":
+/// 禅寂 chars hang slowly (the trace stays), 豪放 chars march through
+/// quickly (the line is gone before it fully resolves). Combined
+/// with voice_speed_mul, voice_base_size, voice_hue_offset and
+/// voice_spawn_rate_mul this gives each voice the complete fifth
+/// axis of typographic identity: how long a mark stays.
+///
+/// Bounded to (0.5, 2.0) — shorter than 0.5x makes characters
+/// blink; longer than 2.0x risks GLYPH_CAP exhaustion.
+pub(crate) fn voice_max_life_mul(voice: &str) -> f32 {
+    match voice {
+        "婉约" => 1.20, // lyrical — linger
+        "豪放" => 0.70, // march through fast
+        "禅寂" => 1.50, // hang — the trace is the point
+        "稚拙" => 0.90, // bouncy — brief
+        "苍茫" => 1.10, // vast — slight linger
+        _ => 1.00,      // unknown → no shift
+    }
+}
+
 /// Spawn-rate accumulator. The frame loop accumulates `dt * base_rate`
 /// and pops whole glyphs each time the accumulator crosses 1.0.
 #[derive(Default)]
@@ -251,11 +272,16 @@ fn spawn_glyphs(
                 .wrapping_add(113)
                 .wrapping_add(scene.glyphs.len() as u64))
                 * 0.24;
-        // ~10-14 s on screen so each char has time to be read. The
-        // phrase-to-phrase silence in the poetry cursor is the
-        // dominant pacing — individual char life is just "long
-        // enough to settle into a reading position".
-        let max_life = 10.0 + energy * 4.0;
+        // ~10-14 s baseline. The phrase-to-phrase silence in the
+        // poetry cursor is the dominant pacing — individual char
+        // life is just "long enough to settle into a reading
+        // position". The voice multiplier stretches or shrinks this
+        // per the curatorial voice: 禅寂 chars linger ~50 % longer
+        // (the trace IS the piece); 豪放 chars vanish ~30 % faster
+        // (the line marches through). All multiplied at the same
+        // base time so the picker stays the single source of truth.
+        let life_voice = voice_max_life_mul(voice);
+        let max_life = (10.0 + energy * 4.0) * life_voice;
         let (spawn_y, vy) = if descend {
             (fb_h as f32 + 20.0, -speed)
         } else {
@@ -518,6 +544,36 @@ mod tests {
         // An unknown voice name shouldn't panic; falling back to
         // 1.0 (no change) is correct.
         assert_eq!(voice_spawn_rate_mul("???"), 1.0);
+    }
+
+    #[test]
+    fn voice_max_life_mul_distinguishes_long_from_short() {
+        // Per ARTIFACT.md the trace life must match the curatorial
+        // voice: 禅寂 chars hang longest (留白 as substance), 豪放
+        // chars vanish fastest (march through). The viewer can
+        // identify the voice from how long each mark stays.
+        assert!(voice_max_life_mul("豪放") < voice_max_life_mul("稚拙"));
+        assert!(voice_max_life_mul("稚拙") < voice_max_life_mul("苍茫"));
+        assert!(voice_max_life_mul("苍茫") < voice_max_life_mul("婉约"));
+        assert!(voice_max_life_mul("婉约") < voice_max_life_mul("禅寂"));
+    }
+
+    #[test]
+    fn voice_max_life_mul_magnitude_is_bounded() {
+        // The multiplier must stay in (0.5, 2.0) — shorter than
+        // 0.5x makes chars blink, longer than 2.0x risks
+        // GLYPH_CAP exhaustion at high spawn_rate multiplicands.
+        for v in ["婉约", "豪放", "禅寂", "稚拙", "苍茫"] {
+            let m = voice_max_life_mul(v);
+            assert!((0.5..=2.0).contains(&m), "{v} life mul {m} out of band");
+        }
+    }
+
+    #[test]
+    fn voice_max_life_mul_unknown_falls_back_safely() {
+        // An unknown voice name shouldn't panic; falling back to
+        // 1.0 (no change) is correct.
+        assert_eq!(voice_max_life_mul("???"), 1.0);
     }
 
     #[test]
