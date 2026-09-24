@@ -265,9 +265,23 @@ impl Composition {
             // 1 — Subtitle (centred echo, just below hero). The "near-crisp"
             //   continuation of the hero — heaviest of the supporting
             //   echoes, carrying the concrete answer (《言师采药去》) before
-            //   the verse starts to dissolve.
-            //   Stagger 0.18s so it fades in just after the hero lands —
-            //   the second stroke of the calligraphic inscription.
+            //   the verse starts to dissolve. Stagger 0.18s so it fades
+            //   in just after the hero lands — the second stroke of the
+            //   calligraphic inscription.
+            //   alpha 0.86 → 0.76, shadow_mix 0.10 → 0.16: the subtitle
+            //   was reading at almost the same brightness as the hero,
+            //   so the two lines formed one dense centred inscription
+            //   instead of hero-plus-echo. The hero's bloom already
+            //   carries the focal claim (ART_DIRECTION §四 "高光只落在
+            //   主句"); pulling the subtitle's body a step further into
+            //   shadow now lets the eye separate "主句" from "近对答" —
+            //   the subtitle still leads the supporting hierarchy (above
+            //   upper-right 0.72 and lower-left 0.58) but no longer reads
+            //   as a co-focal duplicate. shadow_mix 0.16 also tightens
+            //   the subtitle's breath amplitude slightly (the inscribed-
+            //   breath is scaled by 1 - shadow_mix), so the supporting
+            //   line leans even more clearly "echo of the hero" than
+            //   "second voice".
             SlotDef {
                 role: SlotRole::Support,
                 x_frac: 0.50,
@@ -276,8 +290,8 @@ impl Composition {
                 em_scale: 0.34,
                 target_w_frac: 0.0,
                 max_chars: 7,
-                alpha: 0.86,
-                shadow_mix: 0.10,
+                alpha: 0.76,
+                shadow_mix: 0.16,
                 drift_x: 3.0,
                 drift_y: 1.5,
                 drift_fx: 0.21,
@@ -555,7 +569,19 @@ impl Scene {
     pub fn new(width: u32, height: u32) -> Self {
         let mut rng = Lcg::new(0x00C0_FFEE_BEEF);
         let mut dust = Vec::with_capacity(48);
-        for _ in 0..48 {
+        // Two-pass dust seeding: 30 motes spread uniformly across the page
+        // as faint stars in the night sky, then 18 motes concentrated in
+        // the warm horizon band (v ≈ 0.55–0.85) as fireflies in the mist.
+        // The two layers keep the same total count and the same warm-cream
+        // hue — only their Y distribution differs. The fireflies ground
+        // the inscription's lower strokes (《言师采药去》 / 《云深不知处》)
+        // in a place inhabited by living light, not on empty dark — the
+        // warm horizon mist now has bodies in it, the way a real twilight
+        // hillside has fireflies rising from the grass. Slightly larger
+        // and slightly slower than the upper stars (fireflies hover;
+        // stars drift), so the two layers read as different scales of
+        // depth rather than two populations of the same thing.
+        for _ in 0..30 {
             dust.push(Dust {
                 x: rng.unit() * width as f32,
                 y: rng.unit() * height as f32,
@@ -563,10 +589,19 @@ impl Scene {
                 a: 0.05 + rng.unit() * 0.18,
                 phase: rng.unit() * core::f32::consts::TAU,
                 speed: 0.04 + rng.unit() * 0.12,
-                // Single warm-cream hue — no off-color blue/cyan motes.
-                // The earlier cool dust produced stray "off-color dots" against
-                // the warm gradient. We keep them faint and warm so they read
-                // as fireflies/starlight instead of digital artifacts.
+                hue: color::star::WARM,
+            });
+        }
+        for _ in 0..18 {
+            let v = 0.55 + rng.unit() * 0.30;
+            dust.push(Dust {
+                x: rng.unit() * width as f32,
+                y: v * height as f32,
+                r: 1.0 + rng.unit() * 1.6,
+                a: 0.08 + rng.unit() * 0.20,
+                phase: rng.unit() * core::f32::consts::TAU,
+                // fireflies hover more than stars drift
+                speed: 0.03 + rng.unit() * 0.08,
                 hue: color::star::WARM,
             });
         }
@@ -770,12 +805,20 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
     for y in 0..h {
         let v = y as f32 / (h_f - 1.0).max(1.0);
         let base = color::grad3(nebula_top, nebula_mid, nebula_bot, v);
-        // Parabolic bell: 0 at v=0.50, peaks ≈0.313 at v≈0.75, 0 at v=1.0.
-        // Shifted from v=0.55→0.50 start so the mist anchors the
-        // inscription's two lower strokes (subtitle + lower-left) on a
-        // shared warm horizon, while leaving the hero and upper-right
-        // clear of the band.
-        let horizon_glow = ((v - 0.50) * (1.0 - v) * 5.0).clamp(0.0, 1.0);
+        // Parabolic bell: 0 at v=0.48, peaks ≈0.338 at v≈0.74, 0 at v=1.0.
+        // Start shifted from v=0.50→v=0.48 so the bell's rising edge
+        // reaches up to v≈0.66 (the subtitle's baseline) and the new
+        // peak lands directly under v≈0.74 (the lower-left echo).
+        // The warm horizon now grounds both lower strokes on a shared
+        // mist band: 《言师采药去》 catches a touch of the leading edge
+        // as it rises (horizon_glow ≈0.306 at v=0.66, 54 % more than
+        // before) and 《云深不知处》 sits under the warmest part of the
+        // bell, so the inscription's closing stroke reads as ink
+        // dissolving into mist rather than floating over empty dark.
+        // The hero (v≈0.42) and upper-right (v≈0.28) stay clear of the
+        // band so the focal bloom keeps its exclusive claim on the
+        // light (ART_DIRECTION §四 "高光只落在主句").
+        let horizon_glow = ((v - 0.48) * (1.0 - v) * 5.0).clamp(0.0, 1.0);
         for x in 0..w {
             let dx = x as f32 - cx;
             let dy = y as f32 - cy;
