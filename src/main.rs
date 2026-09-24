@@ -326,19 +326,23 @@ fn start_llm(
 const POOLS: &[(&str, &str)] = &[
     (
         "静",
-        "雾 月 夜 潮 呼吸 微光 深处 沉睡 鲸落 尘埃 影 钟摆 雨前 纸页 苔",
+        "雾 月 夜 潮 呼吸 微光 深处 沉睡 鲸落 尘埃 影 钟摆 雨前 纸页 苔\
+         林 木 叶 泉 雪落 远钟 云根 幽径 落花 鸿影 薄暮 清露 听蝉 听雪",
     ),
     (
         "动",
-        "风 焰 河 奔 裂帛 星陨 心跳 浪尖 闪电 迁徙 鼓 惊鸟 火 渡口 弦",
+        "风 焰 河 奔 裂帛 星陨 心跳 浪尖 闪电 迁徙 鼓 惊鸟 火 渡口 弦\
+         雷 潮涌 雷鸣 烟火 龙吟 震颤 飞溅 雪崩 迸裂 翻涌 流火 疾行",
     ),
     (
         "冷",
-        "雪 蓝 冰 星 霜 铁 墨 深空 孤 井 石英 冬 海沟 玻璃 月背",
+        "雪 蓝 冰 星 霜 铁 墨 深空 孤 井 石英 冬 海沟 玻璃 月背\
+         银 寒 朔风 凝霜 寒潭 远岭 苍 凛 薄冰 星河 落雪 静海",
     ),
     (
         "暖",
-        "灯 橘 麦 陶 体温 琥珀 黄昏 花信 茧 炊烟 蜜 绒 烛 岸 掌心",
+        "灯 橘 麦 陶 体温 琥珀 黄昏 花信 茧 炊烟 蜜 绒 烛 岸 掌心\
+         茶 暖 炉火 夕照 茶烟 旧书 木质 余温 棉 晨曦 晚风",
     ),
 ];
 
@@ -574,6 +578,18 @@ async fn main() {
             let ch = llm_char
                 .take()
                 .unwrap_or_else(|| local_char(eff_warmth, eff_energy, tick + glyphs.len() as u64));
+            // when ollama is unreachable the fallback is the whole stream — bump
+            // fallback size up toward the LLM size so the ambient doesn't
+            // visibly shrink just because the model went down. Capped at LLM
+            // size to keep the hierarchy of "ink + voice" intact.
+            let llm_ok_now = llm_health.lock().unwrap().ok;
+            let base_size = if from_llm {
+                34.
+            } else if llm_ok_now {
+                28.
+            } else {
+                32.
+            };
             if ch.is_whitespace() {
                 continue;
             }
@@ -621,7 +637,7 @@ async fn main() {
                 vy,
                 life: max_life,
                 max_life,
-                size: ((if from_llm { 34. } else { 28. }) + eff_energy * 16.) * size_jitter,
+                size: (base_size + eff_energy * 16.) * size_jitter,
                 phase: rand_fast(tick.wrapping_add(197).wrapping_add(glyphs.len() as u64))
                     * std::f32::consts::TAU,
             });
