@@ -63,6 +63,37 @@ fn run_drm_test(args: &[String]) -> ! {
     diag::run_drm_test(args)
 }
 
+/// Run the voice-drift self-check on the most recent telemetry
+/// file and exit. Used by the autoloop maintainer (and by humans
+/// inspecting the piece) to read the curatorial-voice
+/// distribution without going through cargo test. Exit code:
+///   - 0  healthy (no voice > 70 % of the recent window)
+///   - 1  stuck (one voice > 70 %)
+///   - 2  could not read the file
+fn run_voice_drift(_args: &[String]) -> ! {
+    let state_dir = std::env::var("INKFLOW_STATE_DIR").unwrap_or_else(|_| "state".into());
+    let path = format!("{state_dir}/telemetry.jsonl");
+    match telemetry::voice_drift_check(&path) {
+        Ok(r) => {
+            eprintln!("voice_drift: total={} last_voice={}", r.total, r.last_voice);
+            for (name, count, pct) in &r.per_voice {
+                eprintln!("  {:<6}  {:>3}  ({:>2}%)", name, count, pct);
+            }
+            if r.is_stuck() {
+                eprintln!("status: STUCK (> 70 % single voice)");
+                std::process::exit(1);
+            } else {
+                eprintln!("status: healthy");
+                std::process::exit(0);
+            }
+        }
+        Err(e) => {
+            eprintln!("voice_drift: {e}");
+            std::process::exit(2);
+        }
+    }
+}
+
 // ---------- main ----------
 
 fn main() {
@@ -72,6 +103,9 @@ fn main() {
     }
     if args.iter().any(|a| a == "--drm-test") {
         run_drm_test(&args);
+    }
+    if args.iter().any(|a| a == "--voice-drift") {
+        run_voice_drift(&args);
     }
 
     let state_dir = std::env::var("INKFLOW_STATE_DIR").unwrap_or_else(|_| "state".into());

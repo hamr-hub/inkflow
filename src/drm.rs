@@ -374,6 +374,11 @@ impl Display {
     /// Restore the CRTC to whatever it was showing before we took over.
     /// Called from Drop and from the --drm-test teardown.
     pub fn restore(&mut self) {
+        if !self.modeset_ok {
+            // We never owned the scan-out — restoring a CRTC we never
+            // modeset would issue a bogus SETCRTC. Just release buffers.
+            return;
+        }
         if let Some(saved) = self.saved_crtc.take() {
             let mut restore = saved;
             // Force mode_valid=1 + the saved mode so the kernel puts the
@@ -1041,10 +1046,4 @@ impl Headless {
 
 #[allow(unused_macros)]
 macro_rules! log {
-    ($($arg:tt)*) => ({
-        // single sink — the runtime logs to stderr; main.rs swaps in a
-        // file-backed logger after we know the state directory.
-        eprintln!($($arg)*);
-    })
-}
-pub(crate) use log;
+    ($($arg:tt                                                                                                                                                                                                               

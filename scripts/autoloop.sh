@@ -41,18 +41,19 @@ Read these in order each turn:
                         testable invariants — read it like a checklist.
   4. state/tel_tail.txt and state/screen.png  ← current state of the piece.
 
-SELF-MONITORING (new in v0.2.1): before picking a change, look at
-the last 30 entries of state/telemetry.jsonl and check the
-'voice' field distribution. If one voice has been dominant
-(> 70 % of the recent window) for the last 10 minutes, this
-cycle's edit must push the picker toward variety — even if
-you'd otherwise have picked a different aesthetic refinement.
-A healthy piece cycles through 婉约 / 豪放 / 禅寂 / 稚拙 / 苍茫;
-a stuck piece drifts toward monotonic voice. The function
-`telemetry::voice_drift_check` is gated to #[cfg(test)] right
-now; the equivalent shell is
-  jq -r '.voice' state/telemetry.jsonl | tail -30 | sort | uniq -c | sort -rn
-which tells you the same thing.
+SELF-MONITORING (new in v0.2.1): before picking a change, run
+  inkflow --voice-drift
+which reads state/telemetry.jsonl via the runtime's own
+`telemetry::voice_drift_check` and prints the per-voice
+distribution over the last 10 minutes. If one voice has been
+dominant (> 70 % of the recent window), this cycle's edit MUST
+push the picker toward variety — even if you'd otherwise have
+picked a different aesthetic refinement. A healthy piece cycles
+through 婉约 / 豪放 / 禅寂 / 稚拙 / 苍茫; a stuck piece drifts
+toward monotonic voice. Exit code is 1 if stuck, 0 if healthy —
+treat the exit code as a soft signal, not a gate (you can still
+commit if you have a strong reason to push the dominant voice
+deeper; just write it into the commit message).
 
 Rendering is DRM/KMS dumb-buffer + software 32bpp; evdev touch via raw ioctl; ollama over
 hand-written TCP; embedded CJK bitmap font. It must never go dark.

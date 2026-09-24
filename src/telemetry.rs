@@ -199,12 +199,9 @@ fn fmt_f64(v: f64) -> String {
 ///
 /// The function does NOT enforce a hard limit — it just reports.
 /// The art-direction judgement lives in the autoloop Claude, not
-/// in the telemetry module. Currently #[cfg(test)] — no
-/// production caller yet. The autoloop Claude learns the drift
-/// state by inspecting the result of cargo test --release
-/// ::voice_drift_check. When we add a `--voice-drift` CLI
-/// subcommand, this gate drops.
-#[cfg(test)]
+/// in the telemetry module. Read by the runtime via the
+/// `--voice-drift` CLI subcommand and by the autoloop Claude as a
+/// self-monitoring signal before each commit.
 pub fn voice_drift_check(path: &str) -> Result<VoiceDriftReport, String> {
     let Ok(content) = std::fs::read_to_string(path) else {
         return Err(format!("telemetry file not readable: {path}"));
@@ -215,12 +212,10 @@ pub fn voice_drift_check(path: &str) -> Result<VoiceDriftReport, String> {
     // Walk lines backwards (most recent first) until we've seen
     // `recent_window_count` entries OR the file is exhausted.
     let recent_window_count = 60usize; // 60 lines × 10 s/tick = 10 min
-    let mut lines_seen = 0usize;
-    for line in content.lines().rev() {
+    for (lines_seen, line) in content.lines().rev().enumerate() {
         if lines_seen >= recent_window_count {
             break;
         }
-        lines_seen += 1;
         // Parse the voice field. The line is JSON; a tiny scanner
         // would do — for now extract "voice":"X" with a fixed string
         // search. (We don't need to be perfect; we just need to
@@ -260,7 +255,7 @@ pub fn voice_drift_check(path: &str) -> Result<VoiceDriftReport, String> {
         .copied()
         .zip(counts.iter().copied())
         .map(|(n, c)| {
-            let pct = if total > 0 { (c * 100) / total } else { 0 };
+            let pct = (c * 100).checked_div(total).unwrap_or(0);
             (n, c, pct)
         })
         .collect();
@@ -274,7 +269,6 @@ pub fn voice_drift_check(path: &str) -> Result<VoiceDriftReport, String> {
 /// Voice-distribution summary produced by [`voice_drift_check`].
 /// `per_voice` is (name, count, percent) tuples ordered to match the
 /// canonical voice list (婉约 / 豪放 / 禅寂 / 稚拙 / 苍茫).
-#[cfg(test)]
 pub struct VoiceDriftReport {
     pub total: u32,
     pub last_voice: &'static str,
@@ -282,7 +276,6 @@ pub struct VoiceDriftReport {
     pub per_voice: Vec<(&'static str, u32, u32)>,
 }
 
-#[cfg(test)]
 impl VoiceDriftReport {
     /// Returns true if one voice accounts for ≥ 70% of the recent
     /// window — a strong signal the piece is stuck on one voice
