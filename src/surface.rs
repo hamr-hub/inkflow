@@ -308,9 +308,12 @@ unsafe fn libc_munmap(addr: *mut std::ffi::c_void, len: usize) -> i32 {
 
 // DRM constants — see <drm.h> / <drm_mode.h>
 const DRM_IOCTL_BASE: u64 = 0x64;
-// 'd'=0x64, DRM command encoding uses base + cmd
+// 'd'=0x64; standard Linux _IOWR(type, nr, size):
+// (3 << 30) | (size << 16) | (type << 8) | nr. Adding base+nr (the
+// previous encoding) produced a garbage ioctl number the kernel
+// rejected, so the dumb-buffer path never opened.
 const fn drm_iowr(cmd: u64, _size: usize) -> i64 {
-    (DRM_IOCTL_BASE + cmd) as i64
+    ((3u64 << 30) | ((_size as u64) << 16) | ((DRM_IOCTL_BASE) << 8) | cmd) as i64
 }
 const DRM_IOCTL_MODE_CREATE_DUMB: i64 = drm_iowr(0xB2, std::mem::size_of::<drm_mode_create_dumb>());
 const DRM_IOCTL_MODE_MAP_DUMB: i64 = drm_iowr(0xB3, std::mem::size_of::<drm_mode_map_dumb>());
@@ -338,8 +341,9 @@ struct drm_mode_destroy_dumb {
     handle: u32,
 }
 
-// /dev/fb0 ioctls
-const FBIOGET_VSCREENINFO: i64 = 0x4601;
+// /dev/fb0 ioctls. FBIOGET_VSCREENINFO is 0x4600 (0x4601 is the PUT
+// command — querying with it and a zeroed struct tried to set a mode).
+const FBIOGET_VSCREENINFO: i64 = 0x4600;
 const FBIOGET_FSCREENINFO: i64 = 0x4602;
 
 #[repr(C)]

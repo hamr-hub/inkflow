@@ -165,17 +165,20 @@ fn main() -> ExitCode {
             ExitCode::SUCCESS
         }
         Mode::DrmTest => {
-            // Try a backend in priority order: drm/card0, drm/card1, fb0.
-            let backends: [&str; 3] = ["/dev/dri/card0", "/dev/dri/card1", "/dev/fb0"];
+            // /dev/fb0 first: the driver owns the modeset and scans out
+            // on every vsync with no DRM master, so an unprivileged user
+            // process can light the panel directly. Dumb buffers are the
+            // fallback but need a modeset (DRM master) to be visible.
+            let backends: [&str; 3] = ["/dev/fb0", "/dev/dri/card0", "/dev/dri/card1"];
             let mut surface = None;
             for path in &backends {
-                if let Ok(s) = inkflow::surface::Surface::try_drm_dumb(w, h, path) {
-                    eprintln!("inkflow: opened drm dumb at {path}");
+                if let Ok(s) = inkflow::surface::Surface::try_framebuffer(w, h, path) {
+                    eprintln!("inkflow: opened framebuffer at {path}");
                     surface = Some(s);
                     break;
                 }
-                if let Ok(s) = inkflow::surface::Surface::try_framebuffer(w, h, path) {
-                    eprintln!("inkflow: opened framebuffer at {path}");
+                if let Ok(s) = inkflow::surface::Surface::try_drm_dumb(w, h, path) {
+                    eprintln!("inkflow: opened drm dumb at {path}");
                     surface = Some(s);
                     break;
                 }
@@ -593,6 +596,10 @@ fn run_compose_test(w: u32, h: u32, frames: usize, out_dir: &str) {
 fn run_live(surf: &mut inkflow::surface::Surface, t0: Instant, started_ms: u128) {
     let mut scene = Scene::new(surf.width, surf.height);
     let mut engine = Engine::new();
+    // Populate the full composition on the first frame (same as the layout
+    // verification). Without this the piece opens on an empty composition
+    // and waits for the first natural beat before any phrase appears.
+    engine.force_beat();
     let mut last = Instant::now();
     // try to tap a touch device lazily — best effort, ignore failure.
     let _touch_path = "/dev/input/event0";
