@@ -1040,7 +1040,23 @@ fn paint_supporting_slot(
     // The temperature gradient mirrors the brush-weight gradient, so the
     // four lines of 《寻隐者不遇》 read as one palette thinning with distance.
     let raw_base = mix(color::ink::CREAM, color::ink::SHADOW, slot.def.shadow_mix);
-    let warmth_tint = warmth * (1.0 - slot.def.shadow_mix) * 0.30;
+    // Ambient warmth from the warm horizon mist — supporting lines that
+    // sit in the mist band (subtitle v≈0.66, lower-left v≈0.74) pick up
+    // a touch of amber from the atmosphere they inhabit, even when
+    // touch-driven warmth is off. The upper-right (v≈0.28) sits clear
+    // of the band so it stays cool, layering an "in the mist" vs "in
+    // the sky" axis on top of the brush-weight gradient. The mist bell
+    // peaks at v≈0.74, so the lower-left catches the most, the subtitle
+    // catches a touch on the rising edge, and the line still reads as
+    // deep ink (its shadow_mix 0.42 keeps it the dimmest of the
+    // supporting tier) dissolving into warm horizon — the visual
+    // metaphor of 《云深不知处》: the clouds are deep, one knows not
+    // where. Restraint (ART_DIRECTION §四): mist contribution capped at
+    // ≈7 % so the supporting tier stays subordinate and the brush-weight
+    // hierarchy (subtitle brightest, lower-left dimmest) holds.
+    let horizon_glow = ((slot.def.y_frac - 0.48) * (1.0 - slot.def.y_frac) * 5.0).clamp(0.0, 1.0);
+    let mist_warmth = horizon_glow * 0.20;
+    let warmth_tint = (warmth * (1.0 - slot.def.shadow_mix) * 0.30 + mist_warmth).clamp(0.0, 1.0);
     let base_color = mix(raw_base, color::ink::WARM, warmth_tint);
     let glow_color = mix(
         color::ink::GLOW,
