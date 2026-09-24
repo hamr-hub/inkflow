@@ -458,6 +458,44 @@ pub fn pick_from_theme_by_len(
     &PHRASES[sub[0] as usize]
 }
 
+// ============================================================
+// Ordered poem groups
+// ============================================================
+//
+// A "mood theme" pools many unrelated lines of one feeling, so a frame can
+// accidentally mix lines from different poems (《江雪》 beside 《寻隐者不遇》).
+// An ordered poem group is the opposite: one complete work, in reading order.
+// When a group is active the slots should pull successive lines rather than
+// sampling randomly, so the screen reads as one coherent piece from one
+// source.
+
+/// One complete ordered work: title plus the phrase indices of its lines in
+/// reading order.
+#[derive(Copy, Clone)]
+pub struct PoemGroup {
+    pub title: &'static str,
+    pub lines: &'static [u16],
+}
+
+/// Curated complete works. Indices point into [`PHRASES`].
+pub const POEM_GROUPS: &[PoemGroup] = &[
+    // 贾岛《寻隐者不遇》 — one same-moment quatrain, all five-char lines.
+    PoemGroup {
+        title: "寻隐者不遇",
+        lines: &[40, 41, 42, 43],
+    },
+];
+
+/// The successive line indices of a poem group, so a composition can lay the
+/// whole work out in reading order (indexing [`PHRASES`] itself) instead of
+/// sampling a theme. Returns an empty slice if the group index is out of range.
+pub fn poem_group_line_indices(group: usize) -> &'static [u16] {
+    if group >= POEM_GROUPS.len() {
+        return &[];
+    }
+    POEM_GROUPS[group].lines
+}
+
 /// Owned counterpart to `Phrase` — used by `parse_line`, which receives an
 /// arbitrary `&str` and cannot return a `'static` borrow.
 #[derive(Debug, Clone)]
@@ -544,6 +582,27 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn poem_groups_are_complete_in_order() {
+        assert!(!POEM_GROUPS.is_empty(), "need at least one group");
+        for group in POEM_GROUPS {
+            assert!(!group.lines.is_empty(), "empty group {}", group.title);
+            let texts: Vec<&str> = group
+                .lines
+                .iter()
+                .map(|&i| PHRASES[i as usize].text)
+                .collect();
+            assert_eq!(
+                texts,
+                vec!["松下问童子", "言师采药去", "只在此山中", "云深不知处"],
+                "{} must read as the complete ordered quatrain",
+                group.title
+            );
+        }
+        assert!(poem_group_line_indices(POEM_GROUPS.len()).is_empty());
+        assert_eq!(poem_group_line_indices(0), POEM_GROUPS[0].lines);
     }
 
     #[test]
