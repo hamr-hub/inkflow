@@ -1555,7 +1555,7 @@ pub fn paint_composition(
     {
         let title_text = phrase::poem_group_title(group);
         if !title_text.is_empty() {
-            paint_poem_title(fb, w, h, title_text, warmth);
+            paint_poem_title(fb, w, h, title_text, warmth, pulse);
         }
     }
 }
@@ -1563,7 +1563,7 @@ pub fn paint_composition(
 /// Paint the faint poem title below the composition. Drawn after the hero
 /// so it sits over the same framebuffer, but its alpha and size keep it
 /// strictly subordinate — a quiet ink mark, not a light source.
-fn paint_poem_title(fb: &mut [u32], w: u32, h: u32, title: &str, warmth: f32) {
+fn paint_poem_title(fb: &mut [u32], w: u32, h: u32, title: &str, warmth: f32, pulse: f32) {
     let chars: Vec<char> = title.chars().collect();
     let n = chars.len();
     if n == 0 {
@@ -1617,7 +1617,19 @@ fn paint_poem_title(fb: &mut [u32], w: u32, h: u32, title: &str, warmth: f32) {
         color::ink::WARM,
         warmth * 0.4 + ambient_warmth,
     );
-    let alpha = 0.40_f32;
+    // Faint inscribed-breath — the signature now rides the same
+    // atmospheric pulse as the supporting tier, so the bottom-center
+    // title reads as a living mark of the same inscription rather than
+    // a static label pinned below it. Amplitude 2.5 % sits a touch
+    // under the lower-left echo's breath (2.3 % is * 1.0 — wait,
+    // actually slightly above the lower-left's 2.3 % since the title
+    // has no shadow_mix attenuation), so the title and the far-faint
+    // echo share one breathing rate at the bottom of the page.
+    // Restraint (ART_DIRECTION §四): clamped well under the supporting
+    // tier's body alpha so the signature never reads as a second focal
+    // light — it's an ink mark that happens to be alive, not a lamp.
+    let breath = 1.0 + 0.025 * pulse;
+    let alpha = (0.40_f32 * breath).clamp(0.0, 1.0);
     let scale_q8: u32 = ((target_px / glyph::HERO_EM_PX as f32) * 256.0).round() as u32;
     let fy = baseline_y * 256;
     let mut pen_x_q8 = pen_x * 256;
