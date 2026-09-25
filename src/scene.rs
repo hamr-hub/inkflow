@@ -1535,6 +1535,84 @@ pub fn paint_composition(
         let hero_phrase = hero_slot.phrase;
         paint_hero(fb, w, h, b, hero_phrase, warmth, pulse, time, &hero_def);
     }
+
+    // Faint baseline title — only when the active theme is pinned to a
+    // curated poem group. Reads as a calligrapher's signature below the
+    // inscription, so the four-line piece registers as one complete work
+    // (《寻隐者不遇》) rather than four floating lines. Alpha 0.40 keeps it
+    // a quiet mark; size em_scale 0.18 (≈23 px tall at hero em 128) sits
+    // below the lower-left echo (y_frac 0.74 → y=533) with a comfortable
+    // 130 px margin so the four-line inscription still leads. Center
+    // alignment pairs with the hero's centre so the title's baseline
+    // visually anchors the whole composition. No outer glow — a title is
+    // ink-on-paper, not a light source (ART_DIRECTION §四 "高光只落在
+    // 主句"). Slight warm tint from `warmth` so a touched-warm scene
+    // breathes amber on the signature too.
+    if let Some(group) = phrase::POEM_BY_THEME
+        .get(scene.theme_idx)
+        .copied()
+        .flatten()
+    {
+        let title_text = phrase::poem_group_title(group);
+        if !title_text.is_empty() {
+            paint_poem_title(fb, w, h, title_text, warmth);
+        }
+    }
+}
+
+/// Paint the faint poem title below the composition. Drawn after the hero
+/// so it sits over the same framebuffer, but its alpha and size keep it
+/// strictly subordinate — a quiet ink mark, not a light source.
+fn paint_poem_title(fb: &mut [u32], w: u32, h: u32, title: &str, warmth: f32) {
+    let chars: Vec<char> = title.chars().collect();
+    let n = chars.len();
+    if n == 0 {
+        return;
+    }
+    // target 22 px tall (≈ 0.17 of hero em). Render from the hero bucket
+    // with a Q8 scale so we downsample the 128 px glyph to a small, soft
+    // signature — closer to ink on paper than to a printed label. Drawing
+    // glyph-by-glyph (rather than via draw_phrase) lets us pick the scale
+    // freely; draw_phrase locks to the bucket's native em.
+    let target_px = 22.0_f32;
+    let per_char = (target_px * 1.06) as i32;
+    let total_w = per_char * (n as i32 - 1).max(0) + target_px as i32;
+    let pen_x = ((w as i32) - total_w) / 2;
+    // y_frac 0.90 → 648 px on 720 — sits ~115 px below the lower-left
+    // echo baseline (≈533) and 56 px above the bottom safe edge.
+    let baseline_y = ((h as f32) * 0.90) as i32;
+    let by_pad = (target_px * 0.85) as i32;
+    let d_pad = (target_px * 0.10) as i32 + 2;
+    let bx_pad = (target_px * 0.08) as i32;
+    if baseline_y - by_pad < 16 || baseline_y + d_pad > (h as i32) - 16 {
+        return;
+    }
+    if pen_x - bx_pad < 16 || pen_x + total_w + bx_pad > (w as i32) - 16 {
+        return;
+    }
+    // Slight warm tilt from `warmth` (touch-driven) so a warm scene
+    // breathes amber on the title too. Base is muted cream so the title
+    // reads as ink, not as a second focal light.
+    let base_color = mix(color::ink::CREAM, color::ink::WARM, warmth * 0.4);
+    let alpha = 0.40_f32;
+    let scale_q8: u32 = ((target_px / glyph::HERO_EM_PX as f32) * 256.0).round() as u32;
+    let fy = baseline_y * 256;
+    let mut pen_x_q8 = pen_x * 256;
+    for &ch in &chars {
+        let glyph_idx = glyph::index_for(ch as u32);
+        if glyph_idx == 0 {
+            // Character missing from atlas — keep advancing so spacing
+            // stays consistent across the title.
+            pen_x_q8 += per_char * 256;
+            continue;
+        }
+        glyph::draw_glyph(
+            fb, w as usize, h as usize, glyph_idx, base_color, base_color, pen_x_q8, fy, scale_q8,
+            alpha,
+        );
+        let adv = glyph::HERO_TABLE[glyph_idx as usize].advance as i32;
+        pen_x_q8 += adv * (scale_q8 as i32);
+    }
 }
 
 #[inline]

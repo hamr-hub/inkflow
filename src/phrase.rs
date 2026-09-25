@@ -509,6 +509,19 @@ pub fn poem_group_line_indices(group: usize) -> &'static [u16] {
     POEM_GROUPS[group].lines
 }
 
+/// Return the title of a poem group by index (e.g. "寻隐者不遇" for group 0).
+/// Returns an empty string if the group index is out of range. The renderer
+/// uses this to add a faint baseline inscription below the composition so the
+/// piece reads as one complete inscribed work — not four lines floating
+/// unanchored. The title characters are kept in the glyph atlas by
+/// `scripts/build_font.py` which scans `POEM_GROUPS[].title` for codepoints.
+pub fn poem_group_title(group: usize) -> &'static str {
+    if group >= POEM_GROUPS.len() {
+        return "";
+    }
+    POEM_GROUPS[group].title
+}
+
 /// Owned counterpart to `Phrase` — used by `parse_line`, which receives an
 /// arbitrary `&str` and cannot return a `'static` borrow.
 #[derive(Debug, Clone)]

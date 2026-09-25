@@ -52,7 +52,13 @@ BODY_PX = 72
 def collect_codepoints() -> list[int]:
     phrase_src = (SRC_DIR / "phrase.rs").read_text(encoding="utf-8")
     cps: set[int] = set()
+    # Phrase text (the lines shown in the composition).
     for m in re.finditer(r'text:\s*"([^"]+)"', phrase_src):
+        for ch in m.group(1):
+            cps.add(ord(ch))
+    # Poem-group titles (rendered as a faint baseline inscription below the
+    # composition; e.g. 寻隐者不遇, the title of 《寻隐者不遇》 by 贾岛).
+    for m in re.finditer(r'title:\s*"([^"]+)"', phrase_src):
         for ch in m.group(1):
             cps.add(ord(ch))
     # ASCII space + light punctuation + common CJK punctuation.
