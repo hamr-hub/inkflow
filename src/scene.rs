@@ -912,13 +912,17 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
     //
     // Two overlapping smooth bells replace the previous two-band linear
     // falloff. The body is a tight quadratic bell that peaks at the centre
-    // and falls smoothly to zero at the body edge; the halo is a wider
-    // quadratic bell that peaks exactly where the body reaches zero, so
-    // there is no alpha discontinuity at the boundary. The previous linear
-    // falloff showed a faint visible ring at the body/halo join — a
-    // featureless hollow disc instead of a luminous body. With the new
-    // bells the disc reads as one continuous luminous body bathed in its
-    // own moonlit air.
+    // and falls smoothly to zero at the body edge. The halo rises
+    // smoothly from 0 at the body edge (a 6-px quadratic fade-in) to its
+    // peak at body_r + 6 px, then falls smoothly to 0 at the halo radius.
+    // The first version of these bells had the halo peak *exactly* at
+    // the body edge — the resulting bright pixel just outside the disc
+    // ringed the body and read as a faint dark valley between disc and
+    // halo against the vignette-darkened upper-right corner (the disc
+    // looked hollow rather than luminous). With the halo now starting at
+    // 0 at the boundary and rising smoothly outward, the body→halo
+    // transition is continuous and the disc reads as one luminous body
+    // bathed in its own moonlit air.
     //
     // Body peak is raised to 0.50 so the moon actually reads against the
     // vignette-darkened upper-right corner (where the background has been
@@ -987,8 +991,27 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
                     0.0
                 };
                 let halo_k = if !in_body {
-                    let k = 1.0 - (d - moon_body_r) / halo_span;
-                    k * k
+                    let d_from_body = d - moon_body_r;
+                    // Halo starts at 0 at the body edge (6-px quadratic
+                    // fade-in over [0, 6) px outside the disc), peaks
+                    // at body_r + 6 px, then falls quadratically to 0
+                    // at halo_r. Total integrated luminance (1/3 of
+                    // halo_span * halo_peak) is unchanged from the old
+                    // peak-at-body-edge curve, but the spatial
+                    // distribution shifts the brightest pixel off the
+                    // boundary — eliminating the bright ring that read
+                    // as a dark valley against the vignette-darkened
+                    // upper-right corner. The 6-px fade-in width is
+                    // well inside the halo span (43 px) so the body
+                    // and the brightest part of the halo remain
+                    // perceptually one continuous luminous body.
+                    if d_from_body < 6.0 {
+                        let k = d_from_body * (1.0 / 6.0);
+                        k * k
+                    } else {
+                        let k = 1.0 - (d_from_body - 6.0) / (halo_span - 6.0);
+                        k * k
+                    }
                 } else {
                     0.0
                 };
