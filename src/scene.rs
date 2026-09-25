@@ -1013,12 +1013,29 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
             if d2 < moon_halo_r2 {
                 let in_body = d2 < moon_body_r2;
                 let d = d2.sqrt();
-                let body_k = if in_body {
-                    let k = 1.0 - d * body_recip;
-                    k * k
-                } else {
-                    0.0
-                };
+                // Body bell — Gaussian with sigma 8 px. Falls smoothly
+                // from body center (alpha ≈ 0.50) through body edge
+                // (alpha ≈ 0.05) and continues past body_r as a faint
+                // contribution that blends with the halo. The previous
+                // quadratic k^2 falloff dropped to 0 at body_r while the
+                // halo was just starting to rise — leaving a 6-px ring
+                // of near-zero luminance that read as a faint dark rim
+                // against the vignette-darkened upper-right corner
+                // (the disc looked hollow rather than luminous). With
+                // the Gaussian, body alpha at body_r (≈0.05) ≈ halo peak
+                // (0.05), so the body and halo read as one continuous
+                // luminous body (moon + moonlit air merged) instead of
+                // "bright core + dark rim + halo ring". Sigma 8 chosen
+                // so body_k(body_r) = exp(-17²/128) = exp(-2.26) ≈ 0.105
+                // → alpha ≈ 0.053 ≈ halo_peak. The Gaussian tail past
+                // body_r continues to fall smoothly toward halo_r, so
+                // the body and halo contributions overlap without any
+                // brightness discontinuity. Restraint (ART_DIRECTION §四
+                // "高光只落在主句") holds: peak 0.50 is well under the
+                // hero bloom's combined ~0.7 effective alpha, and the
+                // body's tail past body_r drops to <0.01 by halo_r so
+                // the moon never spills beyond the halo boundary.
+                let body_k = (-d * d / 128.0).exp();
                 let halo_k = if !in_body {
                     let d_from_body = d - moon_body_r;
                     // Halo starts at 0 at the body edge (6-px quadratic
