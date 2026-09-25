@@ -1835,17 +1835,23 @@ fn paint_poem_title(
     // calligraphic page rather than another line.
     let title_base = mix(color::ink::CREAM, color::ink::SHADOW, 0.35);
     let base_color = mix(title_base, color::ink::WARM, warmth * 0.4 + ambient_warmth);
-    // Faint inscribed-breath — the signature now rides the same
-    // atmospheric pulse as the supporting tier, so the bottom-center
-    // title reads as a living mark of the same inscription rather than
-    // a static label pinned below it. Amplitude 2.5 % sits a touch
-    // under the lower-left echo's breath (2.3 % is * 1.0 — wait,
-    // actually slightly above the lower-left's 2.3 % since the title
-    // has no shadow_mix attenuation), so the title and the far-faint
-    // echo share one breathing rate at the bottom of the page.
-    // Restraint (ART_DIRECTION §四): clamped well under the supporting
-    // tier's body alpha so the signature never reads as a second focal
-    // light — it's an ink mark that happens to be alive, not a lamp.
+    // Faint inscribed-breath — the signature rides the same atmospheric
+    // pulse as the supporting tier, so the bottom-center title reads as
+    // a living mark of the same inscription rather than a static label
+    // pinned below it. Amplitude raised 2.5 % → 4.06 % to match the
+    // lower-left echo's current breath exactly (0.07 * (1 - 0.42) of the
+    // supporting-tier formula): the calligrapher's seal and 《云深不
+    // 知处》 now share one breathing rate at the bottom of the page —
+    // the two bottom strokes of the inscribed work inhale together,
+    // rather than the title sitting 1.6 % quieter than its closest
+    // neighbor (which the prior comment described as "sharing one
+    // breathing rate" but the code never actually delivered once the
+    // lower-left's shadow_mix tightened from 0.55 → 0.42). The 4.06 %
+    // ceiling stays well under the supporting tier's body alpha so the
+    // signature never reads as a second focal light — it's an ink mark
+    // that happens to be alive, in rhythm with the closest inscription
+    // line, not a lamp. Restraint (ART_DIRECTION §四 "高光只落在主句")
+    // holds.
     // Alpha 0.40 → 0.44 (+10 %): the calligrapher's seal was sitting so
     // close to the paper's grain that it read as a faintly-printed label
     // rather than a deliberate ink mark by the same hand that laid the
@@ -1859,7 +1865,7 @@ fn paint_poem_title(
     // palette (ART_DIRECTION §四 "克制统一的调色板") — no glow, no
     // outer halo, no scale change — so the seal stays ink-on-paper,
     // just ink that's now confidently visible as ink.
-    let breath = 1.0 + 0.025 * pulse;
+    let breath = 1.0 + 0.0406 * pulse;
     let alpha = (0.44_f32 * breath).clamp(0.0, 1.0);
     let scale_q8: u32 = ((target_px / glyph::HERO_EM_PX as f32) * 256.0).round() as u32;
     let fy = baseline_y * 256;
