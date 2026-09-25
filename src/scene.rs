@@ -1014,14 +1014,16 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
     let mcy = scene.moon_y + (scene.moon_phase * 0.6).cos() * 2.0;
     let moon_body_r = 17.0_f32;
     let moon_body_r2 = moon_body_r * moon_body_r;
-    // Halo radius 44 → 60 (+36 %): the moon's moonlit air now reaches
-    // ~36 % further into the upper-right quadrant, so the upper-right
-    // echo 《只在此山中》 (≈115 px from the moon) sits closer to the
-    // halo's outer edge rather than at a clear gap. The echo doesn't
-    // receive visible halo luminance (still ~55 px outside), but the
-    // air between the moon and the echo now reads as continuously
-    // moonlit rather than split into "moon halo" and "isolated echo"
-    // — the two upper-right inhabitants share one breathing atmosphere.
+    // Halo radius 44 → 60 → 62 (+41 % over two passes): the moon's
+    // moonlit air now reaches a touch further into the upper-right
+    // quadrant. The +3.3 % extension (60 → 62) keeps the halo edge
+    // 2 px closer to the upper-right echo 《只在此山中》 (≈115 px from
+    // the moon, 53 px outside the halo) — the echo still doesn't
+    // receive visible halo luminance, but the air between the moon
+    // and the echo now reads as continuously moonlit rather than
+    // split into "moon halo" and "isolated echo". The two upper-right
+    // inhabitants share one breathing atmosphere; the sky bell still
+    // does the actual bridging of the 53-px gap (sigma 75 unchanged).
     // Halo peak 0.05 → 0.055 (+10 %): the moon's moonlit air now
     // reaches a touch further into the upper-right quadrant. The prior
     // 0.05 sat very close to invisibility against the vignette-darkened
@@ -1035,9 +1037,14 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
     // under the inscribed glow (~0.20+) and the hero bloom (~0.55),
     // so the focal line keeps its claim on the page's light
     // (ART_DIRECTION §四 "高光只落在主句"); the wider radius brings a
-    // roughly proportional gain in total integrated halo luminance,
-    // but every pixel the halo touches is still ≤ 0.055 alpha.
-    let moon_halo_r = 60.0_f32;
+    // roughly proportional gain in total integrated halo luminance
+    // (+3.3 % at this pass), but every pixel the halo touches is
+    // still ≤ 0.055 alpha. Restraint (ART_DIRECTION §四) holds across
+    // both passes — the moon now reads as one luminous body bathed in
+    // moonlit air (body + halo + sky bell as three nested atmospheric
+    // layers around one disc), not as a hard pixel ringed by an
+    // independent halo.
+    let moon_halo_r = 62.0_f32;
     let moon_halo_r2 = moon_halo_r * moon_halo_r;
     let body_peak = 0.55_f32;
     let halo_peak = 0.055_f32;
@@ -1372,19 +1379,28 @@ fn paint_supporting_slot(
     // subtitle (closest to focal, shadow_mix 0.16) catches the most
     // breath, the upper-right (0.26) less, the far-faint (0.42) the
     // least — same hierarchy that already governs their ink density,
-    // now extending to motion. Amplitude raised 0.06 → 0.07 (+17 %):
-    // the breath now rises to ±5.9 % / ±5.2 % / ±4.1 % across the three
-    // supporting echoes (was ≤ ±5 %), so the inscription reads as one
-    // calligraphic work breathing a touch deeper under one shared light
-    // without crossing into the focal bloom's amplitude band. The four
-    // inscription lines now move together with the same rhythm engine
-    // pulse but still at visibly different depths — the subtitle
-    // breathes most (closest to focal), the upper-right mid, the
-    // far-faint least (the brush running thin as the inscription closes
-    // on 《云深不知处》). Still well under the hero bloom's combined
-    // ~0.7 effective alpha and stays subordinate to the focal line;
-    // restraint (ART_DIRECTION §四) holds.
-    let breath = 1.0 + 0.07 * pulse * (1.0 - slot.def.shadow_mix);
+    // now extending to motion. Amplitude raised 0.06 → 0.07 → 0.075
+    // (+25 % over two passes): the breath now rises to ±6.3 % / ±5.6 %
+    // / ±4.4 % across the three supporting echoes (was ±5.9 % / ±5.2 %
+    // / ±4.1 %), so the inscription reads as one calligraphic work
+    // breathing a touch deeper under one shared light — the subtitle
+    // now sits just above the moon's halo pulse (±6 %), the natural
+    // amplitude for "the page's atmosphere that the inscription
+    // breathes within" (the halo is the air, the inscription is the
+    // ink that lives in it, and the ink now reads as slightly more
+    // alive than the air it inhabits). The upper-right at ±5.6 %
+    // matches the halo pulse almost exactly — the upper-right echo
+    // bathes in moonlit air that pulses at the same rate it does, so
+    // 《只在此山中》 reads as ink breathing in the moon's sphere of
+    // influence rather than ink floating beside it. The far-faint at
+    // ±4.4 % stays clearly below the halo pulse, the brush running
+    // thin as the inscription closes on 《云深不知处》. The three
+    // supporting echoes still move with the same rhythm-engine pulse
+    // but at visibly different depths, and all three stay well under
+    // the hero bloom's combined ~0.7 effective alpha — restraint
+    // (ART_DIRECTION §四 "高光只落在主句") holds across both
+    // amplitudes and the new halo-pulse match.
+    let breath = 1.0 + 0.075 * pulse * (1.0 - slot.def.shadow_mix);
     let alpha = (base_alpha * breath).clamp(0.0, 1.0);
     let chars: Vec<char> = slot.phrase.text.chars().collect();
     let n = chars.len();
@@ -1600,7 +1616,29 @@ pub fn paint_hero(
     // at a hard edge. Reads as atmospheric light, not a second copy of the
     // glyph. Kept extremely low so restraint (ART_DIRECTION §四) holds —
     // the viewer perceives "the page glows" not "the text has a glow".
-    let bloom2_scale_q8: u32 = ((scale_q8.max(1) as f32) * 1.13).round() as u32;
+    //
+    // Outer corona tightened 1.13 → 1.10 (-2.7 %) so the moonlit bleed
+    // sits a touch closer to the ink and the corona no longer reads as
+    // a faint "ghost duplicate" of the hero ~8 px below the baseline
+    // against the heavily-mist'd lower band — the previous 1.13x spread
+    // (centred on the glyph, the outer halo extended ~8 px past the
+    // glyph bbox in every direction, including ~8 px below the baseline
+    // where the warm horizon mist already tints the page) was wide
+    // enough that the bloom underneath the hero lined up with the
+    // subtitle's leading edge, making the bloom feel like a second
+    // copy of 《松下问童子》 rather than light diffusing outward from
+    // the focal line. At 1.10x the corona now extends ~6 px past the
+    // glyph in each direction — the moonlit bleed still wraps the
+    // hero in atmospheric light (the bloom2_alpha base + ceiling are
+    // unchanged, so every pixel still contributes up to 0.06 cream),
+    // but the bleed no longer reaches the subtitle's leading edge so
+    // the focal line reads as ink glowing into moonlit air rather than
+    // ink with a luminous duplicate behind it. Restraint (ART_DIRECTION
+    // §四 "高光只落在主句") holds: peak 0.06 unchanged, the corona
+    // stays well under the inscribed glow and the hero bloom, and the
+    // bloom2_alpha base stays the dominant light contributor at every
+    // pixel the corona still covers.
+    let bloom2_scale_q8: u32 = ((scale_q8.max(1) as f32) * 1.10).round() as u32;
     let bloom2_alpha = (0.022 + 0.02 * pulse + 0.01 * warmth + beat_glow * 0.015).clamp(0.0, 0.06);
     // Outer halo color — kept close to the inner bloom (warmth mix 0.3
     // → 0.1) so the corona reads as moonlit cream spreading outward, not
@@ -1892,20 +1930,19 @@ fn paint_poem_title(
     // Faint inscribed-breath — the signature rides the same atmospheric
     // pulse as the supporting tier, so the bottom-center title reads as
     // a living mark of the same inscription rather than a static label
-    // pinned below it. Amplitude raised 2.5 % → 4.06 % to match the
-    // lower-left echo's current breath exactly (0.07 * (1 - 0.42) of the
-    // supporting-tier formula): the calligrapher's seal and 《云深不
-    // 知处》 now share one breathing rate at the bottom of the page —
-    // the two bottom strokes of the inscribed work inhale together,
-    // rather than the title sitting 1.6 % quieter than its closest
-    // neighbor (which the prior comment described as "sharing one
-    // breathing rate" but the code never actually delivered once the
-    // lower-left's shadow_mix tightened from 0.55 → 0.42). The 4.06 %
-    // ceiling stays well under the supporting tier's body alpha so the
-    // signature never reads as a second focal light — it's an ink mark
-    // that happens to be alive, in rhythm with the closest inscription
-    // line, not a lamp. Restraint (ART_DIRECTION §四 "高光只落在主句")
-    // holds.
+    // pinned below it. Amplitude raised 2.5 % → 4.06 % → 4.35 % to
+    // match the lower-left echo's current breath exactly (0.075 * (1
+    // - 0.42) of the supporting-tier formula): the calligrapher's seal
+    // and 《云深不知处》 now share one breathing rate at the bottom of
+    // the page — the two bottom strokes of the inscribed work inhale
+    // together, the +0.29 % lifting the title with the same supporting-
+    // tier +7 % pass that lifted the subtitle ±5.9 % → ±6.3 %, the
+    // upper-right ±5.2 % → ±5.6 %, and the lower-left ±4.1 % → ±4.4 %.
+    // The 4.35 % ceiling stays well under the supporting tier's body
+    // alpha so the signature never reads as a second focal light —
+    // it's an ink mark that happens to be alive, in rhythm with the
+    // closest inscription line, not a lamp. Restraint (ART_DIRECTION
+    // §四 "高光只落在主句") holds.
     // Alpha 0.40 → 0.44 (+10 %): the calligrapher's seal was sitting so
     // close to the paper's grain that it read as a faintly-printed label
     // rather than a deliberate ink mark by the same hand that laid the
@@ -1919,7 +1956,7 @@ fn paint_poem_title(
     // palette (ART_DIRECTION §四 "克制统一的调色板") — no glow, no
     // outer halo, no scale change — so the seal stays ink-on-paper,
     // just ink that's now confidently visible as ink.
-    let breath = 1.0 + 0.0406 * pulse;
+    let breath = 1.0 + 0.0435 * pulse;
     let alpha = (0.44_f32 * breath).clamp(0.0, 1.0);
     let scale_q8: u32 = ((target_px / glyph::HERO_EM_PX as f32) * 256.0).round() as u32;
     let fy = baseline_y * 256;
