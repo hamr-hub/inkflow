@@ -1268,14 +1268,19 @@ fn paint_supporting_slot(
     // subtitle (closest to focal, shadow_mix 0.16) catches the most
     // breath, the upper-right (0.26) less, the far-faint (0.42) the
     // least — same hierarchy that already governs their ink density,
-    // now extending to motion. Amplitude raised 0.04 → 0.06 (+50 %):
-    // the breath now rises to ±5 % / ±4.4 % / ±3.5 % across the three
-    // supporting echoes (was ≤ 4 %), so the inscription reads as a
-    // living calligraphic work breathing under one shared light
-    // rather than a static inscription. Still well under bloom levels
-    // and stays subordinate to the focal line; restraint
-    // (ART_DIRECTION §四) holds.
-    let breath = 1.0 + 0.06 * pulse * (1.0 - slot.def.shadow_mix);
+    // now extending to motion. Amplitude raised 0.06 → 0.07 (+17 %):
+    // the breath now rises to ±5.9 % / ±5.2 % / ±4.1 % across the three
+    // supporting echoes (was ≤ ±5 %), so the inscription reads as one
+    // calligraphic work breathing a touch deeper under one shared light
+    // without crossing into the focal bloom's amplitude band. The four
+    // inscription lines now move together with the same rhythm engine
+    // pulse but still at visibly different depths — the subtitle
+    // breathes most (closest to focal), the upper-right mid, the
+    // far-faint least (the brush running thin as the inscription closes
+    // on 《云深不知处》). Still well under the hero bloom's combined
+    // ~0.7 effective alpha and stays subordinate to the focal line;
+    // restraint (ART_DIRECTION §四) holds.
+    let breath = 1.0 + 0.07 * pulse * (1.0 - slot.def.shadow_mix);
     let alpha = (base_alpha * breath).clamp(0.0, 1.0);
     let chars: Vec<char> = slot.phrase.text.chars().collect();
     let n = chars.len();
@@ -1463,8 +1468,20 @@ pub fn paint_hero(
         _ => 0,
     };
 
+    // Glow tint leans cool — the focal line is meant to read as moonlit
+    // cream rather than amber-highlighter ink. The warmth coefficient is
+    // pulled down (0.6 → 0.35) so a touched-warm scene still warms the
+    // background and supporting tier but the bloom underneath the hero
+    // stays close to ink::GLOW, the page's natural moonlit-white. The
+    // supporting tier still shifts amber with touch (see
+    // `paint_supporting_slot`); only the focal halo now refuses to chase
+    // the warmth curve, so the inscription reads as one luminous moonlit
+    // work against a mist that may be warm or cool — not as four lines
+    // that all brighten amber together. Restraint (ART_DIRECTION §四
+    // "克制统一的调色板" / "低饱和、高级灰") holds: the bloom stays
+    // inside the cream family, just closer to the cool end of it.
     let base_color = mix(color::ink::CREAM, color::ink::WARM, warmth * 0.5);
-    let glow_color = mix(color::ink::GLOW, color::ink::WARM, warmth * 0.6);
+    let glow_color = mix(color::ink::GLOW, color::ink::WARM, warmth * 0.35);
     let beat_glow = phrase.glow;
     let glow_alpha = (0.10 + 0.18 * pulse + 0.06 * warmth + beat_glow * 0.10).clamp(0.0, 0.55);
     // Secondary wider bloom — same glyph drawn at slightly larger scale and
@@ -1481,10 +1498,17 @@ pub fn paint_hero(
     // the viewer perceives "the page glows" not "the text has a glow".
     let bloom2_scale_q8: u32 = ((scale_q8.max(1) as f32) * 1.13).round() as u32;
     let bloom2_alpha = (0.022 + 0.02 * pulse + 0.01 * warmth + beat_glow * 0.015).clamp(0.0, 0.06);
-    // A touch warmer than the inner bloom so the outer corona reads as
-    // amber lamplight spilling onto the page — closer to ink::WARM than
-    // ink::GLOW, but still inside the cream family.
-    let bloom2_color = mix(glow_color, color::ink::WARM, 0.3);
+    // Outer halo color — kept close to the inner bloom (warmth mix 0.3
+    // → 0.1) so the corona reads as moonlit cream spreading outward, not
+    // as a separate amber ring. The hero's bloom is meant to look like
+    // light the moon spills onto the page (cool-cream), so the outer
+    // corona shouldn't warm independently and reintroduce the amber
+    // highlighter tint the focal line just shed. Restraint (ART_DIRECTION
+    // §四 "克制统一的调色板") holds: the bloom stays inside one cream
+    // family from the inner glow outward, with only a faint trace of
+    // amber so the corona doesn't read as pure cool against the warm
+    // horizon band it sits over.
+    let bloom2_color = mix(glow_color, color::ink::WARM, 0.1);
 
     let overshoot = if matches!(beat.phase, Phase::Entrance) {
         let p = beat.entrance_progress();
