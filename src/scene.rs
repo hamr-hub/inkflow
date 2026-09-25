@@ -1842,8 +1842,21 @@ fn paint_poem_title(
     // Restraint (ART_DIRECTION §四): clamped well under the supporting
     // tier's body alpha so the signature never reads as a second focal
     // light — it's an ink mark that happens to be alive, not a lamp.
+    // Alpha 0.40 → 0.44 (+10 %): the calligrapher's seal was sitting so
+    // close to the paper's grain that it read as a faintly-printed label
+    // rather than a deliberate ink mark by the same hand that laid the
+    // inscription above. Lifting the seal to 0.44 keeps it clearly
+    // subordinate (gap to the lower-left echo stays at 0.14, well
+    // below the 0.18 → 0.14 → 0.04 gradient that already separates the
+    // inscribed tier), but the title now registers as a real signature
+    // — a quiet ink mark that the viewer can actually read as "this is
+    // a complete work by 贾岛" rather than a barely-perceptible blur at
+    // the page's bottom. The +10 % sits inside the same restrained
+    // palette (ART_DIRECTION §四 "克制统一的调色板") — no glow, no
+    // outer halo, no scale change — so the seal stays ink-on-paper,
+    // just ink that's now confidently visible as ink.
     let breath = 1.0 + 0.025 * pulse;
-    let alpha = (0.40_f32 * breath).clamp(0.0, 1.0);
+    let alpha = (0.44_f32 * breath).clamp(0.0, 1.0);
     let scale_q8: u32 = ((target_px / glyph::HERO_EM_PX as f32) * 256.0).round() as u32;
     let fy = baseline_y * 256;
     let mut pen_x_q8 = pen_x * 256;
