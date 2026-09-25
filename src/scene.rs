@@ -291,10 +291,30 @@ impl Composition {
             //   breath is scaled by 1 - shadow_mix), so the supporting
             //   line leans even more clearly "echo of the hero" than
             //   "second voice".
+            //   y_frac 0.66 → 0.64: lift the subtitle one step closer
+            //   to the hero so the central pair reads as one inscribed
+            //   couplet rather than a vertical band of three lines —
+            //   the previous 0.08 gap to the lower-left echo
+            //   (y_frac 0.74) put the subtitle at almost the same
+            //   vertical level as the far-faint, so the eye had to
+            //   work to separate "the inscribed answer" from "the
+            //   dissolving corner echo". At 0.64 the subtitle-to-lower-
+            //   left gap widens to 0.10 (72 px) while the hero-to-
+            //   subtitle pair tightens from 0.24 to 0.22 (158 px), so
+            //   the hero and the subtitle now sit at a near-optical
+            //   midpoint of 0.53 — closer to the page's centre of
+            //   gravity, while the supporting↔lower-left distinction
+            //   gains a 14 px breathing row. The mist-bell value at
+            //   0.64 is 0.302 (vs 0.326 at 0.66, 81 % of the 0.75
+            //   peak), so the subtitle still picks up the rising-edge
+            //   warmth that ties it to the warm horizon — the
+            //   warm/cool axis (subtitle + lower-left warm, upper-right
+            //   cool) and the brush-weight hierarchy (subtitle
+            //   brightest → upper-right → lower-left dimmest) both hold.
             SlotDef {
                 role: SlotRole::Support,
                 x_frac: 0.50,
-                y_frac: 0.66,
+                y_frac: 0.64,
                 align: Align::Center,
                 em_scale: 0.34,
                 target_w_frac: 0.0,
@@ -1185,13 +1205,17 @@ fn paint_supporting_slot(
     // calligraphic inscription breathing under one light, not as three
     // drifting labels. Scaled by (1 - shadow_mix) so the brush-weight
     // gradient also governs how much each line participates: the
-    // subtitle (closest to focal, shadow_mix 0.10) catches the most
+    // subtitle (closest to focal, shadow_mix 0.16) catches the most
     // breath, the upper-right (0.26) less, the far-faint (0.42) the
     // least — same hierarchy that already governs their ink density,
-    // now extending to motion. Amplitude is small (≤ 4 %) so the
-    // supporting lines stay subordinate and never bloom; restraint
+    // now extending to motion. Amplitude raised 0.04 → 0.06 (+50 %):
+    // the breath now rises to ±5 % / ±4.4 % / ±3.5 % across the three
+    // supporting echoes (was ≤ 4 %), so the inscription reads as a
+    // living calligraphic work breathing under one shared light
+    // rather than a static inscription. Still well under bloom levels
+    // and stays subordinate to the focal line; restraint
     // (ART_DIRECTION §四) holds.
-    let breath = 1.0 + 0.04 * pulse * (1.0 - slot.def.shadow_mix);
+    let breath = 1.0 + 0.06 * pulse * (1.0 - slot.def.shadow_mix);
     let alpha = (base_alpha * breath).clamp(0.0, 1.0);
     let chars: Vec<char> = slot.phrase.text.chars().collect();
     let n = chars.len();
