@@ -1579,8 +1579,11 @@ fn paint_poem_title(fb: &mut [u32], w: u32, h: u32, title: &str, warmth: f32) {
     let total_w = per_char * (n as i32 - 1).max(0) + target_px as i32;
     let pen_x = ((w as i32) - total_w) / 2;
     // y_frac 0.90 → 648 px on 720 — sits ~115 px below the lower-left
-    // echo baseline (≈533) and 56 px above the bottom safe edge.
-    let baseline_y = ((h as f32) * 0.90) as i32;
+    // echo baseline (≈533) and 56 px above the bottom safe edge. Held as
+    // a constant so the ambient-warm bell below can read from the same
+    // value rather than re-hardcoding it.
+    let title_v = 0.90_f32;
+    let baseline_y = ((h as f32) * title_v) as i32;
     let by_pad = (target_px * 0.85) as i32;
     let d_pad = (target_px * 0.10) as i32 + 2;
     let bx_pad = (target_px * 0.08) as i32;
@@ -1593,7 +1596,27 @@ fn paint_poem_title(fb: &mut [u32], w: u32, h: u32, title: &str, warmth: f32) {
     // Slight warm tilt from `warmth` (touch-driven) so a warm scene
     // breathes amber on the title too. Base is muted cream so the title
     // reads as ink, not as a second focal light.
-    let base_color = mix(color::ink::CREAM, color::ink::WARM, warmth * 0.4);
+    // Tiny ambient warm from the horizon mist the title sits in — the
+    // signature shares the same warm band where 《云深不知处》
+    // dissolves, so it reads as part of the inscribed work's atmosphere
+    // rather than a separate UI label. Sits below the touch-warm tilt
+    // so a touched-warm scene still breathes amber on the signature.
+    // Independent of touch so the title always belongs to the moonlit
+    // night, not just when the user warms the scene. Reuses the same
+    // bell as `paint_supporting_slot` (coefficient 6.0, onset 0.50) so
+    // the title's warm tint and the lower-left echo's warm tint are
+    // visibly of one atmosphere, then scaled down (× 0.20 instead of
+    // × 0.20 on top of the 0.30 warmth multiplier) so the title stays
+    // a quiet mark — at title_v≈0.90 the bell sits at the far tail
+    // (horizon_glow ≈ 0.24, ambient ≈ 0.048) and the contribution
+    // lands at ≈ 4.8 % always-on warm, well below the supporting
+    // lines' mist share (≈ 7.5 % on the lower-left).
+    let ambient_warmth = ((title_v - 0.50) * (1.0 - title_v) * 6.0).clamp(0.0, 1.0) * 0.20;
+    let base_color = mix(
+        color::ink::CREAM,
+        color::ink::WARM,
+        warmth * 0.4 + ambient_warmth,
+    );
     let alpha = 0.40_f32;
     let scale_q8: u32 = ((target_px / glyph::HERO_EM_PX as f32) * 256.0).round() as u32;
     let fy = baseline_y * 256;
