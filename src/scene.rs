@@ -968,14 +968,27 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
     // transition is continuous and the disc reads as one luminous body
     // bathed in its own moonlit air.
     //
-    // Body peak is raised to 0.50 so the moon actually reads against the
-    // vignette-darkened upper-right corner (where the background has been
-    // pulled ~64 % toward DEEP); the previous 0.20 was too dim against
-    // that darkened field and the disc dissolved into a near-empty spot.
-    // Halo stays capped at 0.05 so the moonlit air never reads as a
-    // competing bloom — the focal line keeps its claim on the page's
-    // light (ART_DIRECTION §四 "高光只落在主句"). Body peak 0.50 sits well
-    // under the hero bloom's combined ~0.7 effective alpha.
+    // Body peak raised 0.50 → 0.55 (+10 %) so the moon reads as one
+    // luminous body against the heavily vignette-darkened upper-right
+    // corner (where the background is pulled ~64 % toward DEEP) rather
+    // than as a faint disc dissolving into a near-empty spot. The recent
+    // moon-passing work (sky_peak +56 % in b7ebeda, halo_peak +10 % in
+    // 69bf26a) lifted the moonlit air around the disc and the cool sky
+    // bell reaching toward the upper-right echo, but the body itself was
+    // still sitting at the dim end of its readable range — the disc read
+    // as a soft luminous dot while its moonlit air and the cool sky
+    // around it both felt slightly more present than the body that owns
+    // them. The +10 % mirrors the +10 % halo bump: same magnitude, same
+    // restraint, same subordination to the focal line. 0.55 still sits
+    // clearly under the hero bloom's combined ~0.7 effective alpha
+    // (ART_DIRECTION §四 "高光只落在主句" — 高光只落在主句 holds) and
+    // well above the halo peak (0.055), so the body remains the brightest
+    // single-pixel point of the moon system while the halo and sky bell
+    // continue to fade off outward. Halo peak 0.055 and sky_peak 0.028
+    // are unchanged — the body's glow lifts alone, and the moon still
+    // reads as a single luminous body (body + halo + sky bell as three
+    // nested atmospheric layers around one disc) rather than as a bright
+    // pixel ringed by an even brighter halo.
     //
     // A gentle terminator (≤ ±12 %) tints the body slightly warmer toward
     // the lower side, where the warm horizon mist sits — the moon catches
@@ -1026,7 +1039,7 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
     // but every pixel the halo touches is still ≤ 0.055 alpha.
     let moon_halo_r = 60.0_f32;
     let moon_halo_r2 = moon_halo_r * moon_halo_r;
-    let body_peak = 0.50_f32;
+    let body_peak = 0.55_f32;
     let halo_peak = 0.055_f32;
     let body_recip = 1.0 / moon_body_r;
     let halo_span = moon_halo_r - moon_body_r;
@@ -1071,24 +1084,39 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
                 let body_k = (-d * d / 128.0).exp();
                 let halo_k = if !in_body {
                     let d_from_body = d - moon_body_r;
-                    // Halo starts at 0 at the body edge (6-px quadratic
-                    // fade-in over [0, 6) px outside the disc), peaks
-                    // at body_r + 6 px, then falls quadratically to 0
+                    // Halo starts at 0 at the body edge (4-px quadratic
+                    // fade-in over [0, 4) px outside the disc), peaks
+                    // at body_r + 4 px, then falls quadratically to 0
                     // at halo_r. Total integrated luminance (1/3 of
-                    // halo_span * halo_peak) is unchanged from the old
-                    // peak-at-body-edge curve, but the spatial
-                    // distribution shifts the brightest pixel off the
-                    // boundary — eliminating the bright ring that read
-                    // as a dark valley against the vignette-darkened
-                    // upper-right corner. The 6-px fade-in width is
-                    // well inside the halo span (43 px) so the body
-                    // and the brightest part of the halo remain
-                    // perceptually one continuous luminous body.
-                    if d_from_body < 6.0 {
-                        let k = d_from_body * (1.0 / 6.0);
+                    // halo_span * halo_peak) is preserved, but the
+                    // brightest pixel now sits closer to the body
+                    // edge — smoothing the visible "ring" between the
+                    // body's Gaussian tail (alpha ≈ 0.009 at the old
+                    // peak d=23) and the halo peak. The previous 6-px
+                    // fade-in had the peak 6 px outside the disc while
+                    // the body contribution had already fallen to ≈ 9 %
+                    // alpha there, leaving a valley at d≈20 that read
+                    // as a faint dark band between body and halo
+                    // against the vignette-darkened upper-right corner.
+                    // The 4-px fade-in puts the peak where the body
+                    // still contributes ≈ 32 % of its center alpha, so
+                    // body + halo read as one continuous luminous
+                    // body bathed in moonlit air rather than "bright
+                    // disc + dark band + bright ring". The 4-px width
+                    // is well inside the halo span (43 px) so the
+                    // body and the brightest part of the halo still
+                    // merge into one perceptually continuous luminous
+                    // body. Restraint holds: peak alpha unchanged at
+                    // 0.055 (still well under the inscribed glow
+                    // ~0.20+ and the hero bloom ~0.55), so the moon
+                    // keeps its claim as a quiet still anchor against
+                    // the focal line (ART_DIRECTION §四 "高光只落在
+                    // 主句").
+                    if d_from_body < 4.0 {
+                        let k = d_from_body * (1.0 / 4.0);
                         k * k
                     } else {
-                        let k = 1.0 - (d_from_body - 6.0) / (halo_span - 6.0);
+                        let k = 1.0 - (d_from_body - 4.0) / (halo_span - 4.0);
                         k * k
                     }
                 } else {
