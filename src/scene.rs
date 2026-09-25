@@ -1745,24 +1745,28 @@ fn paint_poem_title(
     let target_px = 22.0_f32;
     let per_char = (target_px * 1.06) as i32;
     let total_w = per_char * (n as i32 - 1).max(0) + target_px as i32;
-    // y_frac 0.90 → 0.85 → 612 px on 720 — sits ~79 px below the lower-
-    // left echo baseline (≈533) and 92 px above the bottom safe edge.
+    // y_frac 0.90 → 0.85 → 0.83 — sits ~65 px below the lower-left echo
+    // baseline (≈533) on 720-tall, and ~99 px above the bottom safe edge.
     // Lifted from 0.90 so the calligrapher's seal reads as a signature
     // beneath the calligraphic work rather than a label pinned near the
     // bottom edge — the previous 115 px gap put the title in its own
-    // band, slightly detached from the inscription above, and the 56 px
-    // margin to the safe edge left the signature feeling like it was
-    // running out of page. At 0.85 the vertical rhythm tightens into
-    // one calligraphic page (hero→subtitle 158 px, subtitle→lower-left
-    // 72 px, lower-left→title 79 px), and the title moves deeper into
-    // the warm horizon bell (ambient_warmth 0.048 → 0.063, +31 %) so
-    // the seal shares the same atmosphere as 《云深不知处》 — both sit
-    // clearly inside the warm band rather than the title floating below
-    // it on a near-empty patch of dark. Bottom margin grows 56 → 92 px
-    // so the signature breathes inside the frame. Held as a constant
-    // so the ambient-warm bell below can read from the same value
-    // rather than re-hardcoding it.
-    let title_v = 0.85_f32;
+    // band, slightly detached from the inscription above. Pulled a final
+    // step from 0.85 to 0.83 so the seal closes in on the inscribed
+    // quatrain above: the 79 px gap to 《云深不知处》 was reading as
+    // breathing room between two bands rather than as the last 14 px
+    // of one calligraphic page. At 0.83 the vertical rhythm tightens
+    // into one continuous inscription (hero→subtitle 158 px,
+    // subtitle→lower-left 72 px, lower-left→title 65 px) — three
+    // gaps stepping down together rather than three gaps with a
+    // hand-off to a fourth detached band at the bottom. The title
+    // also moves a touch deeper into the warm horizon bell
+    // (ambient_warmth 0.063 → 0.067, +6 %) so the seal shares the
+    // same atmosphere as 《云深不知处》 even more clearly. Bottom
+    // margin stays generous 99 px so the signature still breathes
+    // inside the frame rather than crowding the edge. Held as a
+    // constant so the ambient-warm bell below can read from the
+    // same value rather than re-hardcoding it.
+    let title_v = 0.83_f32;
     // Subtle drift — the signature now sways like the rest of the
     // inscription so it reads as a living mark of the same calligraphic
     // work rather than a static label pinned below it. Amplitudes are
