@@ -997,16 +997,25 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
     // air between the moon and the echo now reads as continuously
     // moonlit rather than split into "moon halo" and "isolated echo"
     // — the two upper-right inhabitants share one breathing atmosphere.
-    // Halo peak stays at 0.05 so the focal line keeps its claim on
-    // the page's light (ART_DIRECTION §四 "高光只落在主句"); the
-    // wider radius brings a roughly proportional gain in total
-    // integrated halo luminance, but every pixel the halo touches is
-    // still ≤ 0.05 alpha — well under the supporting lines'
-    // inscribed glow (~0.20+) and the hero bloom (~0.55).
+    // Halo peak 0.05 → 0.055 (+10 %): the moon's moonlit air now
+    // reaches a touch further into the upper-right quadrant. The prior
+    // 0.05 sat very close to invisibility against the vignette-darkened
+    // corner — even the halo's brightest pixel added only 5 % cream,
+    // which the warm horizon band and the dust haze underneath easily
+    // pulled below "visible ring around the moon". With +10 % the halo
+    // now reads as a clearly continuous ring of moonlit air at peak
+    // (6 px outside the disc edge), tying the body to its moonlit air
+    // more visibly without crossing into competing-bloom territory.
+    // The +10 % keeps every halo pixel ≤ 0.055 alpha — still well
+    // under the inscribed glow (~0.20+) and the hero bloom (~0.55),
+    // so the focal line keeps its claim on the page's light
+    // (ART_DIRECTION §四 "高光只落在主句"); the wider radius brings a
+    // roughly proportional gain in total integrated halo luminance,
+    // but every pixel the halo touches is still ≤ 0.055 alpha.
     let moon_halo_r = 60.0_f32;
     let moon_halo_r2 = moon_halo_r * moon_halo_r;
     let body_peak = 0.50_f32;
-    let halo_peak = 0.05_f32;
+    let halo_peak = 0.055_f32;
     let body_recip = 1.0 / moon_body_r;
     let halo_span = moon_halo_r - moon_body_r;
     let mcx_i = mcx as i32;
