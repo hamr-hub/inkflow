@@ -291,30 +291,42 @@ impl Composition {
             //   breath is scaled by 1 - shadow_mix), so the supporting
             //   line leans even more clearly "echo of the hero" than
             //   "second voice".
-            //   y_frac 0.66 → 0.64: lift the subtitle one step closer
-            //   to the hero so the central pair reads as one inscribed
-            //   couplet rather than a vertical band of three lines —
-            //   the previous 0.08 gap to the lower-left echo
-            //   (y_frac 0.74) put the subtitle at almost the same
-            //   vertical level as the far-faint, so the eye had to
-            //   work to separate "the inscribed answer" from "the
-            //   dissolving corner echo". At 0.64 the subtitle-to-lower-
-            //   left gap widens to 0.10 (72 px) while the hero-to-
-            //   subtitle pair tightens from 0.24 to 0.22 (158 px), so
-            //   the hero and the subtitle now sit at a near-optical
-            //   midpoint of 0.53 — closer to the page's centre of
-            //   gravity, while the supporting↔lower-left distinction
-            //   gains a 14 px breathing row. The mist-bell value at
-            //   0.64 is 0.302 (vs 0.326 at 0.66, 81 % of the 0.75
-            //   peak), so the subtitle still picks up the rising-edge
-            //   warmth that ties it to the warm horizon — the
-            //   warm/cool axis (subtitle + lower-left warm, upper-right
-            //   cool) and the brush-weight hierarchy (subtitle
-            //   brightest → upper-right → lower-left dimmest) both hold.
+            //   y_frac 0.64 → 0.65: lift the subtitle one step further
+            //   from the hero so the central pair reads as two
+            //   distinct strokes of one calligraphic brush rather than
+            //   one dense centred inscription. The 0.64 lift was
+            //   originally introduced to break the "vertical band of
+            //   three lines" — by widening the subtitle-to-lower-left
+            //   gap (0.10 vs the previous 0.08) and tightening the
+            //   hero-to-subtitle pair (0.22 vs the previous 0.24).
+            //   That worked, but it pushed the subtitle so close to the
+            //   hero that the bloom of 《松下问童子》 reads as bleeding
+            //   into 《言师采药去》 — the two lines register as one
+            //   dense inscription block rather than as the focal line
+            //   and its first echo. At 0.65 the hero-to-subtitle pair
+            //   steps down from 158 → 166 px (+8 px, the hero's bloom
+            //   now ends a comfortable 17 px above the subtitle's top
+            //   instead of grazing it), while the subtitle-to-lower-
+            //   left gap narrows 72 → 65 px — still 9 px wider than
+            //   the 56-px band that originally caused the "vertical
+            //   band of three lines" critique, so the subtitle still
+            //   reads as the inscribed answer rather than collapsing
+            //   onto the dissolving corner echo. The three inscribed
+            //   gaps now step down together (hero→subtitle 166 px,
+            //   subtitle→lower-left 65 px, lower-left→title 65 px) —
+            //   the supporting tier shares one even rhythm, while the
+            //   hero stands clearly alone above it (the 166 px opening
+            //   is the page's largest breathing row). The mist-bell
+            //   value at 0.65 is 0.315 (still 84 % of the 0.75 peak),
+            //   so the subtitle keeps its rising-edge warmth that ties
+            //   it to the warm horizon — the warm/cool axis (subtitle +
+            //   lower-left warm, upper-right cool) and the brush-weight
+            //   hierarchy (subtitle brightest → upper-right → lower-
+            //   left dimmest) both hold unchanged.
             SlotDef {
                 role: SlotRole::Support,
                 x_frac: 0.50,
-                y_frac: 0.64,
+                y_frac: 0.65,
                 align: Align::Center,
                 em_scale: 0.34,
                 target_w_frac: 0.0,
