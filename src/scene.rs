@@ -1177,8 +1177,57 @@ fn paint_supporting_slot(
     // (v≈0.28) stays clear of the bell so it remains the cool echo.
     let horizon_glow = ((slot.def.y_frac - 0.50) * (1.0 - slot.def.y_frac) * 6.0).clamp(0.0, 1.0);
     let mist_warmth = horizon_glow * 0.20;
+    // Cool axis — the mirror image of the mist warmth above. Supporting
+    // lines that sit in the moonlit upper sky absorb a touch of cool
+    // tint from the cool air they inhabit, so the upper-right echo
+    // 《只在此山中》 (v≈0.28) reads as ink in the moon's sphere of
+    // influence rather than the same warm cream as the hero and
+    // subtitle. The bell rises from v=0.0, peaks around v≈0.225, and
+    // fades by v=0.45 — the upper-right sits well inside the band
+    // (sky_cool ≈ 0.068), while the subtitle (v≈0.66) and lower-left
+    // (v≈0.74) sit clear of it and pick up nothing. This completes the
+    // warm/cool axis the mist warmth began: the lower-left dissolves
+    // into the warm horizon, the upper-right reads as ink in the cool
+    // moonlit sky, and the two echoes flank the central inscription
+    // on opposite atmospheres rather than both on the same neutral
+    // field. Restraint (ART_DIRECTION §四 "低饱和、高级灰"): the cool
+    // tint is capped at ≈ 0.07 so the upper-right still reads as
+    // cream ink, not as cyan; the brush-weight hierarchy (subtitle
+    // brightest, lower-left dimmest) and the warm/cool axis both hold
+    // without one overpowering the other.
+    let sky_axis = ((0.45 - slot.def.y_frac).max(0.0) / 0.45).clamp(0.0, 1.0);
+    let sky_cool = sky_axis * 0.18;
+    // Moon-proximity cool — slots close to the moon (specifically the
+    // upper-right echo at (0.80, 0.28), next to the moon at (0.86, 0.16))
+    // pick up an extra share of cool luminance from the moon's halo, so
+    // 《只在此山中》 reads as ink bathed in the moon's sphere of
+    // influence rather than ink floating in generic cool sky. The two
+    // were sharing an upper-right quadrant but feeling disconnected — the
+    // echo "only in this mountain" sits beneath a moon that knows where,
+    // and the line should pick up a touch of the moon's cool luminance
+    // so the two share one atmosphere. Falls off with distance: the
+    // upper-right catches moon_proximity ≈ 0.73 (moon_cool ≈ 0.029, total
+    // cool ≈ 0.097), while the hero (dist ≈ 0.44, proximity ≈ 0.11),
+    // subtitle (dist ≈ 0.62, proximity clamped to 0), and lower-left
+    // (dist ≈ 0.89, proximity clamped to 0) stay near their existing
+    // cool tints — they're too far from the moon for proximity to
+    // contribute meaningfully. Cap at 0.10 so the upper-right still
+    // reads as cream ink, not as cyan (ART_DIRECTION §四 "低饱和、
+    // 高级灰"). The added cool tint shifts the upper-right toward
+    // moonlit blue without lifting its alpha, so the brush-weight
+    // hierarchy (subtitle brightest, upper-right next, lower-left
+    // dimmest) and the warm/cool axis (subtitle + lower-left warm,
+    // upper-right cool) both still hold.
+    let moon_dx = slot.def.x_frac - 0.86;
+    let moon_dy = slot.def.y_frac - 0.16;
+    let moon_dist = (moon_dx * moon_dx + moon_dy * moon_dy).sqrt();
+    let moon_proximity = (1.0 - moon_dist * 2.5).clamp(0.0, 1.0);
+    let cool_tint = (sky_cool + moon_proximity * 0.04).clamp(0.0, 0.10);
     let warmth_tint = (warmth * (1.0 - slot.def.shadow_mix) * 0.30 + mist_warmth).clamp(0.0, 1.0);
-    let base_color = mix(raw_base, color::ink::WARM, warmth_tint);
+    let mut base_color = mix(raw_base, color::ink::WARM, warmth_tint);
+    if cool_tint > 0.0 {
+        base_color = mix(base_color, color::star::COOL, cool_tint);
+    }
     let glow_color = mix(
         color::ink::GLOW,
         color::ink::SHADOW,
