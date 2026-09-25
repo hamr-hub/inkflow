@@ -785,8 +785,20 @@ impl Scene {
             let sway_x = d.phase.cos() * 0.4;
             let sway_y = d.phase.sin() * 0.3;
             d.x += sway_x * dt * 6.0;
-            d.y += sway_y * dt * 4.0 - dt * 0.5; // slow downward drift
-                                                 // wrap
+            // Gentle upward drift — the dust behaves as living motes rising
+            // through the moonlit air, not as settled ash (ARTIFACT
+            // §"观者第一分钟" 3: 粒子大多从下往上漂). The previous -0.5
+            // bias had every mote slowly settling toward the bottom of the
+            // page, contradicting the explicit two-pass seeding note that
+            // the lower-band population are "fireflies … rising from the
+            // grass". Flipped sign and dropped magnitude a touch (0.5 → 0.3)
+            // so the upward drift stays as a quiet trend the eye reads as
+            // "alive" rather than a visible current — same slow-alive feel
+            // as the moon's drift (ARTIFACT §观者第一分钟 1). Wrap behaviour
+            // is unchanged so a mote rising past v=1.0 reappears at v=0 and
+            // continues its quiet rise, the way fireflies that drift past
+            // the mist band still belong to the same moonlit night.
+            d.y += sway_y * dt * 4.0 + dt * 0.3; // slow upward drift
             if d.x < -8.0 {
                 d.x += w + 16.0;
             }
@@ -1779,11 +1791,25 @@ fn paint_poem_title(
     // lands at ≈ 4.8 % always-on warm, well below the supporting
     // lines' mist share (≈ 7.5 % on the lower-left).
     let ambient_warmth = ((title_v - 0.50) * (1.0 - title_v) * 6.0).clamp(0.0, 1.0) * 0.20;
-    let base_color = mix(
-        color::ink::CREAM,
-        color::ink::WARM,
-        warmth * 0.4 + ambient_warmth,
-    );
+    // Title base sits one step into the muted ink family (mix CREAM toward
+    // SHADOW 0.0 → 0.35) so the seal reads as ink dried on paper rather
+    // than a fifth inscription line at 40 % opacity. CREAM (rgb 232, 212,
+    // 168) is the brightest ink used by the inscription; the title pulled
+    // straight from CREAM matched the inscription's color axis and read as
+    // a slightly dimmer copy of 《云深不知处》 above it. Pre-mixing 35 %
+    // toward SHADOW (rgb 192, 168, 136) drops the title into the muted ink
+    // band (rgb ≈ 218, 196, 158) — the same axis the supporting tier's
+    // shadow_mix gradient already inhabits — so the seal now reads as a
+    // separate ink mark at the page's bottom rather than a continuation
+    // of the inscribed work. The 35 % pull keeps the title bright enough
+    // to read (still ~70 % of CREAM's red channel) while visibly stepping
+    // out of the inscription's cream family. Restraint (ART_DIRECTION §四
+    // "克制统一的调色板") holds: the seal still belongs to the same warm
+    // horizon atmosphere (ambient_warmth + warmth * 0.4 below), just one
+    // shade quieter in ink so it registers as a different layer of the
+    // calligraphic page rather than another line.
+    let title_base = mix(color::ink::CREAM, color::ink::SHADOW, 0.35);
+    let base_color = mix(title_base, color::ink::WARM, warmth * 0.4 + ambient_warmth);
     // Faint inscribed-breath — the signature now rides the same
     // atmospheric pulse as the supporting tier, so the bottom-center
     // title reads as a living mark of the same inscription rather than
