@@ -1266,27 +1266,29 @@ fn paint_supporting_slot(
     // pick up an extra share of cool luminance from the moon's halo, so
     // 《只在此山中》 reads as ink bathed in the moon's sphere of
     // influence rather than ink floating in generic cool sky. The two
-    // were sharing an upper-right quadrant but feeling disconnected — the
-    // echo "only in this mountain" sits beneath a moon that knows where,
-    // and the line should pick up a touch of the moon's cool luminance
-    // so the two share one atmosphere. Falls off with distance: the
-    // upper-right catches moon_proximity ≈ 0.73 (moon_cool ≈ 0.029, total
-    // cool ≈ 0.097), while the hero (dist ≈ 0.44, proximity ≈ 0.11),
-    // subtitle (dist ≈ 0.62, proximity clamped to 0), and lower-left
-    // (dist ≈ 0.89, proximity clamped to 0) stay near their existing
-    // cool tints — they're too far from the moon for proximity to
-    // contribute meaningfully. Cap at 0.10 so the upper-right still
-    // reads as cream ink, not as cyan (ART_DIRECTION §四 "低饱和、
-    // 高级灰"). The added cool tint shifts the upper-right toward
-    // moonlit blue without lifting its alpha, so the brush-weight
-    // hierarchy (subtitle brightest, upper-right next, lower-left
-    // dimmest) and the warm/cool axis (subtitle + lower-left warm,
-    // upper-right cool) both still hold.
+    // share an upper-right quadrant; the echo "only in this mountain"
+    // sits beneath a moon that knows where, and the line should pick
+    // up a touch of the moon's cool luminance so the two share one
+    // atmosphere. Falls off with distance: the upper-right catches
+    // moon_proximity ≈ 0.665 (moon_cool ≈ 0.040, total cool ≈ 0.108),
+    // while the hero (dist ≈ 0.444, proximity clamped to 0), subtitle
+    // (dist ≈ 0.616, proximity clamped to 0), and lower-left (dist ≈
+    // 0.894, proximity clamped to 0) stay near their existing cool
+    // tints — they're too far from the moon for proximity to contribute
+    // meaningfully. The contribution weight 0.04 → 0.06 (+50 %) and cap
+    // 0.10 → 0.12 (+20 %) so the upper-right reads more clearly as ink
+    // bathed in moonlit air rather than the same neutral cream as the
+    // subtitle and hero; the +50 % weight visibly deepens the moon's
+    // sphere of influence on the closest line, while the +20 % cap
+    // keeps it well under "cyan" (ART_DIRECTION §四 "低饱和、高级灰")
+    // and preserves the brush-weight hierarchy (subtitle brightest,
+    // upper-right next, lower-left dimmest) and the warm/cool axis
+    // (subtitle + lower-left warm, upper-right cool) both still hold.
     let moon_dx = slot.def.x_frac - 0.86;
     let moon_dy = slot.def.y_frac - 0.16;
     let moon_dist = (moon_dx * moon_dx + moon_dy * moon_dy).sqrt();
     let moon_proximity = (1.0 - moon_dist * 2.5).clamp(0.0, 1.0);
-    let cool_tint = (sky_cool + moon_proximity * 0.04).clamp(0.0, 0.10);
+    let cool_tint = (sky_cool + moon_proximity * 0.06).clamp(0.0, 0.12);
     let warmth_tint = (warmth * (1.0 - slot.def.shadow_mix) * 0.30 + mist_warmth).clamp(0.0, 1.0);
     let mut base_color = mix(raw_base, color::ink::WARM, warmth_tint);
     if cool_tint > 0.0 {
