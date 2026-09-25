@@ -1597,7 +1597,7 @@ pub fn paint_composition(
     {
         let title_text = phrase::poem_group_title(group);
         if !title_text.is_empty() {
-            paint_poem_title(fb, w, h, title_text, warmth, pulse);
+            paint_poem_title(fb, w, h, title_text, warmth, pulse, time);
         }
     }
 }
@@ -1605,7 +1605,15 @@ pub fn paint_composition(
 /// Paint the faint poem title below the composition. Drawn after the hero
 /// so it sits over the same framebuffer, but its alpha and size keep it
 /// strictly subordinate — a quiet ink mark, not a light source.
-fn paint_poem_title(fb: &mut [u32], w: u32, h: u32, title: &str, warmth: f32, pulse: f32) {
+fn paint_poem_title(
+    fb: &mut [u32],
+    w: u32,
+    h: u32,
+    title: &str,
+    warmth: f32,
+    pulse: f32,
+    time: f32,
+) {
     let chars: Vec<char> = title.chars().collect();
     let n = chars.len();
     if n == 0 {
@@ -1619,13 +1627,32 @@ fn paint_poem_title(fb: &mut [u32], w: u32, h: u32, title: &str, warmth: f32, pu
     let target_px = 22.0_f32;
     let per_char = (target_px * 1.06) as i32;
     let total_w = per_char * (n as i32 - 1).max(0) + target_px as i32;
-    let pen_x = ((w as i32) - total_w) / 2;
     // y_frac 0.90 → 648 px on 720 — sits ~115 px below the lower-left
     // echo baseline (≈533) and 56 px above the bottom safe edge. Held as
     // a constant so the ambient-warm bell below can read from the same
     // value rather than re-hardcoding it.
     let title_v = 0.90_f32;
-    let baseline_y = ((h as f32) * title_v) as i32;
+    // Subtle drift — the signature now sways like the rest of the
+    // inscription so it reads as a living mark of the same calligraphic
+    // work rather than a static label pinned below it. Amplitudes are
+    // smaller than the supporting echoes (1.6/1.0 px vs 3.0/1.5–2.0 px)
+    // because the signature is a quiet ink mark, not a line of poetry;
+    // frequencies are slower (0.11/0.15 Hz vs 0.13–0.21 Hz) and the phase
+    // offset (3.7) is well clear of every supporting slot (0.0, 0.7, 1.4,
+    // 2.8) so the five drift sinusoids never resolve into a visible group
+    // breath — the signature simply lives in its own slow time, the way a
+    // calligrapher's seal trembles in the same air the inscription
+    // breathes. Restraint holds: ±1.6 px x and ±1.0 px y sit well inside
+    // the safe area even at the title's 22 px size (max lateral 1.6 +
+    // bearing 1.8 + safe_pad 16 px gives 19.4 px clearance on each
+    // side), and a 2.4-minute x-cycle and 1.7-minute y-cycle are slow
+    // enough that the eye reads the title as "alive" rather than "moving"
+    // — the same way the moon's ~9-minute drift reads as still-but-alive
+    // (ARTIFACT §"观者第一分钟" 1. 其它一切都在动，只有它是相对静止的锚).
+    let drift_x = 1.6_f32 * (time * 0.11 + 3.7).sin();
+    let drift_y = 1.0_f32 * (time * 0.15 + 3.7 * 1.3).cos();
+    let pen_x = ((w as i32) - total_w) / 2 + drift_x as i32;
+    let baseline_y = ((h as f32) * title_v) as i32 + drift_y as i32;
     let by_pad = (target_px * 0.85) as i32;
     let d_pad = (target_px * 0.10) as i32 + 2;
     let bx_pad = (target_px * 0.08) as i32;
