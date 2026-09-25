@@ -962,8 +962,17 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
     //
     // The slow sin drift (driven by `moon_phase`) shifts the centre by
     // ±4 px on x and ±2 px on y — enough to be alive, not enough to draw
-    // the eye. The ambient pulse breathes the halo by ±5 % so the moon
-    // reads as part of the page's atmosphere, not as a UI element.
+    // the eye. The body's breath is split from the halo's: the disc now
+    // inhales at ±2 % (the still anchor, less than even the lower-left
+    // echo's ±3.5 %) while the moonlit air inhales at ±6 % (the page's
+    // atmosphere, slightly more than the subtitle's ±5 %), so the disc
+    // reads as the relatively still point the rest of the composition
+    // drifts around, and the halo reads as the page's own atmosphere
+    // pulsing past the disc rather than as a property of the moon
+    // itself. (Was a unified ±5 % on body + halo, so the disc breathed
+    // at the same rate as the subtitle — the still anchor was quietly
+    // competing with its nearest inscription line for breath.) ARTIFACT
+    // §"观者第一分钟" 1. 其它一切都在动，只有它是相对静止的锚。
     let mcx = scene.moon_x + scene.moon_phase.sin() * 4.0;
     let mcy = scene.moon_y + (scene.moon_phase * 0.6).cos() * 2.0;
     let moon_body_r = 17.0_f32;
@@ -1050,7 +1059,14 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
                 // brightness still bounded by body_peak so the moon
                 // never out-glows the focal line.
                 let term = 1.0 + 0.16 * (dy * body_recip).clamp(-1.0, 1.0);
-                let a = (body_peak * body_k * term + halo_peak * halo_k) * (1.0 + pulse * 0.05);
+                // Body and halo now breathe independently — the disc sits
+                // at ±2 % (the still anchor, below every inscription line),
+                // the moonlit air at ±6 % (slightly more than the
+                // subtitle's ±5 %, so the page's atmosphere pulses past
+                // the moon rather than the moon breathing with the page).
+                let body_pulse = 1.0 + pulse * 0.02;
+                let halo_pulse = 1.0 + pulse * 0.06;
+                let a = body_peak * body_k * term * body_pulse + halo_peak * halo_k * halo_pulse;
                 if a > 0.003 {
                     let idx = (yy as u32 * w + xx as u32) as usize;
                     fb[idx] = blend_add_lin(fb[idx], color::ink::WARM, a);
