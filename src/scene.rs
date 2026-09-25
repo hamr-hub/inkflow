@@ -201,6 +201,15 @@ pub struct Scene {
     pub theme_idx: usize,
     /// Composition of slots (1 hero + N supporting).
     pub composition: Composition,
+    /// Moon anchor — pixel-space center. The moon is the slow, dim still
+    /// point at upper-right that everything else drifts around (ARTIFACT
+    /// "观者第一分钟" 1. 右上角的月轮). Drift is driven by `moon_phase`.
+    pub moon_x: f32,
+    pub moon_y: f32,
+    /// Phase accumulator for the moon's slow drift — advances ~0.012 rad/s,
+    /// so the anchor moves a few pixels over a minute, never enough to
+    /// notice as motion but enough to read as alive.
+    pub moon_phase: f32,
 }
 
 pub struct Composition {
@@ -677,6 +686,14 @@ impl Scene {
             ambient_pulse: 0.0,
             theme_idx: 0,
             composition,
+            // Moon anchor — upper-right area, well clear of the upper-right
+            // echo (x_frac 0.80, y_frac 0.28) which sits below and slightly
+            // left of the moon. On 1280x720 the moon is at (1100, 115),
+            // inside the safe area (≥ 60 px from each edge) so it never
+            // clips and never crowds the frame.
+            moon_x: width as f32 * 0.86,
+            moon_y: height as f32 * 0.16,
+            moon_phase: 0.0,
         }
     }
 
@@ -718,6 +735,12 @@ impl Scene {
         self.warmth = warmth;
         self.nebula_phase += dt * 0.06;
         self.ambient_pulse += dt * 0.4;
+        // Moon drifts very slowly — a few pixels per minute. The drift is
+        // so slow the viewer reads the moon as still, but the position is
+        // alive enough that the disc never feels pinned (ARTIFACT "其它
+        // 一切都在动，只有它是相对静止的锚" — relatively still, not
+        // pinned).
+        self.moon_phase += dt * 0.012;
         let (w, h) = (self.width as f32, self.height as f32);
         for d in self.dust.iter_mut() {
             d.phase += dt * d.speed;
@@ -859,6 +882,94 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
                 if a > 0.003 {
                     let idx = (yy as u32 * w + xx as u32) as usize;
                     fb[idx] = blend_add_lin(fb[idx], d.hue, a);
+                }
+            }
+        }
+    }
+
+    // Moon anchor — the still point in the upper-right that the rest of
+    // the composition drifts around (ARTIFACT "观者第一分钟" 1. 右上角的月
+    // 轮). Painted between dust and sparks so the disc occludes any dust
+    // mote behind it (the moon is closer than distant stars) but is
+    // itself overlaid by touch sparks when the viewer taps near it.
+    //
+    // Two overlapping smooth bells replace the previous two-band linear
+    // falloff. The body is a tight quadratic bell that peaks at the centre
+    // and falls smoothly to zero at the body edge; the halo is a wider
+    // quadratic bell that peaks exactly where the body reaches zero, so
+    // there is no alpha discontinuity at the boundary. The previous linear
+    // falloff showed a faint visible ring at the body/halo join — a
+    // featureless hollow disc instead of a luminous body. With the new
+    // bells the disc reads as one continuous luminous body bathed in its
+    // own moonlit air.
+    //
+    // Body peak is raised to 0.50 so the moon actually reads against the
+    // vignette-darkened upper-right corner (where the background has been
+    // pulled ~64 % toward DEEP); the previous 0.20 was too dim against
+    // that darkened field and the disc dissolved into a near-empty spot.
+    // Halo stays capped at 0.05 so the moonlit air never reads as a
+    // competing bloom — the focal line keeps its claim on the page's
+    // light (ART_DIRECTION §四 "高光只落在主句"). Body peak 0.50 sits well
+    // under the hero bloom's combined ~0.7 effective alpha.
+    //
+    // A gentle terminator (≤ ±12 %) tints the body slightly warmer toward
+    // the lower side, where the warm horizon mist sits — the moon catches
+    // ambient light from the horizon glow, so its lit side faces down
+    // rather than facing up. The terminator gives the moon a direction
+    // (a body catching light, not a featureless dot) and reinforces the
+    // atmosphere's warm/cool asymmetry without adding any new colour.
+    //
+    // The slow sin drift (driven by `moon_phase`) shifts the centre by
+    // ±4 px on x and ±2 px on y — enough to be alive, not enough to draw
+    // the eye. The ambient pulse breathes the halo by ±5 % so the moon
+    // reads as part of the page's atmosphere, not as a UI element.
+    let mcx = scene.moon_x + scene.moon_phase.sin() * 4.0;
+    let mcy = scene.moon_y + (scene.moon_phase * 0.6).cos() * 2.0;
+    let moon_body_r = 17.0_f32;
+    let moon_body_r2 = moon_body_r * moon_body_r;
+    let moon_halo_r = 44.0_f32;
+    let moon_halo_r2 = moon_halo_r * moon_halo_r;
+    let body_peak = 0.50_f32;
+    let halo_peak = 0.05_f32;
+    let body_recip = 1.0 / moon_body_r;
+    let halo_span = moon_halo_r - moon_body_r;
+    let mcx_i = mcx as i32;
+    let mcy_i = mcy as i32;
+    let extent = moon_halo_r as i32 + 1;
+    for oy in -extent..=extent {
+        for ox in -extent..=extent {
+            let xx = mcx_i + ox;
+            let yy = mcy_i + oy;
+            if xx < 0 || yy < 0 || xx >= w as i32 || yy >= h as i32 {
+                continue;
+            }
+            let dx = ox as f32;
+            let dy = oy as f32;
+            let d2 = dx * dx + dy * dy;
+            if d2 < moon_halo_r2 {
+                let in_body = d2 < moon_body_r2;
+                let d = d2.sqrt();
+                let body_k = if in_body {
+                    let k = 1.0 - d * body_recip;
+                    k * k
+                } else {
+                    0.0
+                };
+                let halo_k = if !in_body {
+                    let k = 1.0 - (d - moon_body_r) / halo_span;
+                    k * k
+                } else {
+                    0.0
+                };
+                // Terminator applied to the body only — the halo is just
+                // moonlit air, not directional. Light from the lower warm
+                // horizon means dy > 0 (lower side) gets a slight warm
+                // boost; dy < 0 (upper side) gets a slight cool.
+                let term = 1.0 + 0.12 * (dy * body_recip).clamp(-1.0, 1.0);
+                let a = (body_peak * body_k * term + halo_peak * halo_k) * (1.0 + pulse * 0.05);
+                if a > 0.003 {
+                    let idx = (yy as u32 * w + xx as u32) as usize;
+                    fb[idx] = blend_add_lin(fb[idx], color::ink::WARM, a);
                 }
             }
         }
