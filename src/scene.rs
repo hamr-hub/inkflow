@@ -1075,6 +1075,50 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
         }
     }
 
+    // Moonlit sky — a wide, very faint cool Gaussian bell extending past
+    // the halo edge into the upper-right quadrant. The halo stops at 60 px
+    // from the moon but the upper-right echo 《只在此山中》 sits ≈115 px
+    // away, so without this layer the echo lives just outside the halo
+    // in a slightly different atmosphere from the moon it sits beneath.
+    // The bell bridges that gap with continuous moonlit air: at d=115
+    // the alpha is ≈0.0055 (≈31 % of peak), so the echo's neighbourhood
+    // picks up a soft cool luminance that ties it to the moon — the
+    // echo "only in this mountain" now visibly bathes in the same air
+    // as the moon that "knows where", not just floats in the same
+    // quadrant. Peak 0.018 (well under the inscribed glow ~0.20+ and the
+    // bloom ~0.12) keeps the sky luminance from competing with the
+    // focal line (ART_DIRECTION §四 "高光只落在主句"), and σ 75
+    // (tighter than the 90 σ of the first cut) holds the bell close to
+    // the moon so the wide area outside the upper-right quadrant stays
+    // clear of cool luminance. The cool tint (star::COOL) reinforces
+    // the cool moonlit-sky axis the upper-right echo already inhabits.
+    // Drawn between the halo and the sparks so touch sparks still layer
+    // on top of the moonlit air.
+    let sky_peak = 0.018_f32;
+    let sky_sigma = 75.0_f32;
+    let sky_extent_i = (moon_halo_r + 150.0) as i32 + 1;
+    for oy in -sky_extent_i..=sky_extent_i {
+        for ox in -sky_extent_i..=sky_extent_i {
+            let xx = mcx_i + ox;
+            let yy = mcy_i + oy;
+            if xx < 0 || yy < 0 || xx >= w as i32 || yy >= h as i32 {
+                continue;
+            }
+            let dx = ox as f32;
+            let dy = oy as f32;
+            let d = (dx * dx + dy * dy).sqrt();
+            if d < moon_halo_r {
+                continue; // already covered by the halo
+            }
+            let k = (-0.5 * (d / sky_sigma).powi(2)).exp();
+            let a = sky_peak * k;
+            if a > 0.003 {
+                let idx = (yy as u32 * w + xx as u32) as usize;
+                fb[idx] = blend_add_lin(fb[idx], color::star::COOL, a);
+            }
+        }
+    }
+
     // sparks
     for s in &scene.sparks {
         if s.life <= 0.0 {
@@ -1627,11 +1671,24 @@ fn paint_poem_title(
     let target_px = 22.0_f32;
     let per_char = (target_px * 1.06) as i32;
     let total_w = per_char * (n as i32 - 1).max(0) + target_px as i32;
-    // y_frac 0.90 → 648 px on 720 — sits ~115 px below the lower-left
-    // echo baseline (≈533) and 56 px above the bottom safe edge. Held as
-    // a constant so the ambient-warm bell below can read from the same
-    // value rather than re-hardcoding it.
-    let title_v = 0.90_f32;
+    // y_frac 0.90 → 0.85 → 612 px on 720 — sits ~79 px below the lower-
+    // left echo baseline (≈533) and 92 px above the bottom safe edge.
+    // Lifted from 0.90 so the calligrapher's seal reads as a signature
+    // beneath the calligraphic work rather than a label pinned near the
+    // bottom edge — the previous 115 px gap put the title in its own
+    // band, slightly detached from the inscription above, and the 56 px
+    // margin to the safe edge left the signature feeling like it was
+    // running out of page. At 0.85 the vertical rhythm tightens into
+    // one calligraphic page (hero→subtitle 158 px, subtitle→lower-left
+    // 72 px, lower-left→title 79 px), and the title moves deeper into
+    // the warm horizon bell (ambient_warmth 0.048 → 0.063, +31 %) so
+    // the seal shares the same atmosphere as 《云深不知处》 — both sit
+    // clearly inside the warm band rather than the title floating below
+    // it on a near-empty patch of dark. Bottom margin grows 56 → 92 px
+    // so the signature breathes inside the frame. Held as a constant
+    // so the ambient-warm bell below can read from the same value
+    // rather than re-hardcoding it.
+    let title_v = 0.85_f32;
     // Subtle drift — the signature now sways like the rest of the
     // inscription so it reads as a living mark of the same calligraphic
     // work rather than a static label pinned below it. Amplitudes are
