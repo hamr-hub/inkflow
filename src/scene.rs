@@ -828,20 +828,20 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
     for y in 0..h {
         let v = y as f32 / (h_f - 1.0).max(1.0);
         let base = color::grad3(nebula_top, nebula_mid, nebula_bot, v);
-        // Parabolic bell: 0 at v=0.48, peaks ≈0.338 at v≈0.74, 0 at v=1.0.
-        // Start shifted from v=0.50→v=0.48 so the bell's rising edge
-        // reaches up to v≈0.66 (the subtitle's baseline) and the new
-        // peak lands directly under v≈0.74 (the lower-left echo).
-        // The warm horizon now grounds both lower strokes on a shared
-        // mist band: 《言师采药去》 catches a touch of the leading edge
-        // as it rises (horizon_glow ≈0.306 at v=0.66, 54 % more than
-        // before) and 《云深不知处》 sits under the warmest part of the
-        // bell, so the inscription's closing stroke reads as ink
-        // dissolving into mist rather than floating over empty dark.
-        // The hero (v≈0.42) and upper-right (v≈0.28) stay clear of the
-        // band so the focal bloom keeps its exclusive claim on the
-        // light (ART_DIRECTION §四 "高光只落在主句").
-        let horizon_glow = ((v - 0.48) * (1.0 - v) * 5.0).clamp(0.0, 1.0);
+        // Parabolic bell: 0 at v=0.50, peaks ≈0.375 at v≈0.75, 0 at v=1.0.
+        // Coefficient raised 5.0 → 6.0 and onset shifted 0.48 → 0.50
+        // (peak 0.338 → 0.375, +11 %) so the warm band sits a touch
+        // more visibly under the lower-left echo — 《云深不知处》
+        // reads as ink dissolving into warm horizon rather than
+        // hovering over a barely-visible tint. The subtitle (v≈0.66)
+        // catches a little more warmth on the rising edge so both
+        // lower strokes feel grounded on one shared band. The hero
+        // (v≈0.42) and upper-right (v≈0.28) stay clear of the bell
+        // so the focal bloom keeps its exclusive claim on the light
+        // (ART_DIRECTION §四 "高光只落在主句"). Restraint holds:
+        // peak alpha still ≤ 0.375 so the warm band reads as mist,
+        // not as a horizon line.
+        let horizon_glow = ((v - 0.50) * (1.0 - v) * 6.0).clamp(0.0, 1.0);
         for x in 0..w {
             let dx = x as f32 - cx;
             let dy = y as f32 - cy;
@@ -1165,7 +1165,17 @@ fn paint_supporting_slot(
     // where. Restraint (ART_DIRECTION §四): mist contribution capped at
     // ≈7 % so the supporting tier stays subordinate and the brush-weight
     // hierarchy (subtitle brightest, lower-left dimmest) holds.
-    let horizon_glow = ((slot.def.y_frac - 0.48) * (1.0 - slot.def.y_frac) * 5.0).clamp(0.0, 1.0);
+    // Same bell as the background mist (coefficient 6.0, onset 0.50,
+    // peak 0.375 at v≈0.75) so the supporting line's warm tint and
+    // the atmospheric warm band stay in sync. The lower-left at
+    // v≈0.74 sits just under the peak (mist_warmth ≈ 0.075, +10 %
+    // over the previous 0.068) — still within the restraint cap
+    // (≈8 %) so 《云深不知处》 now reads as deep ink actually
+    // dissolving into the warm horizon, not as dim cream floating
+    // over a barely-visible amber tint. The subtitle (v≈0.66) catches
+    // a touch more warmth on the rising edge; the upper-right
+    // (v≈0.28) stays clear of the bell so it remains the cool echo.
+    let horizon_glow = ((slot.def.y_frac - 0.50) * (1.0 - slot.def.y_frac) * 6.0).clamp(0.0, 1.0);
     let mist_warmth = horizon_glow * 0.20;
     let warmth_tint = (warmth * (1.0 - slot.def.shadow_mix) * 0.30 + mist_warmth).clamp(0.0, 1.0);
     let base_color = mix(raw_base, color::ink::WARM, warmth_tint);
