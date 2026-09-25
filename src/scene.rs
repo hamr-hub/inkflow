@@ -1131,20 +1131,25 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
     // away, so without this layer the echo lives just outside the halo
     // in a slightly different atmosphere from the moon it sits beneath.
     // The bell bridges that gap with continuous moonlit air: at d=115
-    // the alpha is ≈0.0055 (≈31 % of peak), so the echo's neighbourhood
-    // picks up a soft cool luminance that ties it to the moon — the
-    // echo "only in this mountain" now visibly bathes in the same air
-    // as the moon that "knows where", not just floats in the same
-    // quadrant. Peak 0.018 (well under the inscribed glow ~0.20+ and the
-    // bloom ~0.12) keeps the sky luminance from competing with the
-    // focal line (ART_DIRECTION §四 "高光只落在主句"), and σ 75
-    // (tighter than the 90 σ of the first cut) holds the bell close to
-    // the moon so the wide area outside the upper-right quadrant stays
-    // clear of cool luminance. The cool tint (star::COOL) reinforces
-    // the cool moonlit-sky axis the upper-right echo already inhabits.
-    // Drawn between the halo and the sparks so touch sparks still layer
-    // on top of the moonlit air.
-    let sky_peak = 0.018_f32;
+    // the alpha is now ≈0.0086 (≈31 % of the new 0.028 peak), so the
+    // echo's neighbourhood picks up a clearly visible cool luminance
+    // that ties it to the moon — the echo "only in this mountain" now
+    // bathes in the same air as the moon that "knows where", not just
+    // floats in the same quadrant. Peak 0.018 → 0.028 (+56 %): the
+    // prior 0.0055 alpha at d=115 was technically present but visually
+    // invisible against the vignette-darkened upper-right corner — the
+    // echo and the moon read as two separate inhabitants of the
+    // quadrant rather than sharing one breathing atmosphere. The new
+    // peak keeps the bell well under the inscribed glow (~0.20+) and
+    // the bloom (~0.12) so the sky luminance still doesn't compete with
+    // the focal line (ART_DIRECTION §四 "高光只落在主句"), and σ 75
+    // (unchanged — tighter than the 90 σ of the first cut) still holds
+    // the bell close to the moon so the wide area outside the
+    // upper-right quadrant stays clear of cool luminance. The cool
+    // tint (star::COOL) reinforces the cool moonlit-sky axis the
+    // upper-right echo already inhabits. Drawn between the halo and
+    // the sparks so touch sparks still layer on top of the moonlit air.
+    let sky_peak = 0.028_f32;
     let sky_sigma = 75.0_f32;
     let sky_extent_i = (moon_halo_r + 150.0) as i32 + 1;
     for oy in -sky_extent_i..=sky_extent_i {
