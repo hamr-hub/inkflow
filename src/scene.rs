@@ -527,12 +527,13 @@ impl Composition {
                 slot.phrase = &phrase::PHRASES[line_idx as usize];
                 slot.last_idx = line_idx;
                 slot.primed = true;
-                // On the FIRST pinned beat, leave the slot's age alone — the
-                // initial `-stagger` set in `Scene::new` keeps the line
-                // invisible until its turn arrives, so the quatrain unfurls
-                // in reading order (hero → subtitle → upper-right →
-                // lower-left). On subsequent pinned beats, sit at mid-life
-                // so the inscription is fixed at peak alpha.
+                // On the FIRST pinned beat, leave the slot's age alone —
+                // the initial `lifetime * 0.5` set in `Scene::new` keeps
+                // every supporting echo at peak alpha, so the four-line
+                // inscription reads as one complete calligraphic work
+                // from the very first frame. On subsequent pinned beats,
+                // re-sit at mid-life so the inscription is fixed at peak
+                // alpha regardless of any drift.
                 if self.first_pinned_beat_done {
                     slot.age = (slot.def.lifetime * 0.5).max(0.0);
                 }
@@ -650,11 +651,27 @@ impl Scene {
                         let idx = lines[pos];
                         slot.phrase = &phrase::PHRASES[idx as usize];
                         slot.last_idx = idx;
-                        // Stagger their visible birth by giving them negative
-                        // age so they fade in over the first second rather
-                        // than all at once.
-                        slot.age = -slot.def.stagger;
-                        slot.primed = false;
+                        // Pinned supporting slots sit at peak alpha from
+                        // frame 0, so the four-line calligraphic inscription
+                        // of 《寻隐者不遇》 reads as one complete work the
+                        // moment the piece opens — not as "two lines and
+                        // two emerging absences". The previous `-stagger`
+                        // initial age left the upper-right and lower-left
+                        // echoes invisible until ≈1.1 s (stagger 0.50 s +
+                        // fade_in 0.6 s), and the canonical snapshot
+                        // (frame 0) showed only hero + subtitle. The
+                        // hero's bloom still owns the focal claim
+                        // (ART_DIRECTION §四 "高光只落在主句"); the
+                        // supporting echoes settle into their inscribed
+                        // hierarchy (subtitle 0.76 / upper-right 0.72 /
+                        // lower-left 0.58) from the first frame instead
+                        // of materialising under the viewer's eye. The
+                        // piece is "always there" (ARTIFACT §"它在那里
+                        // 等你") — the unfurl was a nice metaphor that
+                        // contradicted the calm of opening on an already-
+                        // populated inscription.
+                        slot.age = slot.def.lifetime * 0.5;
+                        slot.primed = true;
                         cursor += 1;
                     }
                 }
@@ -927,7 +944,21 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
     let mcy = scene.moon_y + (scene.moon_phase * 0.6).cos() * 2.0;
     let moon_body_r = 17.0_f32;
     let moon_body_r2 = moon_body_r * moon_body_r;
-    let moon_halo_r = 44.0_f32;
+    // Halo radius 44 → 60 (+36 %): the moon's moonlit air now reaches
+    // ~36 % further into the upper-right quadrant, so the upper-right
+    // echo 《只在此山中》 (≈115 px from the moon) sits closer to the
+    // halo's outer edge rather than at a clear gap. The echo doesn't
+    // receive visible halo luminance (still ~55 px outside), but the
+    // air between the moon and the echo now reads as continuously
+    // moonlit rather than split into "moon halo" and "isolated echo"
+    // — the two upper-right inhabitants share one breathing atmosphere.
+    // Halo peak stays at 0.05 so the focal line keeps its claim on
+    // the page's light (ART_DIRECTION §四 "高光只落在主句"); the
+    // wider radius brings a roughly proportional gain in total
+    // integrated halo luminance, but every pixel the halo touches is
+    // still ≤ 0.05 alpha — well under the supporting lines'
+    // inscribed glow (~0.20+) and the hero bloom (~0.55).
+    let moon_halo_r = 60.0_f32;
     let moon_halo_r2 = moon_halo_r * moon_halo_r;
     let body_peak = 0.50_f32;
     let halo_peak = 0.05_f32;
@@ -964,8 +995,18 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
                 // Terminator applied to the body only — the halo is just
                 // moonlit air, not directional. Light from the lower warm
                 // horizon means dy > 0 (lower side) gets a slight warm
-                // boost; dy < 0 (upper side) gets a slight cool.
-                let term = 1.0 + 0.12 * (dy * body_recip).clamp(-1.0, 1.0);
+                // boost; dy < 0 (upper side) gets a slight cool. Strength
+                // raised ±12 % → ±16 % (≈ +33 %) so the moon reads more
+                // clearly as a body catching horizon light — the bottom
+                // edge now catches ≈+16 % amber while the top dimms
+                // ≈16 %, giving the disc a direction without breaking
+                // the "restrained palette, low-saturation高级灰" cap
+                // (ART_DIRECTION §四). The halo stays non-directional
+                // (moonlit air, not lit surface), so the asymmetry only
+                // appears on the body, never as a colored ring. Total
+                // brightness still bounded by body_peak so the moon
+                // never out-glows the focal line.
+                let term = 1.0 + 0.16 * (dy * body_recip).clamp(-1.0, 1.0);
                 let a = (body_peak * body_k * term + halo_peak * halo_k) * (1.0 + pulse * 0.05);
                 if a > 0.003 {
                     let idx = (yy as u32 * w + xx as u32) as usize;
