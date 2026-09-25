@@ -1077,17 +1077,27 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
                 // moonlit air, not directional. Light from the lower warm
                 // horizon means dy > 0 (lower side) gets a slight warm
                 // boost; dy < 0 (upper side) gets a slight cool. Strength
-                // raised ±12 % → ±16 % (≈ +33 %) so the moon reads more
-                // clearly as a body catching horizon light — the bottom
-                // edge now catches ≈+16 % amber while the top dimms
-                // ≈16 %, giving the disc a direction without breaking
-                // the "restrained palette, low-saturation高级灰" cap
-                // (ART_DIRECTION §四). The halo stays non-directional
-                // (moonlit air, not lit surface), so the asymmetry only
-                // appears on the body, never as a colored ring. Total
-                // brightness still bounded by body_peak so the moon
-                // never out-glows the focal line.
-                let term = 1.0 + 0.16 * (dy * body_recip).clamp(-1.0, 1.0);
+                // raised ±12 % → ±16 % → ±20 % (≈ +67 % over two passes)
+                // and the bottom half now tints 0..10 % toward AMBER so
+                // the moon reads more clearly as a body catching horizon
+                // light — the bottom edge now catches ≈+20 % alpha AND
+                // ≈10 % amber, giving the disc a clear direction (lit
+                // side facing down, where the warm horizon mist sits)
+                // rather than a uniform luminous disc. The color tint
+                // caps at 10 % so the moon still reads as cream ink, not
+                // as an amber highlighter — the "restrained palette,
+                // low-saturation 高级灰" cap (ART_DIRECTION §四) holds.
+                // The top stays pure ink::WARM cream while the bottom
+                // shifts a touch warmer, the way a real moon catches
+                // ambient horizon light. The halo stays non-directional
+                // (moonlit air, not lit surface) — the tint is multiplied
+                // only into the body's alpha contribution, so the
+                // asymmetry never bleeds onto the halo as a colored
+                // ring. Total brightness still bounded by body_peak so
+                // the moon never out-glows the focal line.
+                let t_term = (dy * body_recip).clamp(-1.0, 1.0);
+                let term = 1.0 + 0.20 * t_term;
+                let term_warm = (t_term * 0.10).max(0.0);
                 // Body and halo now breathe independently — the disc sits
                 // at ±2 % (the still anchor, below every inscription line),
                 // the moonlit air at ±6 % (slightly more than the
@@ -1095,10 +1105,21 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
                 // the moon rather than the moon breathing with the page).
                 let body_pulse = 1.0 + pulse * 0.02;
                 let halo_pulse = 1.0 + pulse * 0.06;
-                let a = body_peak * body_k * term * body_pulse + halo_peak * halo_k * halo_pulse;
-                if a > 0.003 {
+                let body_a = body_peak * body_k * term * body_pulse;
+                let halo_a = halo_peak * halo_k * halo_pulse;
+                if body_a > 0.003 || halo_a > 0.003 {
                     let idx = (yy as u32 * w + xx as u32) as usize;
-                    fb[idx] = blend_add_lin(fb[idx], color::ink::WARM, a);
+                    if body_a > 0.003 {
+                        let body_color = if term_warm > 0.0 {
+                            mix(color::ink::WARM, color::drop::AMBER, term_warm)
+                        } else {
+                            color::ink::WARM
+                        };
+                        fb[idx] = blend_add_lin(fb[idx], body_color, body_a);
+                    }
+                    if halo_a > 0.003 {
+                        fb[idx] = blend_add_lin(fb[idx], color::ink::WARM, halo_a);
+                    }
                 }
             }
         }
