@@ -938,23 +938,37 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
     for y in 0..h {
         let v = y as f32 / (h_f - 1.0).max(1.0);
         let base = color::grad3(nebula_top, nebula_mid, nebula_bot, v);
-        // Parabolic bell: 0 at v=0.50, peaks ≈0.400 at v≈0.75, 0 at v=1.0.
-        // Coefficient raised 5.0 → 6.0 → 6.4 (+7 % over two passes, this
-        // pass +6.7 %) so the warm band sits a touch more visibly under
-        // the lower-left echo — 《云深不知处》 reads as ink dissolving
-        // into warm horizon rather than hovering over a barely-visible
-        // tint, with the bell now reaching its peak luminance just as
-        // the closing echo settles over the band. The subtitle (v≈0.66)
-        // catches a little more warmth on the rising edge so both
-        // lower strokes feel grounded on one shared band. The hero
-        // (v≈0.42) and upper-right (v≈0.28) stay clear of the bell
-        // so the focal bloom keeps its exclusive claim on the light
-        // (ART_DIRECTION §四 "高光只落在主句"). Restraint holds:
-        // peak alpha still ≤ 0.400 so the warm band reads as mist,
-        // not as a horizon line, and the +6.7 % lift stays well under
-        // the threshold where the warm band would compete with the
-        // focal bloom's claim on the page's light.
-        let horizon_glow = ((v - 0.50) * (1.0 - v) * 6.4).clamp(0.0, 1.0);
+        // Parabolic bell: 0 at v=0.50, peaks ≈0.425 at v≈0.75, 0 at v=1.0.
+        // Coefficient raised 5.0 → 6.0 → 6.4 → 6.8 (+7 % / +6.7 % / +6.25 %
+        // over three passes, this pass +6.25 %) so the warm band sits one
+        // more touch more visibly under the lower-left echo — 《云深不知处》
+        // reads as ink dissolving into warm horizon rather than hovering
+        // over a barely-visible tint, with the bell now reaching its peak
+        // luminance just as the closing echo settles over the band. The
+        // subtitle (v≈0.66) catches a little more warmth on the rising
+        // edge so both lower strokes feel grounded on one shared band.
+        // The hero (v≈0.42) and upper-right (v≈0.28) stay clear of the
+        // bell so the focal bloom keeps its exclusive claim on the light
+        // (ART_DIRECTION §四 "高光只落在主句"). Restraint holds: peak
+        // alpha still ≤ 0.425 so the warm band reads as mist, not as a
+        // horizon line, and the +6.25 % lift stays well under the threshold
+        // where the warm band would compete with the focal bloom's claim
+        // on the page's light — the final blend alpha peaks at ≈0.051
+        // (0.425 × 0.12), still 12 % alpha and well under the inscribed
+        // glow (~0.20+) and the hero bloom (~0.55). The +6.25 % continues
+        // the same restraint cadence as the recent sky_peak +6.25 % in
+        // 9ec99ff, halo peak +6.25 % in 9989c4a, title alpha +5 % in
+        // c9f4dde, title breath +5.88 % in d44ac01, inscribed-breath base
+        // +5.88 % in d44ac01, warm bell +6.7 % in c5f73e0, terminator
+        // amber-tint cap +5.4 % in 1c666a7, terminator alpha +8.3 % in
+        // ad3ee9a, vignette curve +7.1 % in 7304555, and the sky bell σ
+        // +6.67 % in efd8cb1 — so the page's moonlit atmosphere and its
+        // warm horizon ground now share one proportional series of
+        // restrained steps, and the page's four inscribed strokes plus the
+        // calligrapher's seal sit a touch more clearly grounded in the
+        // warm horizon mist without crossing the "horizon line" threshold
+        // the focal-bloom envelope guards against.
+        let horizon_glow = ((v - 0.50) * (1.0 - v) * 6.8).clamp(0.0, 1.0);
         for x in 0..w {
             let dx = x as f32 - cx;
             let dy = y as f32 - cy;
@@ -2507,14 +2521,23 @@ fn paint_poem_title(
     // and the lower-left echo's warm tint are visibly of one
     // atmosphere, then scaled down (× 0.20 instead of × 0.20 on top
     // of the 0.30 warmth multiplier) so the title stays a quiet mark —
-    // at title_v≈0.90 the bell sits at the far tail (horizon_glow ≈
-    // 0.256, ambient ≈ 0.051) and the contribution lands at ≈ 5.1 %
-    // always-on warm (+6.7 % over the previous 4.8 %), still well below
-    // the supporting lines' mist share (≈ 8.0 % on the lower-left)
-    // and inside the restraint cap (≈ 8 %) so the seal stays one
-    // quiet step below the inscribed tier rather than narrowing the
-    // brush-weight gap.
-    let ambient_warmth = ((title_v - 0.50) * (1.0 - title_v) * 6.4).clamp(0.0, 1.0) * 0.20;
+    // at title_v≈0.83 the bell sits on the descending edge (horizon_glow
+    // ≈ 0.269 with the new 6.8 coefficient, ambient ≈ 0.054) and the
+    // contribution lands at ≈ 5.4 % always-on warm (+6.25 % over the
+    // previous 5.1 %, paired with the +6.25 % background-bell lift), still
+    // well below the supporting lines' mist share (≈ 8.5 % on the lower-
+    // left at the new coefficient) and inside the restraint cap (≈ 8 %)
+    // so the seal stays one quiet step below the inscribed tier rather
+    // than narrowing the brush-weight gap. The coefficient now matches
+    // the background mist bell exactly (also 6.8) so the title's warm
+    // tint and the lower-left echo's warm tint remain visibly of one
+    // atmosphere — both sit a touch more clearly inside the warm horizon
+    // band as the band's reach lifts by one +6.25 % step. Restraint
+    // (ART_DIRECTION §四 "克制统一的调色板") holds: the +0.003 absolute
+    // ambient lift stays inside the muted-ink family (CREAM → SHADOW
+    // 0.35 base), and the seal still reads as ink dried on paper rather
+    // than a second focal light.
+    let ambient_warmth = ((title_v - 0.50) * (1.0 - title_v) * 6.8).clamp(0.0, 1.0) * 0.20;
     // Title base sits one step into the muted ink family (mix CREAM toward
     // SHADOW 0.0 → 0.35) so the seal reads as ink dried on paper rather
     // than a fifth inscription line at 40 % opacity. CREAM (rgb 232, 212,
