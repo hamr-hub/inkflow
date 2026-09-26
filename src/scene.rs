@@ -2109,19 +2109,33 @@ fn paint_poem_title(
     // Faint inscribed-breath — the signature rides the same atmospheric
     // pulse as the supporting tier, so the bottom-center title reads as
     // a living mark of the same inscription rather than a static label
-    // pinned below it. Amplitude raised 2.5 % → 4.06 % → 4.35 % to
-    // match the lower-left echo's current breath exactly (0.075 * (1
-    // - 0.42) of the supporting-tier formula): the calligrapher's seal
-    // and 《云深不知处》 now share one breathing rate at the bottom of
-    // the page — the two bottom strokes of the inscribed work inhale
-    // together, the +0.29 % lifting the title with the same supporting-
-    // tier +7 % pass that lifted the subtitle ±5.9 % → ±6.3 %, the
-    // upper-right ±5.2 % → ±5.6 %, and the lower-left ±4.1 % → ±4.4 %.
-    // The 4.35 % ceiling stays well under the supporting tier's body
-    // alpha so the signature never reads as a second focal light —
-    // it's an ink mark that happens to be alive, in rhythm with the
-    // closest inscription line, not a lamp. Restraint (ART_DIRECTION
-    // §四 "高光只落在主句") holds.
+    // pinned below it. Amplitude raised 2.5 % → 4.06 % → 4.35 % → 4.64 %
+    // to keep matching the lower-left echo's current breath exactly
+    // (0.080 * (1 - 0.42) of the supporting-tier formula): the
+    // calligrapher's seal and 《云深不知处》 now share one breathing
+    // rate at the bottom of the page after the most recent supporting-
+    // tier base lift (0.075 → 0.080, +6.7 % in 708d491) — the title
+    // would have quietly fallen out of step with 《云深不知处》 if
+    // left at 0.0435 (now 0.003 below the lower-left's 0.0464 instead
+    // of exact), and the two bottom strokes of the inscribed work
+    // read as one pair inhaling together at the same rate. The +6.7 %
+    // (0.0435 → 0.0464) continues the same restraint cadence as the
+    // supporting-tier base lift in 708d491 and the warm bell lift
+    // in c5f73e0 (6.0 → 6.4, +6.7 %), the inscribed-breath base
+    // (0.075 → 0.080, +6.7 %), and the cool_tint lift in 0ce6e37
+    // (0.115 → 0.123, +6.5 %) — the seal sharing one breath rate
+    // with the lower-left, the warm horizon grounding the lower-left,
+    // the inscription breathing a touch deeper under the moon's air,
+    // and the upper-right cooling a touch more in the moon's air are
+    // the four quiet ways the page's four inscribed strokes and the
+    // calligrapher's seal have been sharing one atmosphere across the
+    // recent work. The 4.64 % ceiling still sits comfortably under the
+    // supporting tier's body alpha (subtitle 0.76 * 1.046 ≈ 0.795
+    // would be the matching subtitle ceiling — so the title stays
+    // clearly subordinate) so the signature never reads as a second
+    // focal light — it's an ink mark that happens to be alive, in
+    // rhythm with the closest inscription line, not a lamp. Restraint
+    // (ART_DIRECTION §四 "高光只落在主句") holds.
     // Alpha 0.40 → 0.44 → 0.46 → 0.48 (+4.3 % this pass): the calligrapher's
     // seal sits one more visible step out of the paper's grain so the
     // signature now reads as the closing mark of a deliberate hand
@@ -2153,7 +2167,7 @@ fn paint_poem_title(
     // on its author's mark (ARTIFACT §"墨流不解释自己；它只是在")
     // rather than four inscribed lines plus a label floating beneath
     // them.
-    let breath = 1.0 + 0.0435 * pulse;
+    let breath = 1.0 + 0.0464 * pulse;
     let alpha = (0.48_f32 * breath).clamp(0.0, 1.0);
     let scale_q8: u32 = ((target_px / glyph::HERO_EM_PX as f32) * 256.0).round() as u32;
     let fy = baseline_y * 256;
