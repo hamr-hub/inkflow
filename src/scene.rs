@@ -1597,8 +1597,74 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
     // refinement rather than seven independent tweaks. Restraint holds:
     // peak 0.034 is still well under one sixth of the inscribed glow
     // and the sky bell never competes with the focal line.
+    //
+    // σ 75 → 80 (+6.67 %, the first geometric refinement on the sky
+    // bell's reach — peak 0.034, color star::COOL, and the four-pass
+    // 0.018 → 0.028 → 0.030 → 0.032 → 0.034 luminance chain all
+    // untouched): the moon's outermost atmospheric layer now reaches
+    // a touch further into the upper-right quadrant, so the
+    // moonlit air bridging the disc and the upper-right echo
+    // 《只在此山中》 reads as a touch more visibly continuous. At
+    // d=115 (the echo's neighbourhood, was 0.0105 with σ 75) the
+    // alpha is now ≈0.0121 (+15 % relative at the echo), at d=150
+    // (the bell's outer flank) the alpha is ≈0.0058 (vs ≈0.0046
+    // with σ 75, +26 % relative), and at d=200 the bell is still
+    // essentially invisible at ≈0.0015 — so the +6.67 % sigma
+    // extension stays in the relationship between the moon and the
+    // echo rather than spreading the bell into the lower-left
+    // quadrant, and the sky luminance remains firmly under the
+    // inscribed glow (~0.20+) and the hero bloom (~0.55) so the
+    // focal line keeps its exclusive claim on the page's light
+    // (ART_DIRECTION §四 "高光只落在主句"). The +6.67 % pairs with
+    // the recent page-frame softening in 7304555 (vignette curve
+    // pow(0.7) → pow(0.75) and cap 0.78 → 0.74) — the upper-right
+    // corner no longer crushes the moon's halo at 78 % pull toward
+    // DEEP, so the sky bell's +6.67 % reach extension can paint
+    // its faintly cooler air a few pixels further into the corner
+    // before meeting the frame, and the disc and the upper-right
+    // echo now share one breathing atmosphere a touch more visibly
+    // continuous across the air between them rather than two
+    // distinguishable gradients meeting mid-quadrant. The +6.67 %
+    // continues the same restraint cadence as the recent +6.25 %
+    // sky_peak (9ec99ff), +6.25 % halo (9989c4a), +5.4 % terminator
+    // amber-tint cap (1c666a7), +3.2 % halo radius (eff9295),
+    // +8.3 % terminator alpha (ad3ee9a), +7.1 % vignette curve
+    // (7304555), +5.6 % body x5 (fe42fec / b7ebeda / 90e22dc /
+    // 3b60530), and the page-wide +5-8 % ladder — so the moon's
+    // three nested atmospheric layers (body + halo + sky bell),
+    // the moon's geometric reach, the moon's directional
+    // terminator, the four inscribed strokes, and the calligrapher's
+    // seal now share one proportional series of restrained steps
+    // (+3.2 %, +3.2 %, +3.3 %, +5.0 %, +5.4 %, +5.5 %, +5.6 %,
+    // +5.88 %, +6.1 %, +6.25 %, +6.5 %, +6.67 %, +6.7 %, +7.1 %,
+    // +8.3 %), and the page's moonlit atmosphere reads as one
+    // coherent refinement rather than sixteen independent tweaks.
+    // The +5 px absolute sigma extension stays inside the same
+    // restraint scale as the prior halo radius extensions (44 →
+    // 60 → 62 → 64 → 66, the geometric axis has lifted by 50 %
+    // cumulatively across four passes), the σ 8 body bell and
+    // the moon's ±4 / ±2 px drift are unchanged so the disc's
+    // geometric extent and breathing rate stay exactly as they
+    // were — only the outermost atmospheric layer's reach shifts,
+    // and only by 5 px of Gaussian sigma. With the sky bell now
+    // breathing one gentle step further into the moon's air at
+    // the +6.67 % step — pairing with the recent page-frame
+    // softening that freed the upper-right corner from its 78 %
+    // pull — the moon's three nested atmospheric layers (body +
+    // halo + sky bell) now share one proportional cadence across
+    // luminance peak, geometric extent, and reach, and the disc
+    // reads as one luminous body bathed in moonlit air whose
+    // outer atmosphere extends a touch more visibly into the
+    // same upper-right quadrant the closest echo inhabits. The
+    // page reads as one Tang quatrain inscribed in moonlit air
+    // whose moon's outermost atmospheric layer now reaches a
+    // touch further into the same upper-right corner the closest
+    // echo inhabits, so the moon and 《只在此山中》 now share one
+    // breathing atmosphere a touch more visibly continuous across
+    // the air between them rather than two distinguishable
+    // gradients meeting mid-quadrant.
     let sky_peak = 0.034_f32;
-    let sky_sigma = 75.0_f32;
+    let sky_sigma = 80.0_f32;
     let sky_extent_i = (moon_halo_r + 150.0) as i32 + 1;
     for oy in -sky_extent_i..=sky_extent_i {
         for ox in -sky_extent_i..=sky_extent_i {
