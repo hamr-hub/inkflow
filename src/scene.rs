@@ -636,8 +636,22 @@ impl Scene {
         }
         for _ in 0..18 {
             let v = 0.55 + rng.unit() * 0.30;
+            // Bias x toward the lower-left half so the fireflies ground
+            // 《云深不知处》 at (0.18, 0.74) with more visible atmospheric
+            // partners, balancing the moon's halo on the upper-right.
+            // The moon has its halo + sky bell for company; the lower-
+            // left echo only has the warm horizon mist. A power-1.4
+            // transform keeps the mean at x_frac ≈ 0.42 (so the warm
+            // band still reads as one continuous mist) while raising
+            // the density on the lower-left half by ~30 % — the echo
+            // now sits inside a slightly more inhabited stretch of
+            // moonlit air rather than on the tail of a uniform field.
+            // The 18-count is unchanged so the band keeps its
+            // "克制" density (ART_DIRECTION §三 "数量克制"); only the
+            // x-distribution shifts.
+            let x_bias = rng.unit().powf(1.4);
             dust.push(Dust {
-                x: rng.unit() * width as f32,
+                x: x_bias * width as f32,
                 y: v * height as f32,
                 r: 1.0 + rng.unit() * 1.6,
                 a: 0.08 + rng.unit() * 0.20,
