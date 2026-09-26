@@ -1060,7 +1060,31 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
     // independent halo.
     let moon_halo_r = 62.0_f32;
     let moon_halo_r2 = moon_halo_r * moon_halo_r;
-    let body_peak = 0.55_f32;
+    // Body peak 0.55 → 0.58 (+5.5 %): the moon's brightest single pixel
+    // now sits a touch more visibly luminous against the heavily
+    // vignette-darkened upper-right corner. The +5.5 % mirrors the most
+    // recent halo_peak bump (0.055 → 0.058, same magnitude, same
+    // restraint cadence) so the moon's three nested atmospheric layers
+    // (body + halo + sky bell) now share one proportional cadence —
+    // halo +5.5 %, body +5.5 %, terminator alpha +20 % relative on the
+    // bottom edge — and the moon reads as one luminous body whose
+    // brightness lifts in three coordinated ways. The +5.5 % lifts the
+    // body from 0.55 to 0.58, still well under the hero bloom's combined
+    // ~0.7 effective alpha (ART_DIRECTION §四 "高光只落在主句" — 高光只
+    // 落在主句 holds), still well above the halo peak (0.058), so the
+    // body remains the brightest single-pixel point of the moon system
+    // while the halo and sky bell continue to fade off outward. Restraint
+    // (ART_DIRECTION §四 "克制统一的调色板") holds: the body's +0.03
+    // absolute lift stays inside the cream family, the brightest pixel
+    // still sits inside the bell-curve's quiet rise so no rim ring
+    // emerges, and the body now reads as one luminous body bathed in
+    // moonlit air (body + halo + sky bell as three nested atmospheric
+    // layers around one disc) rather than as a bright pixel ringed by
+    // an even brighter halo. The 0.58 cap also leaves comfortable
+    // headroom (≈+20 % more body before crossing the focal-bloom
+    // envelope) so the next pass in this arc can step the body again
+    // without needing to rebalance any of the other systems.
+    let body_peak = 0.58_f32;
     // Halo peak 0.05 → 0.055 (+10 %) → 0.058 (+5.5 %): the moon's
     // moonlit air now reads as a touch more visibly continuous ring
     // at peak against the heavily vignette-darkened upper-right corner.
