@@ -1047,7 +1047,27 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
     let moon_halo_r = 62.0_f32;
     let moon_halo_r2 = moon_halo_r * moon_halo_r;
     let body_peak = 0.55_f32;
-    let halo_peak = 0.055_f32;
+    // Halo peak 0.05 → 0.055 (+10 %) → 0.058 (+5.5 %): the moon's
+    // moonlit air now reads as a touch more visibly continuous ring
+    // at peak against the heavily vignette-darkened upper-right corner.
+    // The prior 0.055 added 5.5 % cream at the brightest halo pixel,
+    // which was enough to register as a clear ring after the +10 %
+    // pass but still sat very close to the threshold where the warm
+    // horizon band and the dust haze underneath could pull individual
+    // halo pixels back below "visible" against the corner. The +5.5 %
+    // is the next restrained step in the same arc — every halo pixel
+    // is now ≤ 0.058 alpha, still well under the inscribed glow
+    // (~0.20+) and the hero bloom (~0.55), so the focal line keeps
+    // its claim on the page's light (ART_DIRECTION §四 "高光只落在
+    // 主句"). The +5.5 % continues the same cadence as the prior
+    // +10 % body bump (0.50 → 0.55 in 0964a48) and the +10 % halo
+    // bump (0.05 → 0.055 in 69bf26a) — a touch of proportional
+    // halo luminance without crossing into competing-bloom territory.
+    // The 4-px fade-in and σ 75 sky bell are unchanged so the body,
+    // halo, and sky bell still read as three nested atmospheric
+    // layers around one disc (ARTIFACT §观者第一分钟 1. 其它一切都
+    // 在动，只有它是相对静止的锚).
+    let halo_peak = 0.058_f32;
     let body_recip = 1.0 / moon_body_r;
     let halo_span = moon_halo_r - moon_body_r;
     let mcx_i = mcx as i32;
