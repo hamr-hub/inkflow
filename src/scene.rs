@@ -1519,27 +1519,32 @@ fn paint_supporting_slot(
     // breath, the upper-right (0.26) less, the far-faint (0.42) the
     // least — same hierarchy that already governs their ink density,
     // now extending to motion. Amplitude raised 0.06 → 0.07 → 0.075
-    // (+25 % over two passes): the breath now rises to ±6.3 % / ±5.6 %
-    // / ±4.4 % across the three supporting echoes (was ±5.9 % / ±5.2 %
-    // / ±4.1 %), so the inscription reads as one calligraphic work
-    // breathing a touch deeper under one shared light — the subtitle
-    // now sits just above the moon's halo pulse (±6 %), the natural
-    // amplitude for "the page's atmosphere that the inscription
-    // breathes within" (the halo is the air, the inscription is the
-    // ink that lives in it, and the ink now reads as slightly more
-    // alive than the air it inhabits). The upper-right at ±5.6 %
-    // matches the halo pulse almost exactly — the upper-right echo
-    // bathes in moonlit air that pulses at the same rate it does, so
-    // 《只在此山中》 reads as ink breathing in the moon's sphere of
-    // influence rather than ink floating beside it. The far-faint at
-    // ±4.4 % stays clearly below the halo pulse, the brush running
-    // thin as the inscription closes on 《云深不知处》. The three
-    // supporting echoes still move with the same rhythm-engine pulse
-    // but at visibly different depths, and all three stay well under
-    // the hero bloom's combined ~0.7 effective alpha — restraint
-    // (ART_DIRECTION §四 "高光只落在主句") holds across both
+    // → 0.080 (+33 % over three passes, this pass +6.7 %): the breath
+    // now rises to ±6.7 % / ±5.9 % / ±4.6 % across the three
+    // supporting echoes (was ±6.3 % / ±5.6 % / ±4.4 %), so the
+    // inscription reads as one calligraphic work breathing a touch
+    // deeper under one shared light — the +6.7 % continues the same
+    // cadence as the warm bell lift in c5f73e0 (6.0 → 6.4, +6.7 %),
+    // so the supporting tier's breath and the warm horizon band now
+    // share one proportional cadence and the inscription reads as
+    // breathing inside the same moonlit air that hosts the warm mist.
+    // The subtitle at ±6.7 % now sits just below the moon's halo
+    // pulse (±7 %), the natural amplitude for "the page's atmosphere
+    // that the inscription breathes within" (the halo is the air, the
+    // inscription is the ink that lives in it, and the ink now reads
+    // as nearly as alive as the air it inhabits). The upper-right at
+    // ±5.9 % matches the halo pulse almost exactly — the upper-right
+    // echo bathes in moonlit air that pulses at the same rate it
+    // does, so 《只在此山中》 reads as ink breathing in the moon's
+    // sphere of influence rather than ink floating beside it. The
+    // far-faint at ±4.6 % stays clearly below the halo pulse, the
+    // brush running thin as the inscription closes on 《云深不知处》.
+    // The three supporting echoes still move with the same rhythm-
+    // engine pulse but at visibly different depths, and all three stay
+    // well under the hero bloom's combined ~0.7 effective alpha —
+    // restraint (ART_DIRECTION §四 "高光只落在主句") holds across all
     // amplitudes and the new halo-pulse match.
-    let breath = 1.0 + 0.075 * pulse * (1.0 - slot.def.shadow_mix);
+    let breath = 1.0 + 0.080 * pulse * (1.0 - slot.def.shadow_mix);
     let alpha = (base_alpha * breath).clamp(0.0, 1.0);
     let chars: Vec<char> = slot.phrase.text.chars().collect();
     let n = chars.len();
