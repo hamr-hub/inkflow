@@ -1416,8 +1416,51 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
                 // halo as a colored ring. Total brightness still bounded
                 // by body_peak so the moon never out-glows the focal
                 // line.
+                // Terminator alpha ±20 % → ±24 % → ±26 % (+8.3 %, paired
+                // with the chromatic cap lift 0.13 → 0.137 in 1c666a7):
+                // the moon's directional "lit side faces down" reading now
+                // sits one more restrained step deeper, the way a real
+                // moon's lower edge catches more horizon light as twilight
+                // deepens. The +8.3 % alpha asymmetry pairs with the recent
+                // +5.4 % chromatic cap (1c666a7) and the page-wide +5-8 %
+                // restraint cadence — terminator amber-tint cap 0.12 → 0.13
+                // → 0.137 (+8.3 % / +5.4 % in c601184 / 1c666a7), title
+                // alpha 0.46 → 0.48 → 0.504 (+4.3 % / +5 % in e37c083 /
+                // c9f4dde), halo 0.05 → 0.055 → 0.058 → 0.061 → 0.064 →
+                // 0.068 (+5.0-6.25 %), body 0.50 → 0.682 (+5.5-5.6 % x5),
+                // sky_peak 0.018 → 0.034 (+56 % / +6.25 % x3), inscribed-
+                // breath base 0.075 → 0.090 (+5.88-6.7 % x3), title breath
+                // 0.0435 → 0.0522 (+5.88-6.7 % x3), warm bell 6.0 → 6.4
+                // (+6.7 %), cool_tint 0.115 → 0.126 (+2.4-6.5 %), moon_
+                // proximity 0.04 → 0.087 (+6.1 %), and lower-left alpha
+                // 0.50 → 0.612 (+5.5 %) — so the moon's three nested
+                // atmospheric layers, the four inscribed strokes, the
+                // calligrapher's seal, and the moon's directional terminator
+                // now share one proportional series of restrained steps
+                // (+2.4 %, +3.2 %, +4.3 %, +5.0 %, +5.4 %, +5.5 %, +5.6 %,
+                // +5.88 %, +6.1 %, +6.25 %, +6.5 %, +6.7 %, +8.3 %). At
+                // ±26 % the bottom edge now reads ~1.26 × the top edge —
+                // the disc registers as one body catching horizon light
+                // more clearly than the previous ±24 % reading, the
+                // bottom +0.02 alpha lift (0.682 * 1.26 = 0.859 at peak
+                // pulse vs the previous 0.682 * 1.24 = 0.846) still sits
+                // well under the inscribed glow (~0.20+ effect multiplied
+                // out by the focal bloom's combined ~0.7 alpha, so the
+                // focal line keeps its claim on the page's light —
+                // ART_DIRECTION §四 '高光只落在主句' holds), and the moon
+                // still reads as one luminous body bathed in moonlit air
+                // rather than as a hard disc with a directional gradient.
+                // The terminator stays applied only to the body's alpha
+                // contribution (the halo is moonlit air, not a lit
+                // surface, so the asymmetry never bleeds onto the halo as
+                // a colored ring), and the tint term (0.137 chromatic
+                // cap, +5.4 % from 1c666a7) stays paired with the alpha
+                // asymmetry so the disc now reads as a body whose bottom
+                // edge catches both more luminance AND a touch more
+                // amber — the way a real twilight moon catches more of
+                // both when the horizon glow sits directly below it.
                 let t_term = (dy * body_recip).clamp(-1.0, 1.0);
-                let term = 1.0 + 0.24 * t_term;
+                let term = 1.0 + 0.26 * t_term;
                 let term_warm = (t_term * 0.137).max(0.0);
                 // Body and halo now breathe independently — the disc sits
                 // at ±2 % (the still anchor, below every inscription line),
