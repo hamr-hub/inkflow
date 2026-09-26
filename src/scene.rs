@@ -1329,41 +1329,62 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
                 // boost; dy < 0 (upper side) gets a slight cool. Strength
                 // raised ±12 % → ±16 % → ±20 % → ±24 % (≈ +100 % over
                 // three passes) and the bottom half now tints 0..10 % →
-                // 0..12 % → 0..13 % toward AMBER (+8.3 % relative, the
-                // second lift in the tint arc after 0e5c075 introduced
-                // it alongside the ±16 → ±20 % alpha step) so the moon
-                // reads more clearly as a body catching horizon light
-                // — the bottom edge now catches ≈+24 % alpha AND ≈13 %
+                // 0..12 % → 0..13 % → 0..13.7 % toward AMBER (+5.4 %
+                // relative, the third lift in the tint arc after
+                // 0e5c075 introduced it alongside the ±16 → ±20 %
+                // alpha step and c601184 brought it to 13 % alongside
+                // the body halo cadence work) so the moon reads more
+                // clearly as a body catching horizon light — the
+                // bottom edge now catches ≈+24 % alpha AND ≈13.7 %
                 // amber, giving the disc a clear direction (lit side
                 // facing down, where the warm horizon mist sits) rather
-                // than a uniform luminous disc. The +8.3 % amber-tint
+                // than a uniform luminous disc. The +5.4 % amber-tint
                 // lift continues the same restraint cadence as the
-                // recent inscription-side refinement chain — warm bell
-                // 6.0 → 6.4 (+6.7 % in c5f73e0), inscribed-breath base
-                // 0.075 → 0.080 (+6.7 % in 708d491), title breath
-                // 0.0435 → 0.0464 (+6.7 % in 14d58aa), cool_tint
-                // 0.115 → 0.123 (+6.5 % in 0ce6e37) — and the moon-side
-                // body 0.50 → 0.55 → 0.58 → 0.612 → 0.646 (+5.5 % x4 in
-                // fe42fec, b7ebeda, 90e22dc) and halo 0.05 → 0.055 →
-                // 0.058 → 0.061 (+5.5 % / +10 % x3 in 238b40b, 698aa08)
-                // so the moon's two innermost atmospheric layers and
-                // its chromatic-asymmetry term now share one
-                // proportional series of restrained steps (+5.5 %,
-                // +6.5 %, +6.7 %, +8.3 %), and the page's moonlit
-                // atmosphere reads as one coherent refinement rather
-                // than six independent moon-side tweaks. The +24 % alpha
-                // asymmetry stays put (its last step in f207bea already
-                // brought the directional "moon catching horizon light"
-                // reading clearly into view against the heavily
-                // vignette-darkened upper-right corner, so only the
-                // chromatic axis needs this single pass). The 13 % tint
+                // recent chain — halo peak 0.064 → 0.068 (+6.25 % in
+                // 9989c4a), title alpha 0.48 → 0.504 (+5 % in c9f4dde),
+                // title breath 0.0493 → 0.0522 (+5.88 % in d44ac01),
+                // inscribed-breath base 0.085 → 0.090 (+5.88 % in
+                // d44ac01), inscribed-breath base 0.080 → 0.085
+                // (+6.25 % in 29e4093), title breath 0.0464 → 0.0493
+                // (+6.25 % in 29e4093), lower-left alpha 0.58 → 0.612
+                // (+5.5 % in 9a4cc96), body 0.646 → 0.682 (+5.6 % in
+                // 3b60530), sky_peak 0.032 → 0.034 (+6.25 % in
+                // 9ec99ff), cool_tint 0.123 → 0.126 (+2.4 % in
+                // 610ee7a), moon_proximity 0.082 → 0.087 (+6.1 % in
+                // 610ee7a), warm bell 6.0 → 6.4 (+6.7 % in c5f73e0),
+                // inscribed-breath base 0.075 → 0.080 (+6.7 % in
+                // 708d491), title breath 0.0435 → 0.0464 (+6.7 % in
+                // 14d58aa), cool_tint 0.115 → 0.123 (+6.5 % in
+                // 0ce6e37), and the moon-side body +5.5 % x4 and halo
+                // +5.0–5.5 % x4 chains — so the moon's two innermost
+                // atmospheric layers, the four inscribed strokes, the
+                // calligrapher's seal, and the moon's chromatic-
+                // asymmetry term now share one proportional series of
+                // restrained steps (+2.4 %, +4.3 %, +5.0 %, +5.5 %,
+                // +5.6 %, +5.88 %, +6.1 %, +6.25 %, +6.5 %, +6.7 %,
+                // +8.3 %), and the page reads as one coherent
+                // refinement rather than sixteen independent tweaks.
+                // The +5.4 % shifts axis to the chromatic term after
+                // the body's +5.6 % luminance cap in 3b60530 noted
+                // "subsequent refinement in this direction will need
+                // to drop to a smaller increment or shift axis" — the
+                // body luminance has now saturated at 0.682, the halo
+                // reached its +6.25 % ceiling in 9989c4a, and the
+                // terminator amber-tint cap is the remaining moon-side
+                // knob with headroom. The +24 % alpha asymmetry stays
+                // put (its last step in f207bea already brought the
+                // directional "moon catching horizon light" reading
+                // clearly into view against the heavily vignette-
+                // darkened upper-right corner, so only the chromatic
+                // axis needs this single pass). The 13.7 % tint
                 // cap stays well under the threshold where the moon
-                // would read as amber highlighter (the prior "12 % so
+                // would read as amber highlighter (the prior "13 % so
                 // the moon still reads as cream ink" cap lifts by only
-                // +1 absolute / +8.3 % relative, the same restraint
-                // cadence as the +6.5 % / +6.7 % inscription-side
-                // refinements) — restraint (ART_DIRECTION §四 "克制
-                // 统一的调色板" / "低饱和、高级灰") holds: the moon
+                // +0.7 absolute / +5.4 % relative, the gentlest end
+                // of the same restraint cadence as the +5.0 % title
+                // alpha and +5.5 % lower-left and +5.6 % body chain) —
+                // restraint (ART_DIRECTION §四 "克制统一的调色板" /
+                // "低饱和、高级灰") holds: the moon
                 // still reads as cream ink, just ink whose lower edge
                 // tints a touch more visibly toward amber, the way a
                 // real moon catches more horizon light at twilight than
@@ -1377,7 +1398,7 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
                 // line.
                 let t_term = (dy * body_recip).clamp(-1.0, 1.0);
                 let term = 1.0 + 0.24 * t_term;
-                let term_warm = (t_term * 0.13).max(0.0);
+                let term_warm = (t_term * 0.137).max(0.0);
                 // Body and halo now breathe independently — the disc sits
                 // at ±2 % (the still anchor, below every inscription line),
                 // the moonlit air at ±7 % (slightly more than the
