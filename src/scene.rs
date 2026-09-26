@@ -1225,38 +1225,40 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
                 // boost; dy < 0 (upper side) gets a slight cool. Strength
                 // raised ±12 % → ±16 % → ±20 % → ±24 % (≈ +100 % over
                 // three passes) and the bottom half now tints 0..10 % →
-                // 0..12 % toward AMBER (+20 % relative, the first lift in
-                // the tint arc since 0e5c075 introduced it alongside the
-                // ±16 → ±20 % alpha step) so the moon reads more clearly
-                // as a body catching horizon light — the bottom edge now
-                // catches ≈+24 % alpha AND ≈12 % amber, giving the disc a
-                // clear direction (lit side facing down, where the warm
-                // horizon mist sits) rather than a uniform luminous disc.
-                // The +20 % alpha extension (+4 absolute, matching the
-                // prior +4 absolute steps) lifts the bottom edge from
-                // +20 % to +24 % alpha while the top dims correspondingly
-                // from −20 % to −24 %, so the directional asymmetry reads
-                // as a touch more visibly "moon catching horizon light"
-                // against the heavily vignette-darkened upper-right corner
-                // — the disc previously sat very close to a uniform
-                // luminous dot even after the ±20 % pass, because the
-                // body's Gaussian σ 8 falloff already attenuated the
-                // bright pixels well before the bottom rim, so the +20 %
-                // directional boost was concentrated at the centre. The
-                // +20 % amber-tint lift pairs with the +20 % alpha lift
-                // from the prior terminator pass — the bottom edge now
-                // catches both a touch more alpha AND a touch more amber,
-                // so the directional "moon catching horizon light"
-                // reading deepens along both axes in a single pass
-                // (the alpha arc handled the luminance asymmetry, the
-                // tint arc handles the chromatic asymmetry — the same
-                // arc, two quiet refinements spaced across passes). The
-                // 12 % tint cap is still well under the threshold where
-                // the moon would read as amber highlighter (the prior
-                // "10 % so the moon still reads as cream ink" cap lifts
-                // by only +2 absolute / +20 % relative, the same
-                // restraint cadence as the +20 % alpha steps in the
-                // luminance arc) — restraint (ART_DIRECTION §四 "克制
+                // 0..12 % → 0..13 % toward AMBER (+8.3 % relative, the
+                // second lift in the tint arc after 0e5c075 introduced
+                // it alongside the ±16 → ±20 % alpha step) so the moon
+                // reads more clearly as a body catching horizon light
+                // — the bottom edge now catches ≈+24 % alpha AND ≈13 %
+                // amber, giving the disc a clear direction (lit side
+                // facing down, where the warm horizon mist sits) rather
+                // than a uniform luminous disc. The +8.3 % amber-tint
+                // lift continues the same restraint cadence as the
+                // recent inscription-side refinement chain — warm bell
+                // 6.0 → 6.4 (+6.7 % in c5f73e0), inscribed-breath base
+                // 0.075 → 0.080 (+6.7 % in 708d491), title breath
+                // 0.0435 → 0.0464 (+6.7 % in 14d58aa), cool_tint
+                // 0.115 → 0.123 (+6.5 % in 0ce6e37) — and the moon-side
+                // body 0.50 → 0.55 → 0.58 → 0.612 → 0.646 (+5.5 % x4 in
+                // fe42fec, b7ebeda, 90e22dc) and halo 0.05 → 0.055 →
+                // 0.058 → 0.061 (+5.5 % / +10 % x3 in 238b40b, 698aa08)
+                // so the moon's two innermost atmospheric layers and
+                // its chromatic-asymmetry term now share one
+                // proportional series of restrained steps (+5.5 %,
+                // +6.5 %, +6.7 %, +8.3 %), and the page's moonlit
+                // atmosphere reads as one coherent refinement rather
+                // than six independent moon-side tweaks. The +24 % alpha
+                // asymmetry stays put (its last step in f207bea already
+                // brought the directional "moon catching horizon light"
+                // reading clearly into view against the heavily
+                // vignette-darkened upper-right corner, so only the
+                // chromatic axis needs this single pass). The 13 % tint
+                // cap stays well under the threshold where the moon
+                // would read as amber highlighter (the prior "12 % so
+                // the moon still reads as cream ink" cap lifts by only
+                // +1 absolute / +8.3 % relative, the same restraint
+                // cadence as the +6.5 % / +6.7 % inscription-side
+                // refinements) — restraint (ART_DIRECTION §四 "克制
                 // 统一的调色板" / "低饱和、高级灰") holds: the moon
                 // still reads as cream ink, just ink whose lower edge
                 // tints a touch more visibly toward amber, the way a
@@ -1271,7 +1273,7 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
                 // line.
                 let t_term = (dy * body_recip).clamp(-1.0, 1.0);
                 let term = 1.0 + 0.24 * t_term;
-                let term_warm = (t_term * 0.12).max(0.0);
+                let term_warm = (t_term * 0.13).max(0.0);
                 // Body and halo now breathe independently — the disc sits
                 // at ±2 % (the still anchor, below every inscription line),
                 // the moonlit air at ±7 % (slightly more than the
