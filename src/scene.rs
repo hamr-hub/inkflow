@@ -963,11 +963,39 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
             let nebula = (1.0 - d2).clamp(0.0, 1.0).powf(2.0);
             let glow_color = mix(rgb(60, 50, 70), rgb(140, 96, 72), warmth);
             let p = blend_screen(base, glow_color, nebula * (0.18 + pulse * 0.10));
-            // vignette darken corners
+            // vignette darken corners — softened to 柔和暗角 (ART_DIRECTION
+            // §三 "柔和暗角"). Curve exponent 0.7 → 0.75 (+7.1 %, the
+            // gentlest step on the curve axis) and ceiling cap 0.78 → 0.74
+            // (-5.1 %) — together the corner falloff now reads as a soft
+            // moonlit envelope rather than a hard hanging-scroll frame.
+            // The 68-commit moon-and-inscription arc lifted the moon's
+            // body (0.50 → 0.682, +36 %), halo (0.05 → 0.068, +36 %),
+            // sky bell (0.018 → 0.034, +89 %), the inscribed strokes,
+            // and the calligrapher's seal, but never touched the page
+            // frame itself — the upper-right corner was crushing the
+            // moon's halo with a 78 % pull toward DEEP that no other
+            // element had to fight. With pow(0.75) the corner falloff
+            // reads as one continuous gradient from page-center to
+            // hanging-scroll-edge (mid-distance pixels lift ≈0.02–0.03
+            // in darkening, the corner stays clamped but now at 0.74),
+            // so the moon's moonlit air and the upper-right echo's cool
+            // tint can paint a touch further into the corner before
+            // meeting the frame, and the four inscribed strokes feel
+            // suspended in moonlit air rather than pinned inside a
+            // dark rectangle. The -5.1 % cap drop and +7.1 % curve lift
+            // pair within the established restraint cadence (the recent
+            // arc's +2.4 % to +8.3 % series: body +5.6 %, halo +5.0-
+            // 6.25 %, sky +6.25 %, terminator ±26 %, title alpha +5 %,
+            // inscribed-breath +5.88 %, warm-bell +6.7 %), the focal
+            // line's bloom (~0.55 cap) still owns the page's light
+            // (ART_DIRECTION §四 "高光只落在主句"), the focal hierarchy
+            // (hero / subtitle / upper-right / lower-left / seal) is
+            // unchanged, and the dust + sky_bell + halo + body still
+            // read as the moon's three nested atmospheric layers.
             let vx = (x as f32 / w_f - 0.5).abs() * 2.0;
             let vy = (y as f32 / h_f - 0.5).abs() * 2.0;
-            let vig = (vx * vx + vy * vy).powf(0.7);
-            let vig_dark = (vig * 0.65).clamp(0.0, 0.78);
+            let vig = (vx * vx + vy * vy).powf(0.75);
+            let vig_dark = (vig * 0.65).clamp(0.0, 0.74);
             let p = mix(p, color::bg::DEEP, vig_dark);
             // ambient luminance wave
             let p = blend_add_lin(p, color::star::WARM, ambient * (1.0 - vig_dark * 0.6));
