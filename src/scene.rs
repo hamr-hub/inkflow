@@ -410,6 +410,41 @@ impl Composition {
             //   still leans furthest into shadow), but the viewer now
             //   sees a full quatrain on the page rather than two lines
             //   and two absences.
+            //   alpha 0.58 → 0.612 (+5.5 %): lift 《云深不知处》 one more
+            //   step into view as the moon-side luminance arc reached
+            //   saturation (body 0.682 / halo 0.064 / sky 0.034, the
+            //   last body bump in 3b60530 noting "subsequent refinement
+            //   in this direction will need to drop to a smaller
+            //   increment or shift axis"). The +5.5 % shifts axis to
+            //   the closing line of the quatrain — the philosophical
+            //   "deep in the clouds, one knows not where" — without
+            //   crowding any of the moon's atmospheric layers. The
+            //   far-faint reading still holds: 0.612 stays clearly
+            //   below upper-right 0.72 and subtitle 0.76 (the brush-
+            //   weight hierarchy still steps down 0.76 > 0.72 > 0.612
+            //   > title 0.48), and the lower-left's shadow_mix 0.42
+            //   still keeps it the deepest into shadow so the closing
+            //   stroke still dissolves into the mist the way a real
+            //   inscribed closing line should — the line reads a touch
+            //   more clearly without losing its "ink running thin" quality.
+            //   The +5.5 % continues the same restraint cadence as the
+            //   recent chain — body 0.50 → 0.55 → 0.58 → 0.612 → 0.646 →
+            //   0.682 (+5.5–5.6 % x5 in fe42fec, b7ebeda, 90e22dc,
+            //   3b60530), halo 0.05 → 0.055 → 0.058 → 0.061 → 0.064
+            //   (+5.0 / +5.5 % x4 in 238b40b, 698aa08, 0f13e55), sky 0.018
+            //   → 0.028 → 0.030 → 0.032 → 0.034 (+56 % / +7 % / +6.25 %
+            //   in b7ebeda, 80e27d5, 9ec99ff), terminator amber-tint cap
+            //   0.12 → 0.13 (+8.3 % in c601184), warm bell 6.0 → 6.4
+            //   (+6.7 % in c5f73e0), inscribed-breath base 0.075 → 0.080
+            //   (+6.7 % in 708d491), title breath 0.0435 → 0.0464 (+6.7 %
+            //   in 14d58aa), title alpha 0.46 → 0.48 (+4.3 % in e37c083),
+            //   cool_tint 0.115 → 0.123 (+6.5 % in 0ce6e37), moon_proximity
+            //   0.082 → 0.087 (+6.1 % in 610ee7a) — so the page's moonlit
+            //   atmosphere and the four inscribed strokes plus the
+            //   calligrapher's seal now share one proportional series of
+            //   restrained steps (+4.3 %, +5.0 %, +5.5 %, +5.6 %, +6.1 %,
+            //   +6.25 %, +6.5 %, +6.7 %, +8.3 %), and the page reads as
+            //   one coherent refinement rather than ten independent tweaks.
             //   em_scale 0.30 → 0.28: the closing stroke is the most
             //   delicate — the brush running thin as the inscription
             //   dissolves into 云深不知处 (the clouds are deep, one
@@ -425,7 +460,7 @@ impl Composition {
                 em_scale: 0.28,
                 target_w_frac: 0.0,
                 max_chars: 5,
-                alpha: 0.58,
+                alpha: 0.612,
                 shadow_mix: 0.42,
                 drift_x: 3.0,
                 drift_y: 2.0,
