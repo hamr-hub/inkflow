@@ -1969,24 +1969,28 @@ fn paint_supporting_slot(
     // supporting tier) dissolving into warm horizon — the visual
     // metaphor of 《云深不知处》: the clouds are deep, one knows not
     // where. Restraint (ART_DIRECTION §四): mist contribution capped at
-    // ≈7 % so the supporting tier stays subordinate and the brush-weight
+    // ≈8.5 % so the supporting tier stays subordinate and the brush-weight
     // hierarchy (subtitle brightest, lower-left dimmest) holds.
-    // Same bell as the background mist (coefficient 6.4, onset 0.50,
-    // peak 0.400 at v≈0.75) so the supporting line's warm tint and
-    // the atmospheric warm band stay in sync — the +6.7 % coefficient
-    // lift from 6.0 → 6.4 lifts both the background luminance and
-    // each supporting line's warm tint by the same percentage so
-    // 《云深不知处》 sits inside a slightly more visibly inhabited
-    // stretch of warm mist without ever reading as warmer than the
-    // air it sits in. The lower-left at v≈0.74 sits just under the
-    // peak (mist_warmth ≈ 0.080, +7 % over the previous 0.075) —
-    // still within the restraint cap (≈8 %) so 《云深不知处》
-    // reads as deep ink actually dissolving into the warm horizon,
-    // not as dim cream floating over a barely-visible amber tint.
-    // The subtitle (v≈0.66) catches a touch more warmth on the
-    // rising edge; the upper-right (v≈0.28) stays clear of the bell
-    // so it remains the cool echo in the moon's air.
-    let horizon_glow = ((slot.def.y_frac - 0.50) * (1.0 - slot.def.y_frac) * 6.4).clamp(0.0, 1.0);
+    // Same bell as the background mist and the title's ambient warmth
+    // (coefficient 6.8, onset 0.50, peak 0.425 at v≈0.75) so all three
+    // warm layers — the background atmosphere, each supporting line's
+    // warm tint, and the seal's ambient warmth — stay in sync — the
+    // +6.25 % coefficient lift from 6.4 → 6.8 lifts both the supporting
+    // line's warm tint and the atmospheric warm band by the same
+    // percentage so 《云深不知处》 sits inside a slightly more visibly
+    // inhabited stretch of warm mist without ever reading as warmer
+    // than the air it sits in, and pairs with the +6.25 % background-
+    // bell lift and the +6.25 % title-ambient lift in c253209 so all
+    // three warm-tint axes share one proportional cadence. The lower-
+    // left at v≈0.74 sits just under the peak (mist_warmth ≈ 0.085,
+    // +6.25 % over the previous 0.080) — still within the restraint
+    // cap (≈8.5 %) so 《云深不知处》 reads as deep ink actually
+    // dissolving into the warm horizon, not as dim cream floating
+    // over a barely-visible amber tint. The subtitle (v≈0.66) catches
+    // a touch more warmth on the rising edge; the upper-right (v≈0.28)
+    // stays clear of the bell so it remains the cool echo in the
+    // moon's air.
+    let horizon_glow = ((slot.def.y_frac - 0.50) * (1.0 - slot.def.y_frac) * 6.8).clamp(0.0, 1.0);
     let mist_warmth = horizon_glow * 0.20;
     // Cool axis — the mirror image of the mist warmth above. Supporting
     // lines that sit in the moonlit upper sky absorb a touch of cool
