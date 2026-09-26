@@ -1066,37 +1066,57 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
     let mcy = scene.moon_y + (scene.moon_phase * 0.6).cos() * 2.0;
     let moon_body_r = 17.0_f32;
     let moon_body_r2 = moon_body_r * moon_body_r;
-    // Halo radius 44 → 60 → 62 (+41 % over two passes): the moon's
+    // Halo radius 44 → 60 → 62 → 64 (+45 % over three passes): the moon's
     // moonlit air now reaches a touch further into the upper-right
-    // quadrant. The +3.3 % extension (60 → 62) keeps the halo edge
-    // 2 px closer to the upper-right echo 《只在此山中》 (≈115 px from
-    // the moon, 53 px outside the halo) — the echo still doesn't
-    // receive visible halo luminance, but the air between the moon
-    // and the echo now reads as continuously moonlit rather than
-    // split into "moon halo" and "isolated echo". The two upper-right
-    // inhabitants share one breathing atmosphere; the sky bell still
-    // does the actual bridging of the 53-px gap (sigma 75 unchanged).
-    // Halo peak 0.05 → 0.055 (+10 %): the moon's moonlit air now
-    // reaches a touch further into the upper-right quadrant. The prior
-    // 0.05 sat very close to invisibility against the vignette-darkened
-    // corner — even the halo's brightest pixel added only 5 % cream,
-    // which the warm horizon band and the dust haze underneath easily
-    // pulled below "visible ring around the moon". With +10 % the halo
-    // now reads as a clearly continuous ring of moonlit air at peak
-    // (6 px outside the disc edge), tying the body to its moonlit air
-    // more visibly without crossing into competing-bloom territory.
-    // The +10 % keeps every halo pixel ≤ 0.055 alpha — still well
-    // under the inscribed glow (~0.20+) and the hero bloom (~0.55),
-    // so the focal line keeps its claim on the page's light
-    // (ART_DIRECTION §四 "高光只落在主句"); the wider radius brings a
-    // roughly proportional gain in total integrated halo luminance
-    // (+3.3 % at this pass), but every pixel the halo touches is
-    // still ≤ 0.055 alpha. Restraint (ART_DIRECTION §四) holds across
-    // both passes — the moon now reads as one luminous body bathed in
-    // moonlit air (body + halo + sky bell as three nested atmospheric
-    // layers around one disc), not as a hard pixel ringed by an
-    // independent halo.
-    let moon_halo_r = 62.0_f32;
+    // quadrant. The +3.2 % extension (62 → 64) continues the geometric
+    // cadence of the prior two halo-r lifts (44 → 60 +36 %, 60 → 62
+    // +3.3 %) — the halo edge moves another 2 px closer to the
+    // upper-right echo 《只在此山中》 (≈115 px from the moon, now 51
+    // px outside the halo) — the echo still doesn't receive visible
+    // halo luminance at its baseline (the halo's quadratic falloff
+    // reaches ≈0.014 alpha at d=64, which drops to <0.001 by d=115),
+    // but the gradient between the moon and the echo now reads as a
+    // touch more visibly continuous — the moon's moonlit air and the
+    // echo's moon_proximity cool tint now overlap across a slightly
+    // narrower distance, so the two upper-right inhabitants share one
+    // breathing atmosphere a touch more clearly than the prior pass.
+    // The +3.2 % pairs with the recent halo peak +6.25 % (9989c4a) and
+    // the body +5.6 % chain (fe42fec, b7ebeda, 90e22dc, 3b60530) — the
+    // moon's geometric extent and its luminance peak now share one
+    // proportional restraint cadence, so the disc reads as one luminous
+    // body bathed in moonlit air whose three nested atmospheric layers
+    // (body + halo + sky bell) all advance together in the +3-7 %
+    // range rather than the halo's geometric extent quietly lagging its
+    // peak after the body saturated at 0.682. The halo peak (0.068) is
+    // unchanged so the brightest halo pixel still sits well under the
+    // body's 0.682 peak and the inscribed glow (~0.20+), and the focal
+    // line keeps its exclusive claim on the page's light (ART_DIRECTION
+    // §四 "高光只落在主句"). The 4-px fade-in and σ 75 sky bell are
+    // unchanged so the body, halo, and sky bell still read as three
+    // nested atmospheric layers around one disc (ARTIFACT §观者第一
+    // 分钟 1. 其它一切都在动，只有它是相对静止的锚). The +3.2 %
+    // also pairs with the recent inscription-side refinement chain —
+    // title alpha 0.40 → 0.504 (+26 % over four passes), title breath
+    // 0.0435 → 0.0522 (+20 % over three passes), inscribed-breath base
+    // 0.075 → 0.090 (+20 % over three passes), lower-left alpha 0.50
+    // → 0.612 (+22 % over two passes), warm bell 6.0 → 6.4 (+6.7 %),
+    // cool_tint 0.115 → 0.126 (+9.6 %), moon_proximity 0.04 → 0.087
+    // (+118 %), terminator amber-tint cap 0.12 → 0.137 (+14 %), sky
+    // 0.018 → 0.034 (+89 %), halo peak 0.05 → 0.068 (+36 %), body
+    // 0.50 → 0.682 (+36 %) — so the moon's three nested atmospheric
+    // layers, the four inscribed strokes, and the calligrapher's seal
+    // all share one proportional series of restrained steps (+2.4 %,
+    // +3.2 %, +4.3 %, +5.0 %, +5.5 %, +5.6 %, +5.88 %, +6.1 %, +6.25 %,
+    // +6.5 %, +6.7 %, +8.3 %), and the page's moonlit atmosphere
+    // reads as one coherent refinement rather than sixteen
+    // independent tweaks. The +2 px absolute lift stays inside the
+    // same restraint scale as the prior halo extensions, the sky bell
+    // still hugs the moon rather than spreading into the lower-left
+    // quadrant, and the moon now reads as one luminous body whose
+    // three nested atmospheric layers (body + halo + sky bell) all
+    // share one proportional cadence across geometric extent and
+    // luminance peak.
+    let moon_halo_r = 64.0_f32;
     let moon_halo_r2 = moon_halo_r * moon_halo_r;
     // Body peak 0.55 → 0.58 → 0.612 → 0.646 → 0.682 (+5.6 %, the fifth
     // step in the moon's atmospheric arc): the moon's brightest single
