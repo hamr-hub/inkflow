@@ -1168,43 +1168,54 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
                 // horizon means dy > 0 (lower side) gets a slight warm
                 // boost; dy < 0 (upper side) gets a slight cool. Strength
                 // raised ±12 % → ±16 % → ±20 % → ±24 % (≈ +100 % over
-                // three passes) and the bottom half tints 0..10 % toward
-                // AMBER so the moon reads more clearly as a body catching
-                // horizon light — the bottom edge now catches ≈+24 %
-                // alpha AND ≈10 % amber, giving the disc a clear direction
-                // (lit side facing down, where the warm horizon mist
-                // sits) rather than a uniform luminous disc. The +20 %
-                // → +24 % alpha extension (+4 absolute, matching the prior
-                // +4 absolute steps) lifts the bottom edge from +20 %
-                // to +24 % alpha while the top dims correspondingly from
-                // −20 % to −24 %, so the directional asymmetry reads as a
-                // touch more visibly "moon catching horizon light" against
-                // the heavily vignette-darkened upper-right corner — the
-                // disc previously sat very close to a uniform luminous
-                // dot even after the ±20 % pass, because the body's
-                // Gaussian σ 8 falloff already attenuated the bright
-                // pixels well before the bottom rim, so the +20 %
-                // directional boost was concentrated at the centre. With
-                // ±24 % the central bottom catches ≈+24 % (visible at the
-                // brightest core pixels) and the rim's directional term
-                // scales with body_k — the moon now reads as a body
-                // whose lit side faces down toward the warm horizon
-                // below, rather than a uniform disc the viewer has to
-                // imagine catching light. The color tint still caps at
-                // 10 % so the moon reads as cream ink, not as an amber
-                // highlighter — the "restrained palette, low-saturation
-                // 高级灰" cap (ART_DIRECTION §四) holds. The top stays
-                // pure ink::WARM cream while the bottom shifts a touch
-                // warmer, the way a real moon catches ambient horizon
-                // light. The halo stays non-directional (moonlit air,
-                // not lit surface) — the tint is multiplied only into
-                // the body's alpha contribution, so the asymmetry never
-                // bleeds onto the halo as a colored ring. Total
-                // brightness still bounded by body_peak so the moon never
-                // out-glows the focal line.
+                // three passes) and the bottom half now tints 0..10 % →
+                // 0..12 % toward AMBER (+20 % relative, the first lift in
+                // the tint arc since 0e5c075 introduced it alongside the
+                // ±16 → ±20 % alpha step) so the moon reads more clearly
+                // as a body catching horizon light — the bottom edge now
+                // catches ≈+24 % alpha AND ≈12 % amber, giving the disc a
+                // clear direction (lit side facing down, where the warm
+                // horizon mist sits) rather than a uniform luminous disc.
+                // The +20 % alpha extension (+4 absolute, matching the
+                // prior +4 absolute steps) lifts the bottom edge from
+                // +20 % to +24 % alpha while the top dims correspondingly
+                // from −20 % to −24 %, so the directional asymmetry reads
+                // as a touch more visibly "moon catching horizon light"
+                // against the heavily vignette-darkened upper-right corner
+                // — the disc previously sat very close to a uniform
+                // luminous dot even after the ±20 % pass, because the
+                // body's Gaussian σ 8 falloff already attenuated the
+                // bright pixels well before the bottom rim, so the +20 %
+                // directional boost was concentrated at the centre. The
+                // +20 % amber-tint lift pairs with the +20 % alpha lift
+                // from the prior terminator pass — the bottom edge now
+                // catches both a touch more alpha AND a touch more amber,
+                // so the directional "moon catching horizon light"
+                // reading deepens along both axes in a single pass
+                // (the alpha arc handled the luminance asymmetry, the
+                // tint arc handles the chromatic asymmetry — the same
+                // arc, two quiet refinements spaced across passes). The
+                // 12 % tint cap is still well under the threshold where
+                // the moon would read as amber highlighter (the prior
+                // "10 % so the moon still reads as cream ink" cap lifts
+                // by only +2 absolute / +20 % relative, the same
+                // restraint cadence as the +20 % alpha steps in the
+                // luminance arc) — restraint (ART_DIRECTION §四 "克制
+                // 统一的调色板" / "低饱和、高级灰") holds: the moon
+                // still reads as cream ink, just ink whose lower edge
+                // tints a touch more visibly toward amber, the way a
+                // real moon catches more horizon light at twilight than
+                // at full night. The top stays pure ink::WARM cream
+                // while the bottom shifts a touch warmer. The halo stays
+                // non-directional (moonlit air, not lit surface) — the
+                // tint is multiplied only into the body's alpha
+                // contribution, so the asymmetry never bleeds onto the
+                // halo as a colored ring. Total brightness still bounded
+                // by body_peak so the moon never out-glows the focal
+                // line.
                 let t_term = (dy * body_recip).clamp(-1.0, 1.0);
                 let term = 1.0 + 0.24 * t_term;
-                let term_warm = (t_term * 0.10).max(0.0);
+                let term_warm = (t_term * 0.12).max(0.0);
                 // Body and halo now breathe independently — the disc sits
                 // at ±2 % (the still anchor, below every inscription line),
                 // the moonlit air at ±7 % (slightly more than the
