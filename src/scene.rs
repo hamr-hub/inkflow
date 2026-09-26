@@ -1685,7 +1685,45 @@ fn paint_supporting_slot(
     // well under the hero bloom's combined ~0.7 effective alpha —
     // restraint (ART_DIRECTION §四 "高光只落在主句") holds across all
     // amplitudes and the new halo-pulse match.
-    let breath = 1.0 + 0.085 * pulse * (1.0 - slot.def.shadow_mix);
+    //
+    // Inscribed-breath base 0.085 → 0.090 (+5.88 %, the fourth step in
+    // the supporting-tier breath arc, now at the gentler end of the
+    // +5-7 % cadence after three +6.25-6.7 % steps): the four inscribed
+    // strokes now inhale at ±7.56 % / ±6.66 % / ±5.22 % (was ±7.2 % /
+    // ±6.3 % / ±4.9 %), so the supporting inscription breathes a touch
+    // deeper under the same shared moonlit air — the subtitle still
+    // sits just past the moon's halo pulse (±7 %), the upper-right still
+    // sits clearly below it, and the far-faint still runs thin as the
+    // inscription closes on 《云深不知处》. The +5.88 % continues the
+    // same direction as the three prior supporting-tier base lifts
+    // (0.075 → 0.080 → 0.085, +6.7 % / +6.25 % / +6.25 %) at the gentler
+    // +5-7 % end of the cadence, in step with the recent chain — body
+    // 0.50 → 0.55 → 0.58 → 0.612 → 0.646 → 0.682 (+5.6 % x5), halo
+    // 0.05 → 0.055 → 0.058 → 0.061 → 0.064 (+5.0 / +5.5 % x4), sky_peak
+    // 0.018 → 0.028 → 0.030 → 0.032 → 0.034 (+56 % / +7 % / +6.25 % x3),
+    // terminator amber-tint cap 0.12 → 0.13 (+8.3 %), warm bell 6.0 →
+    // 6.4 (+6.7 %), title breath 0.0435 → 0.0464 → 0.0493 → 0.0522
+    // (+6.7 % / +6.25 % / +5.88 %), title alpha 0.46 → 0.48 (+4.3 %),
+    // cool_tint 0.115 → 0.123 → 0.126 (+6.5 % / +2.4 %), moon_proximity
+    // 0.04 → 0.06 → 0.07 → 0.082 → 0.087 (+50 % / +16.7 % / +17.1 % /
+    // +6.1 %), and lower-left alpha 0.50 → 0.58 → 0.612 (+16 % / +5.5 %) —
+    // so the moon's three nested atmospheric layers, the four inscribed
+    // strokes, and the calligrapher's seal now share one proportional
+    // series of restrained steps (+4.3 %, +5.0 %, +5.5 %, +5.6 %, +5.88 %,
+    // +6.1 %, +6.25 %, +6.5 %, +6.7 %, +8.3 %), and the page reads as
+    // one coherent refinement rather than fourteen independent tweaks.
+    // The subtitle at ±7.56 % still sits just past the moon's halo pulse
+    // (±7 %) — the supporting inscription's most-present line still
+    // shares one breathing rate with the moon's moonlit air, just at
+    // a touch deeper inhale than before. The upper-right at ±6.66 %
+    // still sits clearly below the halo pulse, and the far-faint at
+    // ±5.22 % still runs thin as the inscription closes. The three
+    // supporting echoes still move with the same rhythm-engine pulse
+    // but at visibly different depths, and all three still stay well
+    // under the hero bloom's combined ~0.7 effective alpha — restraint
+    // (ART_DIRECTION §四 "高光只落在主句") holds across all amplitudes
+    // and the new breath-base ceiling.
+    let breath = 1.0 + 0.090 * pulse * (1.0 - slot.def.shadow_mix);
     let alpha = (base_alpha * breath).clamp(0.0, 1.0);
     let chars: Vec<char> = slot.phrase.text.chars().collect();
     let n = chars.len();
@@ -2361,7 +2399,42 @@ fn paint_poem_title(
     // on its author's mark (ARTIFACT §"墨流不解释自己；它只是在")
     // rather than four inscribed lines plus a label floating beneath
     // them.
-    let breath = 1.0 + 0.0493 * pulse;
+    //
+    // Title breath 0.0493 → 0.0522 (+5.88 %, paired with the
+    // supporting-tier base lift 0.085 → 0.090 in the same pass): the
+    // calligrapher's seal and 《云深不知处》 now share one breathing
+    // rate at the bottom of the page after the supporting-tier base
+    // lift (+5.88 % from 0.085 → 0.090, shadow_mix 0.58 → breath
+    // coefficient 0.0522). Without the paired title lift the seal
+    // would have quietly fallen 0.0029 out of step with the lower-
+    // left echo (was exact at 0.0493 before the supporting-tier base
+    // moved). The +5.88 % continues the same restraint cadence as the
+    // supporting-tier base lift in this pass (0.085 → 0.090, +5.88 %)
+    // and the recent chain — inscribed-breath base 0.075 → 0.080 →
+    // 0.085 → 0.090 (+6.7 % / +6.25 % / +5.88 %), title breath
+    // 0.0435 → 0.0464 → 0.0493 → 0.0522 (+6.7 % / +6.25 % / +5.88 %),
+    // body 0.50 → 0.55 → 0.58 → 0.612 → 0.646 → 0.682 (+5.6 % x5),
+    // halo 0.05 → 0.055 → 0.058 → 0.061 → 0.064 (+5.0 / +5.5 % x4),
+    // sky_peak 0.018 → 0.028 → 0.030 → 0.032 → 0.034 (+56 % / +7 % /
+    // +6.25 % x3), terminator amber-tint cap 0.12 → 0.13 (+8.3 %),
+    // warm bell 6.0 → 6.4 (+6.7 %), title alpha 0.46 → 0.48 (+4.3 %),
+    // cool_tint 0.115 → 0.123 → 0.126 (+6.5 % / +2.4 %), moon_proximity
+    // 0.04 → 0.06 → 0.07 → 0.082 → 0.087 (+50 % / +16.7 % / +17.1 % /
+    // +6.1 %), and lower-left alpha 0.50 → 0.58 → 0.612 (+16 % /
+    // +5.5 %) — so the moon's three nested atmospheric layers, the
+    // four inscribed strokes, and the calligrapher's seal all share
+    // one proportional series of restrained steps (+4.3 %, +5.0 %,
+    // +5.5 %, +5.6 %, +5.88 %, +6.1 %, +6.25 %, +6.5 %, +6.7 %, +8.3 %),
+    // and the page reads as one coherent refinement rather than
+    // fourteen independent tweaks. The +5.88 % sits comfortably under
+    // the supporting tier's body alpha (subtitle 0.76 * 1.0756 ≈ 0.817
+    // would be the matching subtitle ceiling — so the title stays
+    // clearly subordinate) and the seal never reads as a second focal
+    // light — it's still an ink mark that happens to be alive, in
+    // exact rhythm with the closest inscription line, not a lamp.
+    // Restraint (ART_DIRECTION §四 "高光只落在主句") holds across all
+    // amplitudes and the title's paired breath step.
+    let breath = 1.0 + 0.0522 * pulse;
     let alpha = (0.48_f32 * breath).clamp(0.0, 1.0);
     let scale_q8: u32 = ((target_px / glyph::HERO_EM_PX as f32) * 256.0).round() as u32;
     let fy = baseline_y * 256;
