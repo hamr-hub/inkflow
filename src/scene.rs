@@ -2296,7 +2296,7 @@ fn paint_supporting_slot(
     // closest inscription line settles further into the same +5-7 %
     // restraint cadence as the rest of the page's recent
     // refinements.
-    let cool_tint = (sky_cool + moon_proximity * 0.097).clamp(0.0, 0.14);
+    let cool_tint = (sky_cool + moon_proximity * 0.102).clamp(0.0, 0.14);
     let warmth_tint = (warmth * (1.0 - slot.def.shadow_mix) * 0.30 + mist_warmth).clamp(0.0, 1.0);
     let mut base_color = mix(raw_base, color::ink::WARM, warmth_tint);
     if cool_tint > 0.0 {
