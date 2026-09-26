@@ -903,20 +903,23 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
     for y in 0..h {
         let v = y as f32 / (h_f - 1.0).max(1.0);
         let base = color::grad3(nebula_top, nebula_mid, nebula_bot, v);
-        // Parabolic bell: 0 at v=0.50, peaks ≈0.375 at v≈0.75, 0 at v=1.0.
-        // Coefficient raised 5.0 → 6.0 and onset shifted 0.48 → 0.50
-        // (peak 0.338 → 0.375, +11 %) so the warm band sits a touch
-        // more visibly under the lower-left echo — 《云深不知处》
-        // reads as ink dissolving into warm horizon rather than
-        // hovering over a barely-visible tint. The subtitle (v≈0.66)
+        // Parabolic bell: 0 at v=0.50, peaks ≈0.400 at v≈0.75, 0 at v=1.0.
+        // Coefficient raised 5.0 → 6.0 → 6.4 (+7 % over two passes, this
+        // pass +6.7 %) so the warm band sits a touch more visibly under
+        // the lower-left echo — 《云深不知处》 reads as ink dissolving
+        // into warm horizon rather than hovering over a barely-visible
+        // tint, with the bell now reaching its peak luminance just as
+        // the closing echo settles over the band. The subtitle (v≈0.66)
         // catches a little more warmth on the rising edge so both
         // lower strokes feel grounded on one shared band. The hero
         // (v≈0.42) and upper-right (v≈0.28) stay clear of the bell
         // so the focal bloom keeps its exclusive claim on the light
         // (ART_DIRECTION §四 "高光只落在主句"). Restraint holds:
-        // peak alpha still ≤ 0.375 so the warm band reads as mist,
-        // not as a horizon line.
-        let horizon_glow = ((v - 0.50) * (1.0 - v) * 6.0).clamp(0.0, 1.0);
+        // peak alpha still ≤ 0.400 so the warm band reads as mist,
+        // not as a horizon line, and the +6.7 % lift stays well under
+        // the threshold where the warm band would compete with the
+        // focal bloom's claim on the page's light.
+        let horizon_glow = ((v - 0.50) * (1.0 - v) * 6.4).clamp(0.0, 1.0);
         for x in 0..w {
             let dx = x as f32 - cx;
             let dy = y as f32 - cy;
@@ -1574,17 +1577,22 @@ fn paint_supporting_slot(
     // where. Restraint (ART_DIRECTION §四): mist contribution capped at
     // ≈7 % so the supporting tier stays subordinate and the brush-weight
     // hierarchy (subtitle brightest, lower-left dimmest) holds.
-    // Same bell as the background mist (coefficient 6.0, onset 0.50,
-    // peak 0.375 at v≈0.75) so the supporting line's warm tint and
-    // the atmospheric warm band stay in sync. The lower-left at
-    // v≈0.74 sits just under the peak (mist_warmth ≈ 0.075, +10 %
-    // over the previous 0.068) — still within the restraint cap
-    // (≈8 %) so 《云深不知处》 now reads as deep ink actually
-    // dissolving into the warm horizon, not as dim cream floating
-    // over a barely-visible amber tint. The subtitle (v≈0.66) catches
-    // a touch more warmth on the rising edge; the upper-right
-    // (v≈0.28) stays clear of the bell so it remains the cool echo.
-    let horizon_glow = ((slot.def.y_frac - 0.50) * (1.0 - slot.def.y_frac) * 6.0).clamp(0.0, 1.0);
+    // Same bell as the background mist (coefficient 6.4, onset 0.50,
+    // peak 0.400 at v≈0.75) so the supporting line's warm tint and
+    // the atmospheric warm band stay in sync — the +6.7 % coefficient
+    // lift from 6.0 → 6.4 lifts both the background luminance and
+    // each supporting line's warm tint by the same percentage so
+    // 《云深不知处》 sits inside a slightly more visibly inhabited
+    // stretch of warm mist without ever reading as warmer than the
+    // air it sits in. The lower-left at v≈0.74 sits just under the
+    // peak (mist_warmth ≈ 0.080, +7 % over the previous 0.075) —
+    // still within the restraint cap (≈8 %) so 《云深不知处》
+    // reads as deep ink actually dissolving into the warm horizon,
+    // not as dim cream floating over a barely-visible amber tint.
+    // The subtitle (v≈0.66) catches a touch more warmth on the
+    // rising edge; the upper-right (v≈0.28) stays clear of the bell
+    // so it remains the cool echo in the moon's air.
+    let horizon_glow = ((slot.def.y_frac - 0.50) * (1.0 - slot.def.y_frac) * 6.4).clamp(0.0, 1.0);
     let mist_warmth = horizon_glow * 0.20;
     // Cool axis — the mirror image of the mist warmth above. Supporting
     // lines that sit in the moonlit upper sky absorb a touch of cool
@@ -2035,15 +2043,19 @@ fn paint_poem_title(
     // so a touched-warm scene still breathes amber on the signature.
     // Independent of touch so the title always belongs to the moonlit
     // night, not just when the user warms the scene. Reuses the same
-    // bell as `paint_supporting_slot` (coefficient 6.0, onset 0.50) so
-    // the title's warm tint and the lower-left echo's warm tint are
-    // visibly of one atmosphere, then scaled down (× 0.20 instead of
-    // × 0.20 on top of the 0.30 warmth multiplier) so the title stays
-    // a quiet mark — at title_v≈0.90 the bell sits at the far tail
-    // (horizon_glow ≈ 0.24, ambient ≈ 0.048) and the contribution
-    // lands at ≈ 4.8 % always-on warm, well below the supporting
-    // lines' mist share (≈ 7.5 % on the lower-left).
-    let ambient_warmth = ((title_v - 0.50) * (1.0 - title_v) * 6.0).clamp(0.0, 1.0) * 0.20;
+    // bell as `paint_supporting_slot` (coefficient 6.4, onset 0.50, the
+    // same +6.7 % lift over the previous 6.0) so the title's warm tint
+    // and the lower-left echo's warm tint are visibly of one
+    // atmosphere, then scaled down (× 0.20 instead of × 0.20 on top
+    // of the 0.30 warmth multiplier) so the title stays a quiet mark —
+    // at title_v≈0.90 the bell sits at the far tail (horizon_glow ≈
+    // 0.256, ambient ≈ 0.051) and the contribution lands at ≈ 5.1 %
+    // always-on warm (+6.7 % over the previous 4.8 %), still well below
+    // the supporting lines' mist share (≈ 8.0 % on the lower-left)
+    // and inside the restraint cap (≈ 8 %) so the seal stays one
+    // quiet step below the inscribed tier rather than narrowing the
+    // brush-weight gap.
+    let ambient_warmth = ((title_v - 0.50) * (1.0 - title_v) * 6.4).clamp(0.0, 1.0) * 0.20;
     // Title base sits one step into the muted ink family (mix CREAM toward
     // SHADOW 0.0 → 0.35) so the seal reads as ink dried on paper rather
     // than a fifth inscription line at 40 % opacity. CREAM (rgb 232, 212,
