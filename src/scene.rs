@@ -1623,25 +1623,39 @@ fn paint_supporting_slot(
     // sits beneath a moon that knows where, and the line should pick
     // up a touch of the moon's cool luminance so the two share one
     // atmosphere. Falls off with distance: the upper-right catches
-    // moon_proximity ≈ 0.665 (moon_cool ≈ 0.040, total cool ≈ 0.108),
+    // moon_proximity ≈ 0.665 (moon_cool ≈ 0.047, total cool ≈ 0.115),
     // while the hero (dist ≈ 0.444, proximity clamped to 0), subtitle
     // (dist ≈ 0.616, proximity clamped to 0), and lower-left (dist ≈
     // 0.894, proximity clamped to 0) stay near their existing cool
     // tints — they're too far from the moon for proximity to contribute
-    // meaningfully. The contribution weight 0.04 → 0.06 (+50 %) and cap
-    // 0.10 → 0.12 (+20 %) so the upper-right reads more clearly as ink
-    // bathed in moonlit air rather than the same neutral cream as the
-    // subtitle and hero; the +50 % weight visibly deepens the moon's
-    // sphere of influence on the closest line, while the +20 % cap
-    // keeps it well under "cyan" (ART_DIRECTION §四 "低饱和、高级灰")
+    // meaningfully. The contribution weight 0.04 → 0.06 (+50 %) → 0.07
+    // (+16.7 % relative, the third step in this arc) and cap 0.10 →
+    // 0.12 (+20 %) so the upper-right reads more clearly as ink bathed
+    // in moonlit air rather than the same neutral cream as the subtitle
+    // and hero; the +16.7 % weight visibly deepens the moon's sphere of
+    // influence on the closest line while the cap (still 0.12) keeps
+    // the result well under "cyan" (ART_DIRECTION §四 "低饱和、高级灰")
     // and preserves the brush-weight hierarchy (subtitle brightest,
     // upper-right next, lower-left dimmest) and the warm/cool axis
     // (subtitle + lower-left warm, upper-right cool) both still hold.
+    // The +16.7 % pairs with the +16.7 % halo_pulse lift in 20ee479
+    // (0.06 → 0.07, same magnitude, same restraint cadence) so the
+    // moon's sphere of influence on the air around it (halo_pulse) and
+    // the moon's reach onto the closest inscription line
+    // (moon_proximity) share one proportional cadence — the page's
+    // moonlit atmosphere reads as one coherent envelope rather than as
+    // two independent moon-side refinements; and the +16.7 % pairs
+    // with the recent title alpha bumps (0.46 → 0.48 in e37c083, the
+    // calligrapher's seal clearing the warm horizon) so the moon's air
+    // deepening on the echo and the seal clearing the bottom of the
+    // warm band are the two quiet ways the page's three upper-right
+    // inhabitants (moon + echo + halo) and its bottom signature share
+    // one atmosphere across the recent work.
     let moon_dx = slot.def.x_frac - 0.86;
     let moon_dy = slot.def.y_frac - 0.16;
     let moon_dist = (moon_dx * moon_dx + moon_dy * moon_dy).sqrt();
     let moon_proximity = (1.0 - moon_dist * 2.5).clamp(0.0, 1.0);
-    let cool_tint = (sky_cool + moon_proximity * 0.06).clamp(0.0, 0.12);
+    let cool_tint = (sky_cool + moon_proximity * 0.07).clamp(0.0, 0.12);
     let warmth_tint = (warmth * (1.0 - slot.def.shadow_mix) * 0.30 + mist_warmth).clamp(0.0, 1.0);
     let mut base_color = mix(raw_base, color::ink::WARM, warmth_tint);
     if cool_tint > 0.0 {
