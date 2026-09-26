@@ -1207,11 +1207,32 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
                 let term_warm = (t_term * 0.10).max(0.0);
                 // Body and halo now breathe independently — the disc sits
                 // at ±2 % (the still anchor, below every inscription line),
-                // the moonlit air at ±6 % (slightly more than the
-                // subtitle's ±5 %, so the page's atmosphere pulses past
+                // the moonlit air at ±7 % (slightly more than the
+                // subtitle's ±6.3 %, so the page's atmosphere pulses past
                 // the moon rather than the moon breathing with the page).
+                // Restores the original intent — the supporting-tier
+                // amplitude bump (0.06 → 0.075 base, commit 5241c61) had
+                // lifted the subtitle from ±5 % to ±6.3 % without a
+                // matching halo lift, so the moon's air ended up sitting
+                // fractionally below the inscription's most-present line
+                // (halo 6.0 % < subtitle 6.3 %) — the metaphor of
+                // "atmosphere pulses past the moon" had quietly inverted
+                // into "the inscription breathes past the moon". The +0.7
+                // pp halo lift (0.06 → 0.07, +16.7 % breath amplitude)
+                // restores the original hierarchy at the same restraint
+                // cadence as the prior halo bump (+10 % peak in 69bf26a)
+                // and the supporting-tier +25 % over two passes (5241c61 +
+                // 99e14e1) — the page's atmosphere now reads as the
+                // outside the moon inhabits rather than a sub-layer of
+                // the inscription it sits among. At pulse=1 the halo
+                // still only varies by ±7 % (peak 0.058 * 1.07 = 0.0621,
+                // vs the prior 0.0615) so the absolute alpha ceiling is
+                // essentially unchanged — the lift is in the breath
+                // relationship, not in the halo's brightness, so the
+                // focal line's claim on the page's light holds
+                // (ART_DIRECTION §四 "高光只落在主句").
                 let body_pulse = 1.0 + pulse * 0.02;
-                let halo_pulse = 1.0 + pulse * 0.06;
+                let halo_pulse = 1.0 + pulse * 0.07;
                 let body_a = body_peak * body_k * term * body_pulse;
                 let halo_a = halo_peak * halo_k * halo_pulse;
                 if body_a > 0.003 || halo_a > 0.003 {
