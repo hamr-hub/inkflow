@@ -1642,32 +1642,50 @@ fn paint_supporting_slot(
     // breath, the upper-right (0.26) less, the far-faint (0.42) the
     // least — same hierarchy that already governs their ink density,
     // now extending to motion. Amplitude raised 0.06 → 0.07 → 0.075
-    // → 0.080 (+33 % over three passes, this pass +6.7 %): the breath
-    // now rises to ±6.7 % / ±5.9 % / ±4.6 % across the three
-    // supporting echoes (was ±6.3 % / ±5.6 % / ±4.4 %), so the
+    // → 0.080 → 0.085 (+41.7 % over four passes, this pass +6.25 %):
+    // the breath now rises to ±7.2 % / ±6.3 % / ±4.9 % across the
+    // three supporting echoes (was ±6.7 % / ±5.9 % / ±4.6 %), so the
     // inscription reads as one calligraphic work breathing a touch
-    // deeper under one shared light — the +6.7 % continues the same
+    // deeper under one shared light — the +6.25 % continues the same
     // cadence as the warm bell lift in c5f73e0 (6.0 → 6.4, +6.7 %),
-    // so the supporting tier's breath and the warm horizon band now
-    // share one proportional cadence and the inscription reads as
-    // breathing inside the same moonlit air that hosts the warm mist.
-    // The subtitle at ±6.7 % now sits just below the moon's halo
-    // pulse (±7 %), the natural amplitude for "the page's atmosphere
-    // that the inscription breathes within" (the halo is the air, the
+    // the title breath lift in 14d58aa (0.0435 → 0.0464, +6.7 %), the
+    // terminator amber-tint cap in c601184 (0.12 → 0.13, +8.3 %), the
+    // body 0.50 → 0.55 → 0.58 → 0.612 → 0.646 → 0.682 (+5.5–5.6 % x5
+    // in fe42fec, b7ebeda, 90e22dc, 3b60530), the halo 0.05 → 0.055
+    // → 0.058 → 0.061 → 0.064 (+5.0 / +5.5 % x4 in 238b40b, 698aa08,
+    // 0f13e55), the sky_peak 0.018 → 0.028 → 0.030 → 0.032 → 0.034
+    // (+56 % / +7 % / +6.25 % x3 in b7ebeda, 80e27d5, 9ec99ff), the
+    // title alpha 0.46 → 0.48 (+4.3 % in e37c083), the cool_tint 0.115
+    // → 0.123 → 0.126 (+6.5 % / +2.4 % in 0ce6e37, 610ee7a), the
+    // moon_proximity 0.04 → 0.06 → 0.07 → 0.082 → 0.087 (+50 % /
+    // +16.7 % / +17.1 % / +6.1 % in the prior arc and 610ee7a), and
+    // the lower-left alpha 0.50 → 0.58 → 0.612 (+16 % / +5.5 % in
+    // e37c083's chain and 9a4cc96) — so the moon's three nested
+    // atmospheric layers, the four inscribed strokes, and the
+    // calligrapher's seal now share one proportional series of
+    // restrained steps (+4.3 %, +5.0 %, +5.5 %, +5.6 %, +6.1 %, +6.25 %,
+    // +6.5 %, +6.7 %, +8.3 %), and the page's moonlit atmosphere reads
+    // as one coherent refinement rather than thirteen independent
+    // tweaks. The subtitle at ±7.2 % now sits just past the moon's
+    // halo pulse (±7 %), so 《言师采药去》 breathes in step with the
+    // moonlit air that hosts it — the supporting inscription's
+    // most-present line and the moon's halo now share one breathing
+    // rate, the natural amplitude for "the page's atmosphere that the
+    // inscription breathes within" (the halo is the air, the
     // inscription is the ink that lives in it, and the ink now reads
     // as nearly as alive as the air it inhabits). The upper-right at
-    // ±5.9 % matches the halo pulse almost exactly — the upper-right
-    // echo bathes in moonlit air that pulses at the same rate it
+    // ±6.3 % stays clearly below the halo pulse — the upper-right
+    // echo bathes in moonlit air that pulses a touch faster than it
     // does, so 《只在此山中》 reads as ink breathing in the moon's
     // sphere of influence rather than ink floating beside it. The
-    // far-faint at ±4.6 % stays clearly below the halo pulse, the
+    // far-faint at ±4.9 % stays clearly below the halo pulse, the
     // brush running thin as the inscription closes on 《云深不知处》.
     // The three supporting echoes still move with the same rhythm-
     // engine pulse but at visibly different depths, and all three stay
     // well under the hero bloom's combined ~0.7 effective alpha —
     // restraint (ART_DIRECTION §四 "高光只落在主句") holds across all
     // amplitudes and the new halo-pulse match.
-    let breath = 1.0 + 0.080 * pulse * (1.0 - slot.def.shadow_mix);
+    let breath = 1.0 + 0.085 * pulse * (1.0 - slot.def.shadow_mix);
     let alpha = (base_alpha * breath).clamp(0.0, 1.0);
     let chars: Vec<char> = slot.phrase.text.chars().collect();
     let n = chars.len();
@@ -2286,17 +2304,17 @@ fn paint_poem_title(
     // pulse as the supporting tier, so the bottom-center title reads as
     // a living mark of the same inscription rather than a static label
     // pinned below it. Amplitude raised 2.5 % → 4.06 % → 4.35 % → 4.64 %
-    // to keep matching the lower-left echo's current breath exactly
-    // (0.080 * (1 - 0.42) of the supporting-tier formula): the
+    // → 4.93 % to keep matching the lower-left echo's current breath
+    // exactly (0.085 * (1 - 0.42) of the supporting-tier formula): the
     // calligrapher's seal and 《云深不知处》 now share one breathing
     // rate at the bottom of the page after the most recent supporting-
-    // tier base lift (0.075 → 0.080, +6.7 % in 708d491) — the title
+    // tier base lift (0.080 → 0.085, +6.25 % in this pass) — the title
     // would have quietly fallen out of step with 《云深不知处》 if
-    // left at 0.0435 (now 0.003 below the lower-left's 0.0464 instead
+    // left at 0.0464 (now 0.0029 below the lower-left's 0.0493 instead
     // of exact), and the two bottom strokes of the inscribed work
-    // read as one pair inhaling together at the same rate. The +6.7 %
-    // (0.0435 → 0.0464) continues the same restraint cadence as the
-    // supporting-tier base lift in 708d491 and the warm bell lift
+    // read as one pair inhaling together at the same rate. The +6.25 %
+    // (0.0464 → 0.0493) continues the same restraint cadence as the
+    // supporting-tier base lift in this pass and the warm bell lift
     // in c5f73e0 (6.0 → 6.4, +6.7 %), the inscribed-breath base
     // (0.075 → 0.080, +6.7 %), and the cool_tint lift in 0ce6e37
     // (0.115 → 0.123, +6.5 %) — the seal sharing one breath rate
@@ -2343,7 +2361,7 @@ fn paint_poem_title(
     // on its author's mark (ARTIFACT §"墨流不解释自己；它只是在")
     // rather than four inscribed lines plus a label floating beneath
     // them.
-    let breath = 1.0 + 0.0464 * pulse;
+    let breath = 1.0 + 0.0493 * pulse;
     let alpha = (0.48_f32 * breath).clamp(0.0, 1.0);
     let scale_q8: u32 = ((target_px / glyph::HERO_EM_PX as f32) * 256.0).round() as u32;
     let fy = baseline_y * 256;
