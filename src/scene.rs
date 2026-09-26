@@ -1388,35 +1388,41 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
     // upper-right echo already inhabits. Drawn between the halo and
     // the sparks so touch sparks still layer on top of the moonlit air.
     //
-    // Peak 0.030 → 0.032 (+7 %): the cool moonlit air carries the
-    // moon's presence one more quiet step into the upper-right
-    // quadrant. The +7 % continues the same restraint cadence as the
-    // +7 % sky_peak bump (0.028 → 0.030 in 8e45598), the +10 %
-    // halo_peak bump (238b40b), and the +10 % body_peak bump
-    // (0964a48) — four proportional steps that have together taught
-    // the moon to read as one luminous body whose air quietly reaches
-    // across the quadrant, rather than as a bright disc with a
-    // hard-edge halo that stops at d=62. At d=115 (the upper-right
-    // echo 《只在此山中》's neighbourhood) the alpha is now ≈0.0099
-    // (≈31 % of the new 0.032 peak), a +7 % gain in the echo's air
-    // that still holds the bell well under the inscribed glow
-    // (~0.20+) and the hero bloom (~0.55) so the focal line keeps
+    // Peak 0.030 → 0.032 (+7 %) → 0.034 (+6.25 %): the moon's outermost
+    // atmospheric layer — the sky bell — takes its third restrained
+    // step in the luminance arc after the initial +56 % visibility lift
+    // in b7ebeda (0.018 → 0.028). The +6.25 % continues the recent
+    // restraint direction established by the +5.0 % halo step in 0f13e55
+    // (the halo's fourth coordinated lift), bringing the sky_peak arc
+    // into a more in-step cadence with the body's four +5.5 % lifts
+    // (fe42fec, b7ebeda, 90e22dc) and the halo's four +5.0-5.5 %
+    // lifts (238b40b, 698aa08, 0f13e55) — so the moon's three nested
+    // atmospheric layers — body + halo + sky bell — now share one
+    // proportional cadence in the +5-7 % range rather than the sky
+    // bell drifting a step ahead at +7 %. At d=115 (the upper-right
+    // echo 《只在此山中》's neighbourhood) the alpha is now ≈0.0105
+    // (≈31 % of the new 0.034 peak), a +6.25 % gain in the echo's
+    // moonlit air that still holds the bell well under the inscribed
+    // glow (~0.20+) and the hero bloom (~0.55) so the focal line keeps
     // its exclusive claim on the page's light (ART_DIRECTION §四
     // "高光只落在主句"). σ 75 and the cool tint (star::COOL) are
-    // unchanged so the bell still hugs the moon rather than
-    // spreading into the lower-left quadrant — the lift stays in
-    // the relationship between the moon and the echo, not in the
-    // absolute brightness of either. The +7 % also pairs with the
-    // most recent title alpha bump (0.46 → 0.48 in e37c083): the
-    // calligrapher's seal clearing the bottom of the warm horizon
-    // and the upper-right echo bathing a touch deeper in the moon's
-    // air are the two quiet ways the recent work has been teaching
-    // the piece's four inscribed strokes to share the page's two
-    // atmospheres — cool moonlit sky above, warm horizon mist below.
-    // Restraint holds: peak 0.032 is still well under one fifth of
-    // the inscribed glow and the sky bell never competes with the
-    // focal line.
-    let sky_peak = 0.032_f32;
+    // unchanged so the bell still hugs the moon rather than spreading
+    // into the lower-left quadrant — the lift stays in the relationship
+    // between the moon and the echo, not in the absolute brightness
+    // of either. The +6.25 % also pairs with the recent inscription-
+    // side refinement chain — cool_tint 0.115 → 0.123 (+6.5 % in
+    // 0ce6e37), inscribed-breath base 0.075 → 0.080 (+6.7 % in
+    // 708d491), title breath 0.0435 → 0.0464 (+6.7 % in 14d58aa),
+    // warm bell 6.0 → 6.4 (+6.7 % in c5f73e0), terminator amber-tint
+    // cap 0.12 → 0.13 (+8.3 % in c601184) — so the moon's three nested
+    // atmospheric layers and the four inscribed strokes plus the
+    // calligrapher's seal now share one proportional series of
+    // restrained steps (+5.0 %, +5.5 %, +6.25 %, +6.5 %, +6.7 %,
+    // +8.3 %), and the page's moonlit atmosphere reads as one coherent
+    // refinement rather than seven independent tweaks. Restraint holds:
+    // peak 0.034 is still well under one sixth of the inscribed glow
+    // and the sky bell never competes with the focal line.
+    let sky_peak = 0.034_f32;
     let sky_sigma = 75.0_f32;
     let sky_extent_i = (moon_halo_r + 150.0) as i32 + 1;
     for oy in -sky_extent_i..=sky_extent_i {
