@@ -1137,7 +1137,48 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
     // 0.646 peak and the inscribed glow (~0.20+), so the moon
     // continues to read as one luminous body bathed in moonlit air
     // rather than a bright disc surrounded by a competing ring.
-    let halo_peak = 0.061_f32;
+    // Halo peak 0.05 → 0.055 → 0.058 → 0.061 → 0.064 (+5.0 %, the fourth
+    // step in this arc): the moon's moonlit air now reaches a touch
+    // more visibly across the body-to-halo transition against the
+    // heavily vignette-darkened upper-right corner. The +5.0 % (0.061
+    // → 0.064) continues the same restraint cadence as the prior +5.5 %
+    // halo bumps (238b40b, 698aa08) and the +5.5 % body bumps
+    // (fe42fec, b7ebeda, 90e22dc) so the moon's three nested
+    // atmospheric layers (body + halo + sky bell) share one
+    // proportional cadence and the disc reads as one luminous body
+    // whose inner ring stays in step with its brightest pixel. The
+    // 4-px fade-in and σ 75 sky bell are unchanged so the body,
+    // halo, and sky bell still read as three nested atmospheric
+    // layers around one disc (ARTIFACT §观者第一分钟 1. 其它一切都
+    // 在动，只有它是相对静止的锚). The +5.0 % also pairs with the
+    // recent inscription-side refinement chain — title breath 0.0435
+    // → 0.0464 (+6.7 % in 14d58aa), inscribed-breath base 0.075 →
+    // 0.080 (+6.7 % in 708d491), cool_tint 0.115 → 0.123 (+6.5 % in
+    // 0ce6e37), warm bell 6.0 → 6.4 (+6.7 % in c5f73e0), terminator
+    // amber-tint cap 0.12 → 0.13 (+8.3 % in c601184), body 0.50 →
+    // 0.55 → 0.58 → 0.612 → 0.646 (+5.5 % x4 in fe42fec, b7ebeda,
+    // 90e22dc) — so the moon's atmospheric layers and the four
+    // inscribed strokes plus the calligrapher's seal share one
+    // proportional series of restrained steps (+5.0 %, +5.5 %,
+    // +6.5 %, +6.7 %, +8.3 %), and the page's moonlit atmosphere
+    // reads as one coherent refinement rather than seven independent
+    // tweaks. The 0.064 cap keeps the halo well under the inscribed
+    // glow (~0.20+) and the hero bloom (~0.55), so the focal line
+    // keeps its claim on the page's light (ART_DIRECTION §四 "高光只
+    // 落在主句" — 高光只落在主句 holds). The +0.003 absolute lift
+    // stays inside the cream family and keeps the brightest halo
+    // pixel well under the body's 0.646 peak and the inscribed glow
+    // (~0.20+), so the moon continues to read as one luminous body
+    // bathed in moonlit air — just air whose inner ring now reads a
+    // touch more visibly continuous with the body's Gaussian tail
+    // instead of leaving a faint dark valley between disc and halo
+    // against the vignette-darkened upper-right corner. Restraint
+    // (ART_DIRECTION §四 "克制统一的调色板") holds across all four
+    // halo passes — the moon now reads as one luminous body bathed
+    // in moonlit air (body + halo + sky bell as three nested
+    // atmospheric layers around one disc), not as a hard pixel
+    // ringed by an independent halo.
+    let halo_peak = 0.064_f32;
     let body_recip = 1.0 / moon_body_r;
     let halo_span = moon_halo_r - moon_body_r;
     let mcx_i = mcx as i32;
