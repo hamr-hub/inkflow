@@ -1277,7 +1277,34 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
     // tint (star::COOL) reinforces the cool moonlit-sky axis the
     // upper-right echo already inhabits. Drawn between the halo and
     // the sparks so touch sparks still layer on top of the moonlit air.
-    let sky_peak = 0.028_f32;
+    //
+    // Peak 0.028 → 0.030 (+7 %): the cool moonlit air extends a touch
+    // further into the upper-right quadrant. The +7 % is the next
+    // restrained step in the same arc — the 0.018 → 0.028 pass lifted
+    // the bell above the visibility threshold at d=115 (the upper-right
+    // echo's neighbourhood) so the bell read as continuous moonlit air
+    // rather than just-barely-present, and the recent halo_pulse lift
+    // (0.06 → 0.07 in 20ee479) made the halo itself a touch more
+    // dynamic. The sky bell doesn't breathe, but it quietly carries
+    // the moon's air outward into the quadrant where 《只在此山中》
+    // sits; the matching proportional bump keeps the cool luminance
+    // reading as "the moon's air" rather than "a faint static tint
+    // that happens to be near the moon" — the +7 % continues the same
+    // restraint cadence as the +10 % halo_peak bump (238b40b) and the
+    // +10 % body_peak bump (0964a48). At d=115 the alpha is now
+    // ≈0.0092 (≈31 % of the new 0.030 peak), a +7 % gain in the echo's
+    // neighbourhood that still holds the bell well under the inscribed
+    // glow (~0.20+) and the hero bloom (~0.55) so the focal line keeps
+    // its exclusive claim on the page's light (ART_DIRECTION §四 "高光
+    // 只落在主句"). σ 75 and the cool tint (star::COOL) are unchanged
+    // so the bell still hugs the moon rather than spreading into the
+    // lower-left quadrant, and the upper-right echo continues to bath
+    // in one shared moonlit atmosphere with the moon that sits 115 px
+    // above it — the lift is in the relationship between the moon and
+    // the echo, not in the absolute brightness of either. Restraint
+    // holds: peak 0.030 is still well under one fifth of the inscribed
+    // glow and the sky bell never competes with the focal line.
+    let sky_peak = 0.030_f32;
     let sky_sigma = 75.0_f32;
     let sky_extent_i = (moon_halo_r + 150.0) as i32 + 1;
     for oy in -sky_extent_i..=sky_extent_i {
