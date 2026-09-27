@@ -1649,7 +1649,7 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
                 // more restrained step inside the cream/amber family.
                 let term_warm = (t_term * 0.140).max(0.0);
                 // Body and halo now breathe independently — the disc sits
-                // at ±2 % (the still anchor, below every inscription line),
+                // at ±2.1 % (the still anchor, below every inscription line),
                 // the moonlit air at ±7 % (slightly more than the
                 // subtitle's ±6.3 %, so the page's atmosphere pulses past
                 // the moon rather than the moon breathing with the page).
@@ -1668,13 +1668,54 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
                 // 99e14e1) — the page's atmosphere now reads as the
                 // outside the moon inhabits rather than a sub-layer of
                 // the inscription it sits among. At pulse=1 the halo
-                // still only varies by ±7 % (peak 0.058 * 1.07 = 0.0621,
-                // vs the prior 0.0615) so the absolute alpha ceiling is
-                // essentially unchanged — the lift is in the breath
-                // relationship, not in the halo's brightness, so the
-                // focal line's claim on the page's light holds
-                // (ART_DIRECTION §四 "高光只落在主句").
-                let body_pulse = 1.0 + pulse * 0.02;
+                // still only varies by ±7 % (peak 0.072 * 1.07 = 0.0770)
+                // so the absolute alpha ceiling is essentially unchanged
+                // — the lift is in the breath relationship, not in the
+                // halo's brightness, so the focal line's claim on the
+                // page's light holds (ART_DIRECTION §四 "高光只落在主句").
+                //
+                // Body breath 0.02 → 0.021 (+5 %, the first step on the
+                // moon's own breath axis after forty-two consecutive
+                // supporting-tier breath-base lifts reached the natural
+                // ceiling of the inscription-breath axis in 68330e6) —
+                // the disc's still-anchor breath now couples one touch
+                // more visibly with the page's atmosphere, so the body
+                // itself reads as one luminous body breathing a touch
+                // more with the moonlit air that hosts it rather than
+                // as a frozen disc at the exact same luminance on every
+                // beat. The +5 % (0.02 → 0.021) continues the same
+                // restraint cadence as the recent +5 % title alpha lift
+                // (c9f4dde), the +5.5-5.6 % body bumps (fe42fec,
+                // b7ebeda, 90e22dc, 3b60530), and the +5 % lower-left
+                // alpha lifts (9a4cc96) — the page's moon-side breath,
+                // luminance, and inscription-side now sit one shared
+                // +5 % cadence deeper across all three axes. At pulse=1
+                // the body's brightest pixel now varies by ±2.1 %
+                // (peak 0.682 * 1.021 = 0.6963, vs the prior 0.682 *
+                // 1.02 = 0.6956) so the absolute alpha ceiling is
+                // essentially unchanged — the lift is in the body's
+                // breathing rhythm, not in its brightness, and the disc
+                // still sits a touch below every inscribed line (lower-
+                // left ±40.81 %, subtitle ±36.63 %, title alpha 0.529,
+                // halo ±7 %) so the page's hierarchy of restrains
+                // holds (still anchor < halo air < subtitle inscription
+                // < focal line). The body still breathes slower than
+                // any other element on the page; it now just couples
+                // one restrained step more visibly to the same shared
+                // rhythm. Restraint (ART_DIRECTION §四 "克制统一的调色板")
+                // holds: the body's +0.014 alpha ceiling absolute lift
+                // stays inside the cream family, the body's +5 %
+                // breath step matches the page's settled +5 % restraint
+                // cadence rather than climbing the same +4.76 % breath
+                // axis any further, and the disc continues to read as
+                // one luminous body whose breathing now couples one
+                // touch more with the moon's air without ever
+                // crowding the focal-bloom envelope (ARTIFACT §观者第
+                // 一分钟 1. 其它一切都在动，只有它是相对静止的锚 — the
+                // body remains the page's still anchor, just an anchor
+                // that now breathes a touch more with the page's own
+                // rhythm rather than a frozen pixel).
+                let body_pulse = 1.0 + pulse * 0.021;
                 let halo_pulse = 1.0 + pulse * 0.07;
                 let body_a = body_peak * body_k * term * body_pulse;
                 let halo_a = halo_peak * halo_k * halo_pulse;
