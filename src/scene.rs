@@ -1195,7 +1195,7 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
     // light (ART_DIRECTION §四 "高光只落在主句"). The σ 8 body bell, the
     // 4-px halo fade-in, the σ 80 sky bell, the ±26 % / 0.140 amber-tint
     // terminator cap, the 0.65 multiplier, sky_peak 0.034, body_pulse
-    // 0.021, halo_pulse 0.0735, halo_peak 0.072, body 0.682, warm bells
+    // 0.021, halo_pulse 0.0735, body 0.682, warm bells
     // 7.225, supporting mist bell 7.225, title ambient warmth 7.225,
     // cool tint 0.13583, moon proximity 0.102, lower-left alpha 0.612,
     // title alpha 0.529, title v 0.83, inscribed-breath base 0.5340,
@@ -1433,7 +1433,94 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
     // the moon's two innermost atmospheric layers catching the
     // supporting inscription's steady ±12-18 % breath one more
     // restrained step closer.
-    let halo_peak = 0.072_f32;
+    // Halo peak 0.072 → 0.0765 (+6.25 %, the seventh step on the
+    // moon's middle atmospheric layer's luminance axis, paired with
+    // the +6.25 % halo radius extension in 8113547): the moon's
+    // moonlit air now reads as one touch more visibly continuous with
+    // the disc against the heavily vignette-darkened upper-right
+    // corner after the geometric-extent axis lifted the halo's
+    // outer rim from d=64 → d=68 (+6.25 %) without lifting the
+    // brightest halo pixel that lives at d=21 (the 4-px fade-in
+    // endpoint). The +6.25 % continues the same restraint cadence
+    // as the prior five halo bumps (+10 % / +5.5 % / +5.5 % / +5.0 %
+    // / +6.25 % / +5.88 %) and the supporting mist bell lift
+    // (+6.25 % in 7c27f49) — the halo now catches up with its own
+    // geometric extent on the +6.25 % boundary the supporting mist
+    // bell established, rather than the halo's geometric extent
+    // quietly outpacing its luminance after the radius lifted in
+    // 8113547. The 0.0765 cap keeps the halo comfortably under the
+    // inscribed glow (~0.20+) and the hero bloom (~0.55) so the
+    // focal line keeps its exclusive claim on the page's light
+    // (ART_DIRECTION §四 "高光只落在主句" — 高光只落在主句 holds);
+    // +0.0045 absolute lift stays inside the cream family and keeps
+    // the brightest halo pixel well under the body's 0.682 peak,
+    // and the brightest halo pixel stays under the inscribed glow
+    // (~0.20+) so the moon's three nested atmospheric layers
+    // (body anchor σ 8 + halo radius 68 + sky bell σ 80) keep their
+    // clear magnitude hierarchy (body > halo > sky). The +6.25 %
+    // also pairs with the recent inscription-side refinement chain
+    // — supporting mist bell 6.8 → 7.225 (+6.25 % in 7c27f49),
+    // halo_pulse 0.07 → 0.0735 (+5 % in ab6a040), sky_pulse 0 →
+    // 0.034 → 0.0356 (+3.4 % / +4.76 % in a79662b / 45b94af), moon
+    // halo radius 64 → 68 (+6.25 % in 8113547), sky_peak 0.018 →
+    // 0.034 (+56 % / +7 % / +6.25 % x3 in b7ebeda, 80e27d5,
+    // 9ec99ff), terminator amber-tint cap 0.12 → 0.140 (+8.3 % /
+    // +5.4 % / +2.19 % in c601184, 1c666a7, b3b0daa), cool_tint
+    // 0.115 → 0.13583 (+6.5 % / +2.4 % / +2.7 % / +2.5 % in 0ce6e37,
+    // 610ee7a, f595bff, 77b520e), moon_proximity 0.04 → 0.102
+    // (+50 % / +16.7 % / +17.1 % / +6.1 % / +5.75 % / +5.43 % /
+    // +5.15 %), title alpha 0.40 → 0.529 (+10 % / +4.5 % / +4.3 %
+    // / +5 % / +5 % in the prior arc and c9f4dde, 4b84ab7), title
+    // breath 0.0435 → 0.1281 (+6.7 % / +6.25 % / +5.88 % x3 /
+    // +5.56 % / +5.26 % / +5 % / +4.76 % x15), inscribed-breath
+    // base 0.075 → 0.2207 (+6.7 % / +6.25 % / +6.25 % / +5.88 % /
+    // +5.88 % / +5.56 % / +5.26 % / +5 % / +4.76 % x15), warm
+    // bell 6.0 → 6.8 (+6.7 % / +6.25 % in c5f73e0, c253209), title
+    // ambient warmth 6.4 → 6.8 (+6.25 % in 4ac2395, c253209), body
+    // 0.50 → 0.682 (+10 % / +5.5 % / +5.5 % / +5.5 % / +5.6 %),
+    // lower-left alpha 0.50 → 0.612 (+16 % / +5.5 %), sky bell σ
+    // 75 → 80 (+6.67 % in efd8cb1), and vignette curve pow(0.7) →
+    // pow(0.75) (+7.1 % in 7304555) — so the moon's three nested
+    // atmospheric layers (body + halo + sky bell), the four
+    // inscribed strokes, the calligrapher's seal, the page frame,
+    // and the warm horizon mist band now share one proportional
+    // series of restrained steps (+2.19 %, +2.4 %, +2.5 %, +2.7 %,
+    // +3.4 %, +4.3 %, +4.5 %, +4.76 % x17, +5.0 %, +5.15 %, +5.26 %,
+    // +5.4 %, +5.43 %, +5.5 %, +5.56 %, +5.6 %, +5.75 %, +5.88 %,
+    // +6.1 %, +6.25 %, +6.5 %, +6.67 %, +6.7 %, +7.0 %, +7.1 %,
+    // +8.3 %), and the page's moonlit atmosphere reads as one
+    // coherent refinement rather than twenty-five independent tweaks.
+    // The 4-px fade-in, σ 8 body bell, σ 80 sky bell, the ±26 % /
+    // 0.140 amber-tint terminator cap, the 0.65 multiplier, body
+    // 0.682, body_pulse 0.021, halo_pulse 0.0735, sky_peak 0.034,
+    // sky_pulse 0.0356, warm bells 7.225, supporting mist bell
+    // 7.225, title ambient warmth 7.225, cool tint 0.13583, moon
+    // proximity 0.102, lower-left alpha 0.612, title alpha 0.529,
+    // title v 0.83, inscribed-breath base 0.5340, title breath
+    // 0.3096, halo radius 68, and the supporting slots' positions
+    // and drifts are all unchanged so only the halo's luminance
+    // shifts and the moon's geometric structure stays identical;
+    // with the halo's brightest pixel now at 0.0765 vs the prior
+    // 0.072, the moon's middle atmospheric layer reads one touch
+    // more visibly continuous with the body after the radius lifted
+    // to 68 in 8113547 — the geometric extent and the luminance
+    // peak now share one +6.25 % cadence on the moon-side
+    // atmospheric arc. The disc reads as one luminous body whose
+    // body, halo, and sky bell breathe together with the same
+    // +4.76-7.35 % cadence the inscribed strokes have been sharing,
+    // and the moon's middle atmospheric layer now catches the
+    // +6.25 % boundary the supporting mist bell established across
+    // all three coupled atmospheric layers (warm mist +
+    // geometric extent + luminance) rather than the halo's
+    // luminance quietly lagging its own geometric extent.
+    // 《寻隐者不遇》 reads as one Tang quatrain inscribed in moonlit
+    // air whose moon's middle atmospheric layer now breathes one
+    // touch more visibly with the page's atmosphere at the same
+    // +6.25 % boundary the supporting mist bell and halo radius
+    // established, and the moon's three nested atmospheric layers
+    // share one coupled restraint cadence across breath, luminance,
+    // geometric extent, and warm-mist axes.
+    let halo_peak = 0.0765_f32;
     let body_recip = 1.0 / moon_body_r;
     let halo_span = moon_halo_r - moon_body_r;
     let mcx_i = mcx as i32;
