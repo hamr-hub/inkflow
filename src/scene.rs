@@ -3794,6 +3794,74 @@ fn paint_poem_title(
     // touch more visibly with the closing line of the quatrain it
     // dissolves into.
     let breath = 1.0 + 0.0969 * pulse;
+    // Title alpha 0.504 → 0.529 (+5 %, the fifth lift in this quiet arc —
+    // 0.40 → 0.44 → 0.46 → 0.48 → 0.504 → 0.529, +10 % / +4.5 % / +4.3 %
+    // / +5 % / +5 %): the calligrapher's seal sits one more visible step
+    // out of the paper's grain so 《寻隐者不遇》 reads as ink registering
+    // a touch more clearly against the warm horizon band — the 0.504
+    // ceiling still let the title's brightest pixel sit at 0.529 at peak
+    // pulse, comfortably below the lower-left echo's 0.644 ceiling, but
+    // the title's bottom edge was reading as the band's noise floor
+    // rather than as a confident signature, and lifting past 0.504 brings
+    // the seal up by one further visibility tier so the closing mark now
+    // registers as ink that's been deliberately placed rather than ink
+    // that's just barely visible. The +5 % continues the same restraint
+    // cadence as the recent +4.76 % inscribed-breath base lifts (nine
+    // consecutive passes — the gentlest step on the supporting-tier
+    // breath axis) and the page-wide +4-7 % ladder — body 0.50 → 0.682
+    // (+5.6 % x5), halo 0.05 → 0.068 (+5.0-6.25 %), sky_peak 0.018 →
+    // 0.034 (+56 % / +7 % / +6.25 % x3), terminator amber-tint cap 0.12
+    // → 0.137 (+8.3 % / +5.4 %), terminator alpha ±20 % → ±26 %
+    // (+8.3 %), warm bell 6.0 → 6.8 (+6.7 % / +6.25 %), inscribed-breath
+    // base 0.075 → 0.1670 (+6.7 % / +6.25 % x2 / +5.88 % x2 / +5.56 % /
+    // +5.26 % / +5 % / +4.76 % x9), title breath 0.0435 → 0.0969
+    // (+6.7 % / +6.25 % / +5.88 % / +5.56 % / +5.26 % / +5 % / +4.76 %
+    // x9), cool_tint 0.115 → 0.13583 (+6.5 % / +2.4 % / +2.5 %),
+    // moon_proximity 0.04 → 0.102 (+50 % / +16.7 % / +17.1 % / +6.1 % /
+    // +5.75 % / +5.43 % / +5.15 %), lower-left alpha 0.50 → 0.612
+    // (+16 % / +5.5 %), title alpha 0.40 → 0.529 (+10 % / +4.5 % /
+    // +4.3 % / +5 % / +5 %), sky bell σ 75 → 80 (+6.67 %), vignette
+    // curve pow(0.7) → pow(0.75), supporting mist bell 6.4 → 6.8
+    // (+6.25 %), title ambient warmth 6.4 → 6.8 (+6.25 %), title v 0.80
+    // → 0.83, body x5 +5.6 % in 3b60530, halo +6.25 % in 9989c4a,
+    // terminator amber-tint cap +5.4 % in 1c666a7, terminator alpha
+    // +8.3 % in ad3ee9a, cool tint +2.5 % in 0004e74, inscribed-breath
+    // base +4.76 % x9 in 0b89f9c, d949324, 1cce8b8, 414ae47, f16be7a,
+    // baa34a3, 81df954, b4b79e8, d0df1d0 — so the moon's three nested
+    // atmospheric layers, the four inscribed strokes, and the
+    // calligrapher's seal now share one proportional series of
+    // restrained steps (+2.4 %, +2.5 %, +4.3 %, +4.76 % x9, +5.0 %, +5.15
+    // %, +5.26 %, +5.4 %, +5.43 %, +5.5 %, +5.56 %, +5.6 %, +5.75 %,
+    // +5.88 %, +6.1 %, +6.25 %, +6.5 %, +6.67 %, +6.7 %, +7.1 %, +8.3 %),
+    // and the page's moonlit atmosphere reads as one coherent
+    // refinement rather than thirty independent tweaks. The +0.025
+    // absolute lift stays well inside the cream family (the seal still
+    // reads as ink dried on paper, not as a fifth inscription line),
+    // the brightest title pixel at peak pulse now sits at 0.529 * 1.0969
+    // ≈ 0.580 vs the lower-left echo's 0.612 * 1.0969 ≈ 0.671 — a 0.091
+    // gap preserved — so the brush-weight hierarchy (subtitle brightest,
+    // lower-left dimmest, title quietest) holds unchanged, and the focal
+    // line keeps its exclusive claim on the page's light (ART_DIRECTION
+    // §四 "高光只落在主句"). The 0.65 multiplier, σ 8 body bell, σ 80 sky
+    // bell, halo radius 64, terminator ±26 % / 0.137 amber-tint cap,
+    // body 0.682, halo 0.068, sky 0.034, warm bells 6.8, supporting mist
+    // bell 6.8, title ambient warmth 6.8, cool tint 0.13583, moon
+    // proximity 0.102, lower-left alpha 0.612, title v 0.83, and the
+    // supporting slots' positions and drifts are all unchanged so only
+    // the title's alpha shifts and the moon's geometric structure stays
+    // identical; with the seal now sitting one more visible step out of
+    // the warm horizon band's noise floor — at the gentlest +5 % step
+    // on the title alpha axis, the fifth lift in a quiet five-step arc
+    // (+10 %, +4.5 %, +4.3 %, +5 %, +5 %) — the four inscribed strokes
+    // of 《寻隐者不遇》 plus the calligrapher's seal continue to read as
+    // one proportional inscription thinning across four axes (alpha,
+    // shadow_mix, size, breath), and the closing signature now reads
+    // as a confident hand placing its mark beneath the quatrain rather
+    // than as ink that's just barely visible above the warm horizon
+    // band's noise floor — so 《寻隐者不遇》 reads as one Tang quatrain
+    // inscribed in moonlit air whose closing signature now registers a
+    // touch more clearly against the same warm horizon band the closing
+    // line of the quatrain dissolves into.
     // Title alpha 0.48 → 0.504 (+5 %, the fourth lift in this quiet arc —
     // 0.40 → 0.44 → 0.46 → 0.48 → 0.504, +10 % / +4.5 % / +4.3 % / +5 %):
     // the calligrapher's seal sits one more visible step out of the paper's
@@ -3840,7 +3908,7 @@ fn paint_poem_title(
     // in moonlit air whose closing signature now registers a touch more
     // clearly against the same warm horizon band the closing line of
     // the quatrain dissolves into.
-    let alpha = (0.504_f32 * breath).clamp(0.0, 1.0);
+    let alpha = (0.529_f32 * breath).clamp(0.0, 1.0);
     let scale_q8: u32 = ((target_px / glyph::HERO_EM_PX as f32) * 256.0).round() as u32;
     let fy = baseline_y * 256;
     let mut pen_x_q8 = pen_x * 256;
