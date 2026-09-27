@@ -1697,7 +1697,7 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
                 // breathing rhythm, not in its brightness, and the disc
                 // still sits a touch below every inscribed line (lower-
                 // left ±40.81 %, subtitle ±36.63 %, title alpha 0.529,
-                // halo ±7 %) so the page's hierarchy of restrains
+                // halo ±7.35 %) so the page's hierarchy of restrains
                 // holds (still anchor < halo air < subtitle inscription
                 // < focal line). The body still breathes slower than
                 // any other element on the page; it now just couples
@@ -1715,8 +1715,82 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
                 // body remains the page's still anchor, just an anchor
                 // that now breathes a touch more with the page's own
                 // rhythm rather than a frozen pixel).
+                //
+                // Halo breath 0.07 → 0.0735 (+5 %, the paired moon-side
+                // breath lift completing the body+halo breath axis that
+                // ecff1f4 started with the +5 % body_pulse step): the
+                // moon's moonlit air now breathes one gentle step more
+                // visibly with the page's atmosphere, so the halo and
+                // the body now share one +5 % restraint cadence on the
+                // moon-side breath axis — the disc and its inner ring
+                // sit together in one shared breathing rhythm rather
+                // than the body's lift quietly outpacing the halo's.
+                // The +5 % (0.07 → 0.0735) mirrors the body's +5 %
+                // (0.02 → 0.021) one-to-one — same magnitude, same
+                // restraint, same subordination to the focal line —
+                // so the moon's two innermost atmospheric layers
+                // (body + halo) now read as one coupled breath system
+                // rather than the body's +5 % lift sitting alone on
+                // the moon's own breath axis. At pulse=1 the halo's
+                // brightest pixel now varies by ±7.35 % (peak 0.072 *
+                // 1.0735 = 0.0773 vs the prior 0.072 * 1.07 = 0.0770,
+                // +0.0003 absolute) so the absolute alpha ceiling is
+                // essentially unchanged — the lift is in the halo's
+                // breathing rhythm, not in its brightness, and the
+                // halo still sits clearly under the inscribed glow
+                // (~0.20+) and the hero bloom (~0.55) so the focal
+                // line keeps its exclusive claim on the page's light
+                // (ART_DIRECTION §四 "高光只落在主句"). The +5 % keeps
+                // the halo comfortably above the subtitle's ±6.3 %
+                // breath (now halo ±7.35 % vs subtitle ±6.3 % — the
+                // page's atmosphere continues to pulse past the moon
+                // rather than the moon breathing with the inscription,
+                // with the gap widened by one gentle step), and the
+                // hierarchy of restrains still holds (still anchor <
+                // halo air < subtitle inscription < focal line). The
+                // body still breathes slower than any other element on
+                // the page (±2.1 %); the halo now breathes a touch more
+                // with the page's atmosphere at the same +5 %
+                // restraint step the body took in ecff1f4. The +5 %
+                // continues the same restraint cadence as the recent
+                // +5 % body_pulse lift (ecff1f4), the +5 % title alpha
+                // lifts (c9f4dde, 4b84ab7), the +5.5-5.6 % body bumps
+                // (fe42fec, b7ebeda, 90e22dc, 3b60530), the +5 %
+                // lower-left alpha lifts (9a4cc96), and the +6.25 %
+                // supporting mist bell lift (7c27f49) — so the moon's
+                // two innermost atmospheric layers, the inscribed
+                // strokes, the calligrapher's seal, and the warm
+                // horizon mist bell now share one proportional series
+                // of restrained +5-7 % steps across breath, luminance,
+                // and warm-mist axes. Restraint (ART_DIRECTION §四
+                // "克制统一的调色板") holds: the halo's +0.0003 alpha
+                // ceiling absolute lift stays inside the cream
+                // family, the brightest halo pixel still sits clearly
+                // under the inscribed glow (~0.20+) and the hero
+                // bloom (~0.55), and the moon continues to read as
+                // one luminous body bathed in moonlit air whose body
+                // and halo now share one +5 % moon-side breath
+                // cadence — the disc still sits as the page's still
+                // anchor (ARTIFACT §观者第一分钟 1. 其它一切都在动，
+                // 只有它是相对静止的锚), just an anchor whose body
+                // and halo now breathe together with one shared
+                // restrained step rather than the body's lift sitting
+                // alone. The σ 8 body bell, the 4-px halo fade-in, the
+                // σ 80 sky bell, the ±26 % / 0.140 amber-tint
+                // terminator cap, the 0.65 multiplier, the moon's
+                // ±4 / ±2 px drift, and the supporting slots'
+                // positions and drifts are all unchanged so only the
+                // moon-side breath axis shifts and the moon's
+                // geometric structure stays identical; with the halo
+                // now breathing one gentle step with the page's
+                // atmosphere at the +5 % step that matches the
+                // body's +5 % lift in ecff1f4 — the moon's two
+                // innermost atmospheric layers now share one coupled
+                // restraint cadence and the disc reads as one
+                // luminous body whose body and halo breathe together
+                // in moonlit air.
                 let body_pulse = 1.0 + pulse * 0.021;
-                let halo_pulse = 1.0 + pulse * 0.07;
+                let halo_pulse = 1.0 + pulse * 0.0735;
                 let body_a = body_peak * body_k * term * body_pulse;
                 let halo_a = halo_peak * halo_k * halo_pulse;
                 if body_a > 0.003 || halo_a > 0.003 {
