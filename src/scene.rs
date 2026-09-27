@@ -968,7 +968,7 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
         // calligrapher's seal sit a touch more clearly grounded in the
         // warm horizon mist without crossing the "horizon line" threshold
         // the focal-bloom envelope guards against.
-        let horizon_glow = ((v - 0.50) * (1.0 - v) * 6.8).clamp(0.0, 1.0);
+        let horizon_glow = ((v - 0.50) * (1.0 - v) * 7.225).clamp(0.0, 1.0);
         for x in 0..w {
             let dx = x as f32 - cx;
             let dy = y as f32 - cy;
@@ -3540,7 +3540,7 @@ fn paint_supporting_slot(
     // a touch more warmth on the rising edge; the upper-right (v≈0.28)
     // stays clear of the bell so it remains the cool echo in the
     // moon's air.
-    let horizon_glow = ((slot.def.y_frac - 0.50) * (1.0 - slot.def.y_frac) * 6.8).clamp(0.0, 1.0);
+    let horizon_glow = ((slot.def.y_frac - 0.50) * (1.0 - slot.def.y_frac) * 7.225).clamp(0.0, 1.0);
     let mist_warmth = horizon_glow * 0.20;
     // Cool axis — the mirror image of the mist warmth above. Supporting
     // lines that sit in the moonlit upper sky absorb a touch of cool
@@ -4099,7 +4099,7 @@ fn paint_poem_title(
     // ambient lift stays inside the muted-ink family (CREAM → SHADOW
     // 0.35 base), and the seal still reads as ink dried on paper rather
     // than a second focal light.
-    let ambient_warmth = ((title_v - 0.50) * (1.0 - title_v) * 6.8).clamp(0.0, 1.0) * 0.20;
+    let ambient_warmth = ((title_v - 0.50) * (1.0 - title_v) * 7.225).clamp(0.0, 1.0) * 0.20;
     // Title base sits one step into the muted ink family (mix CREAM toward
     // SHADOW 0.0 → 0.35) so the seal reads as ink dried on paper rather
     // than a fifth inscription line at 40 % opacity. CREAM (rgb 232, 212,
