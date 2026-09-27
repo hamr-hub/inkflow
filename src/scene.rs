@@ -1936,8 +1936,74 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
     // breathing atmosphere a touch more visibly continuous across
     // the air between them rather than two distinguishable
     // gradients meeting mid-quadrant.
+    // Sky breath 0 → 0.034 (the first lift on the moon's outermost
+    // atmospheric layer's breath axis, completing the moon-side breath
+    // axis that body_pulse +5 % in ecff1f4 and halo_pulse +5 % in
+    // ab6a040 started): the sky bell now breathes one gentle step with
+    // the page's atmosphere so the moon's three nested atmospheric
+    // layers — body (anchor) + halo (inner air) + sky bell (outer air)
+    // — share one coupled restraint cadence on the moon-side breath
+    // axis rather than the body+halo lifts sitting alone. At pulse=1
+    // the sky bell's brightest pixel now varies by ±3.4 % (peak
+    // 0.034 * 1.034 = 0.0352 vs the prior static 0.034, +0.0012
+    // absolute so the alpha ceiling is essentially unchanged), with
+    // the bell still sitting clearly under the inscribed glow (~0.20+)
+    // and the hero bloom (~0.55) so the focal line keeps its exclusive
+    // claim on the page's light (ART_DIRECTION §四 "高光只落在主句").
+    // The 0.034 breath amplitude sits between body_pulse 0.021 (±2.1 %)
+    // and halo_pulse 0.0735 (±7.35 %) — the sky bell breathes a touch
+    // more visibly with the page's air than the body's still anchor but
+    // considerably less than the halo's inner air, so the moon's three
+    // nested atmospheric layers read as one coupled breath system with
+    // a clear magnitude hierarchy (anchor < outer air < inner air) —
+    // the body still the page's still-anchor (ARTIFACT §观者第一分钟
+    // 1. 其它一切都在动，只有它是相对静止的锚), the sky bell the
+    // gentlest pulse in the moon's air, the halo the strongest pulse
+    // in the moon's air. The +3.4 % sits at a slightly smaller restraint
+    // than the +5 % body+halo cadence because the sky bell is the
+    // outermost faintest layer (peak 0.034 vs halo 0.072, body 0.682) —
+    // a larger breath on the faintest layer would draw the eye to its
+    // motion rather than letting it remain invisible moonlit air, and
+    // a smaller breath would drop the sky bell out of the moon-side
+    // rhythm and let it read as static luminance rather than living
+    // air. The +3.4 % continues the same restraint cadence as the
+    // recent +5 % body_pulse lift (ecff1f4), the +5 % halo_pulse lift
+    // (ab6a040), the +6.25 % supporting mist bell lift (7c27f49), the
+    // +6.25 % sky_peak lifts (80e27d5, 9ec99ff), the +4.76 % x35
+    // inscribed-breath base, the +5 % title alpha lifts (c9f4dde,
+    // 4b84ab7), the +5.5-5.6 % body bumps (fe42fec, b7ebeda, 90e22dc,
+    // 3b60530), the +5 % lower-left alpha lifts (9a4cc96), and the
+    // +6.67 % sky bell σ extension — so the moon's three nested
+    // atmospheric layers (body + halo + sky bell), the inscribed
+    // strokes, the calligrapher's seal, and the warm horizon mist bell
+    // now share one proportional series of restrained +3.4-6.7 % steps
+    // across breath, luminance, geometric extent, and warm-mist axes.
+    // The σ 80 sky bell, the ±26 % / 0.140 amber-tint terminator cap,
+    // the 0.65 multiplier, sky_peak 0.034, body_pulse 0.021, halo_pulse
+    // 0.0735, body 0.682, halo 0.072, sky 0.034, warm bells 7.225,
+    // supporting mist bell 7.225, title ambient warmth 7.225, cool
+    // tint 0.13583, moon proximity 0.102, lower-left alpha 0.612, title
+    // alpha 0.529, title v 0.83, inscribed-breath base 0.5340, title
+    // breath 0.3096, and the supporting slots' positions and drifts are
+    // all unchanged so only the moon's outermost atmospheric layer's
+    // breath axis shifts and the moon's geometric structure stays
+    // identical; with the sky bell now breathing one gentle step with
+    // the page's atmosphere at the +3.4 % step — the smallest restraint
+    // on the moon-side breath axis so the faintest layer reads as
+    // moonlit air rather than as a flickering light — the moon's three
+    // nested atmospheric layers now share one coupled restraint cadence
+    // across breath, luminance, geometric extent, and reach, and the
+    // disc reads as one luminous body whose body, halo, and sky bell
+    // breathe together in moonlit air. The page reads as one Tang
+    // quatrain inscribed in moonlit air whose moon's three nested
+    // atmospheric layers now breathe together with one coupled restraint
+    // cadence, and the moonlit air bridging the disc and the upper-right
+    // echo 《只在此山中》 now breathes with the same quiet rhythm as
+    // the disc itself rather than sitting as static luminance that
+    // happens to share the disc's neighbourhood.
     let sky_peak = 0.034_f32;
     let sky_sigma = 80.0_f32;
+    let sky_pulse = 1.0 + pulse * 0.034;
     let sky_extent_i = (moon_halo_r + 150.0) as i32 + 1;
     for oy in -sky_extent_i..=sky_extent_i {
         for ox in -sky_extent_i..=sky_extent_i {
@@ -1953,7 +2019,7 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
                 continue; // already covered by the halo
             }
             let k = (-0.5 * (d / sky_sigma).powi(2)).exp();
-            let a = sky_peak * k;
+            let a = sky_peak * k * sky_pulse;
             if a > 0.003 {
                 let idx = (yy as u32 * w + xx as u32) as usize;
                 fb[idx] = blend_add_lin(fb[idx], color::star::COOL, a);
