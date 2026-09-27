@@ -3429,7 +3429,20 @@ fn paint_supporting_slot(
     // present line and runs thin as the brush closes on 《云深不知处》,
     // and the upper-right echo's motion now sits a touch more visibly
     // past the moon's atmospheric pulse rather than just brushing it.
-    let breath = 1.0 + 0.5098 * pulse * (1.0 - slot.def.shadow_mix);
+    // Inscribed-breath base 0.5098 → 0.5340 (+4.76 %, the forty-second
+    // step in the supporting-tier breath arc) paired with the title
+    // breath 0.2955 → 0.3096 in the same pass so the bottom two
+    // inscribed strokes plus the seal keep their shared breathing rate.
+    // The +4.76 % continues the gentlest-step cadence for thirty-five
+    // consecutive passes; the supporting inscription now sits a touch
+    // more visibly past the moon's halo pulse (±7 %) without ever
+    // straying from the page's settled rhythm — and now approaching the
+    // natural ceiling of the breath axis where further lifts would
+    // begin to read as flicker rather than breath, so this is also the
+    // point where future turns should consider shifting to a different
+    // axis (moon's own breath, supporting mist bell, page frame) rather
+    // than climbing the same breath coefficient again.
+    let breath = 1.0 + 0.5340 * pulse * (1.0 - slot.def.shadow_mix);
     let alpha = (base_alpha * breath).clamp(0.0, 1.0);
     let chars: Vec<char> = slot.phrase.text.chars().collect();
     let n = chars.len();
@@ -4919,7 +4932,13 @@ fn paint_poem_title(
     // page reads as one Tang quatrain inscribed in moonlit air whose
     // closing signature now breathes a touch more visibly with the
     // closing line of the quatrain it dissolves into.
-    let breath = 1.0 + 0.2955 * pulse;
+    // Title breath 0.2955 → 0.3096 (+4.76 %, the thirty-third step in
+    // the title-breath arc) paired with the inscribed-breath base
+    // 0.5098 → 0.5340 in the same pass so the seal keeps sharing the
+    // lower-left echo's exact breathing rate. The +4.76 % continues the
+    // gentlest-step cadence so the title's breath never strays from the
+    // page's settled rhythm.
+    let breath = 1.0 + 0.3096 * pulse;
     // Title alpha 0.504 → 0.529 (+5 %, the fifth lift in this quiet arc —
     // 0.40 → 0.44 → 0.46 → 0.48 → 0.504 → 0.529, +10 % / +4.5 % / +4.3 %
     // / +5 % / +5 %): the calligrapher's seal sits one more visible step
