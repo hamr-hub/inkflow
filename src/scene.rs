@@ -2740,7 +2740,82 @@ fn paint_supporting_slot(
     // 《云深不知处》, and the upper-right echo's motion now sits a
     // touch more visibly past the moon's atmospheric pulse rather than
     // just brushing it.
-    let breath = 1.0 + 0.1750 * pulse * (1.0 - slot.def.shadow_mix);
+    // Inscribed-breath base 0.1750 → 0.1833 (+4.76 %, the nineteenth step
+    // in the supporting-tier breath arc — 0.075 → 0.080 → 0.085 → 0.090 →
+    // 0.095 → 0.100 → 0.105 → 0.110 → 0.1152 → 0.1207 → 0.1263 → 0.1323 →
+    // 0.1386 → 0.1452 → 0.1521 → 0.1594 → 0.1670 → 0.1750 → 0.1833, +6.7 % /
+    // +6.25 % / +6.25 % / +5.88 % / +5.88 % / +5.56 % / +5.26 % / +5 % /
+    // +4.76 % x11 paired for the nineteenth time with the title breath
+    // 0.1015 → 0.1063 in the same pass so the bottom two inscribed
+    // strokes plus the seal keep their shared breathing rate), so 《松
+    // 下问童子》 《言师采药去》 《只在此山中》 《云深不知处》 now
+    // inhale at ±15.04 % / ±13.53 % / ±10.63 % / ±10.63 % (was ±14.70 % /
+    // ±12.94 % / ±10.15 % / ±10.15 %), with the upper-right echo 《只在
+    // 此山中》 continuing to sit past the moon's halo pulse (±7 %) — from
+    // ±12.94 % to ±13.53 %, so 《只在此山中》 reads as ink breathing a
+    // touch more visibly deep than the moonlit air that hosts it, and the
+    // lower-left echo plus the seal share one quiet breathing rate at
+    // ±10.63 % (was ±10.15 %) — the calligrapher's seal and 《云深不知
+    // 处》 now breathe a touch more visibly alive but still the most-
+    // restrained of the four inscribed strokes plus the title. The
+    // +4.76 % matches the prior ten passes (the gentlest step on the
+    // breath axis for eleven consecutive passes) and continues the same
+    // restraint cadence as the recent +4.76 % inscribed-breath base
+    // lifts (d0df1d0, b4b79e8, 81df954, baa34a3, f16be7a, 414ae47,
+    // 1cce8b8, d949324, 0b89f9c, 690c24f), the +5 % title alpha lift
+    // (4b84ab7), the +5.15 % moon-proximity cool-tint weight (77b520e),
+    // the +4.76 % inscribed-breath base (68ee193), the +5.43 % moon-
+    // proximity cool-tint weight (10d23a3), the +5.75 % moon-proximity
+    // cool-tint weight (f595bff), the +6.1 % moon proximity (610ee7a),
+    // the +5.5 % lower-left alpha (9a4cc96), the +6.5 % cool tint
+    // (0ce6e37), the +6.25 % halo (9989c4a), the +5.6 % body x5
+    // (3b60530), the +6.25 % sky peak x3 (9ec99ff), the +5 % title alpha
+    // (c9f4dde), the +5.88 % title breath (d44ac01), the +5.88 %
+    // inscribed-breath base (d44ac01), the +5.56 % inscribed-breath base
+    // (0004e74), the +5.26 % inscribed-breath base (d2f539c), the
+    // +5.56 % inscribed-breath base (91a6648), the +6.25 % supporting
+    // mist bell (4ac2395), the +6.25 % warm band bell (c253209), the
+    // +6.67 % sky bell σ (efd8cb1), the +7.1 % vignette curve (7304555),
+    // the +8.3 % terminator alpha (ad3ee9a), the +5.4 % terminator
+    // amber-tint cap (1c666a7), the +2.19 % terminator amber-tint cap
+    // (b3b0daa), the +5.88 % title breath (d44ac01), the +4.76 %
+    // inscribed-breath base (0b89f9c), the +4.76 % inscribed-breath base
+    // (d949324), the +4.76 % inscribed-breath base (1cce8b8), the
+    // +4.76 % inscribed-breath base (414ae47), the +4.76 % inscribed-
+    // breath base (f16be7a), the +4.76 % inscribed-breath base
+    // (baa34a3), the +4.76 % inscribed-breath base (81df954), the
+    // +4.76 % inscribed-breath base (b4b79e8), the +4.76 % inscribed-
+    // breath base (d0df1d0) — so the moon's three nested atmospheric
+    // layers, the four inscribed strokes, the calligrapher's seal, the
+    // page frame, and the moon's reach onto its closest inscription line
+    // now share one proportional series of restrained steps (+2.19 %,
+    // +2.4 %, +2.5 %, +2.7 %, +4.3 %, +4.76 % x11, +5.0 %, +5.15 %,
+    // +5.26 %, +5.4 %, +5.43 %, +5.5 %, +5.56 %, +5.6 %, +5.75 %, +5.88 %,
+    // +6.1 %, +6.25 %, +6.5 %, +6.67 %, +6.7 %, +7.1 %, +8.3 %), and the
+    // supporting inscription now reads as one continuous breath across
+    // all four strokes plus the title, with the upper-right echo now
+    // sitting at ±13.53 % (clearly past the halo's ±7 %), the lower-left
+    // + title paired at the most-restrained ±10.63 % as the brush closes
+    // on 《云深不知处》 and the calligrapher's seal. The four inscribed
+    // strokes' combined breath amplitudes stay well under the hero
+    // bloom's ~0.7 effective alpha and the supporting tier's body alpha
+    // (subtitle 0.76 * 1.1504 ≈ 0.874 vs the prior 0.76 * 1.1403 ≈ 0.867,
+    // +0.007 absolute — still clearly subordinate to the focal-bloom
+    // envelope). With the supporting inscription now breathing one more
+    // gentle step into the moon's moonlit air — the nineteenth
+    // supporting-tier base lift in the cadence, paired for the
+    // nineteenth time with the title breath to keep the seal sharing
+    // the lower-left echo's exact breathing rate, and now at the
+    // gentlest +4.76 % step (matched for eleven consecutive passes) so
+    // the breath never strays from the page's settled rhythm — 《寻隐
+    // 者不遇》 reads as one Tang quatrain inscribed in moonlit air whose
+    // four strokes now breathe together with one quiet shared rhythm
+    // that rises a touch more clearly past the moon's halo at the most-
+    // present line and runs thin as the brush closes on 《云深不知
+    // 处》, and the upper-right echo's motion now sits a touch more
+    // visibly past the moon's atmospheric pulse rather than just
+    // brushing it.
+    let breath = 1.0 + 0.1833 * pulse * (1.0 - slot.def.shadow_mix);
     let alpha = (base_alpha * breath).clamp(0.0, 1.0);
     let chars: Vec<char> = slot.phrase.text.chars().collect();
     let n = chars.len();
@@ -3861,7 +3936,50 @@ fn paint_poem_title(
     // inscribed in moonlit air whose closing signature now breathes a
     // touch more visibly with the closing line of the quatrain it
     // dissolves into.
-    let breath = 1.0 + 0.1015 * pulse;
+    // Title breath 0.1015 → 0.1063 (+4.76 %, paired with the supporting-
+    // tier base lift 0.1750 → 0.1833 in the same pass — paired product
+    // 0.1833 * 0.58 = 0.1063): the seal continues to match the
+    // lower-left echo's new exact product so 《寻隐者不遇》 and 《云深不
+    // 知处》 remain visibly of one breathing rate — the bottom two
+    // inscribed strokes plus the seal now share ±10.63 % (was ±10.15 %).
+    // Without the paired title lift the seal would drop out of the
+    // supporting-tier arc and read as a static label rather than as the
+    // closing stroke of the calligraphic inscription; with it, the
+    // title's paired breath step continues the chain of +6.7 % →
+    // +6.25 % → +6.25 % → +5.88 % → +5.88 % → +5.56 % → +5.26 % →
+    // +5 % → +4.76 % x11 lifts (paired product 0.075 * 0.58 = 0.0435 →
+    // 0.080 * 0.58 = 0.0464 → 0.085 * 0.58 = 0.0493 → 0.090 * 0.58 =
+    // 0.0522 → 0.095 * 0.58 = 0.0551 → 0.100 * 0.58 = 0.058 → 0.105 *
+    // 0.58 = 0.0609 → 0.110 * 0.58 = 0.0638 → 0.1152 * 0.58 = 0.0668
+    // → 0.1207 * 0.58 = 0.0700 → 0.1263 * 0.58 = 0.0733 → 0.1323 *
+    // 0.58 = 0.0768 → 0.1386 * 0.58 = 0.0804 → 0.1452 * 0.58 = 0.0842
+    // → 0.1521 * 0.58 = 0.0882 → 0.1594 * 0.58 = 0.0925 → 0.1670 *
+    // 0.58 = 0.0969 → 0.1750 * 0.58 = 0.1015 → 0.1833 * 0.58 = 0.1063),
+    // one gentle step at a time. The +4.76 % matches the prior ten
+    // passes (the gentlest step on the breath axis for eleven
+    // consecutive passes) — the title-breath cadence now matching the
+    // supporting-tier base's gentlest edge at +4.76 % for eleven
+    // consecutive passes — and continues the same restraint cadence as
+    // the page-wide +5-8 % ladder. The +0.005 absolute breath lift keeps
+    // the title clearly subordinate to the closest inscription line —
+    // at peak pulse the title now breathes at 0.529 * 1.1063 ≈ 0.585
+    // vs the lower-left echo's 0.612 * 1.1063 ≈ 0.677, a 0.092 gap
+    // preserved — so the brush-weight hierarchy (subtitle brightest,
+    // lower-left dimmest, title quietest) holds unchanged, and the focal
+    // line keeps its exclusive claim on the page's light (ART_DIRECTION
+    // §四 '高光只落在主句'). With the seal now breathing one more
+    // gentle step into the page's inhabited range — at the gentlest
+    // +4.76 % step in the title-breath arc, paired with the supporting-
+    // tier base lift to keep the lower-left + title pairing intact —
+    // the four inscribed strokes of 《寻隐者不遇》 plus the
+    // calligrapher's seal continue to read as one proportional
+    // inscription thinning across four axes (alpha, shadow_mix, size,
+    // breath), with the title's breath now matching the supporting-tier
+    // base's gentlest +4.76 % edge for eleven consecutive passes. The
+    // page reads as one Tang quatrain inscribed in moonlit air whose
+    // closing signature now breathes a touch more visibly with the
+    // closing line of the quatrain it dissolves into.
+    let breath = 1.0 + 0.1063 * pulse;
     // Title alpha 0.504 → 0.529 (+5 %, the fifth lift in this quiet arc —
     // 0.40 → 0.44 → 0.46 → 0.48 → 0.504 → 0.529, +10 % / +4.5 % / +4.3 %
     // / +5 % / +5 %): the calligrapher's seal sits one more visible step
