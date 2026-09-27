@@ -2816,7 +2816,7 @@ fn paint_supporting_slot(
     // 处》, and the upper-right echo's motion now sits a touch more
     // visibly past the moon's atmospheric pulse rather than just
     // brushing it.
-    let breath = 1.0 + 0.2011 * pulse * (1.0 - slot.def.shadow_mix);
+    let breath = 1.0 + 0.2107 * pulse * (1.0 - slot.def.shadow_mix);
     let alpha = (base_alpha * breath).clamp(0.0, 1.0);
     let chars: Vec<char> = slot.phrase.text.chars().collect();
     let n = chars.len();
@@ -3981,7 +3981,7 @@ fn paint_poem_title(
     // consecutive passes. The page reads as one Tang quatrain inscribed
     // in moonlit air whose closing signature now breathes a touch more
     // visibly with the closing line of the quatrain it dissolves into.
-    let breath = 1.0 + 0.1167 * pulse;
+    let breath = 1.0 + 0.1223 * pulse;
     // Title alpha 0.504 → 0.529 (+5 %, the fifth lift in this quiet arc —
     // 0.40 → 0.44 → 0.46 → 0.48 → 0.504 → 0.529, +10 % / +4.5 % / +4.3 %
     // / +5 % / +5 %): the calligrapher's seal sits one more visible step
