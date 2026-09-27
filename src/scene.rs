@@ -1158,7 +1158,61 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
     // three nested atmospheric layers (body + halo + sky bell) all
     // share one proportional cadence across geometric extent and
     // luminance peak.
-    let moon_halo_r = 64.0_f32;
+    // Halo radius 64 → 68 (+6.25 %, the next gentle step on the moon-side
+    // geometric-extent axis after sky bell σ 75 → 80 +6.67 % in efd8cb1
+    // and halo radius 44 → 64 +45 % over three passes 238b40b / 698aa08 /
+    // 9989c4a), so the moon's middle atmospheric layer now reaches one
+    // more gentle step into the moonlit air rather than the halo's
+    // geometric extent quietly lagging its own breath axis (which the
+    // a79662b / 45b94af breath lifts completed across all three moon-side
+    // layers). At d=68 px the halo's outer rim now overlaps with the σ 80
+    // sky bell's outer reach, so the three nested atmospheric layers read
+    // as one coupled geometric system (body σ 8 anchor + halo radius 68 +
+    // sky bell σ 80 outer air) with a clear magnitude hierarchy (anchor <
+    // halo extent < sky bell extent) rather than the halo sitting at a
+    // separate inner radius while the sky bell extended further out.
+    // The +6.25 % matches the +6.25 % supporting mist bell cadence from
+    // 7c27f49 (the warm horizon bell hosting 《云深不知处》 and 《寻隐者
+    // 不遇》), the +6.25 % sky_peak lifts (80e27d5, 9ec99ff), the +5 %
+    // body_pulse lift (ecff1f4), the +5 % halo_pulse lift (ab6a040), the
+    // +3.4 % and +4.76 % sky_pulse lifts (a79662b, 45b94af), the +6.67 %
+    // sky bell σ extension (efd8cb1), the +4.76 % x35 inscribed-breath
+    // base, the +5 % title alpha lifts (c9f4dde, 4b84ab7), the +5.5-5.6 %
+    // body bumps (fe42fec, b7ebeda, 90e22dc, 3b60530), the +5 % lower-
+    // left alpha lifts (9a4cc96), and the +2.19 % terminator amber-tint
+    // cap — so the moon's three nested atmospheric layers (body σ 8 +
+    // halo radius 68 + sky bell σ 80), the four inscribed strokes, the
+    // calligrapher's seal, and the warm horizon mist bell now share one
+    // proportional series of restrained +2.19-7.35 % steps across breath,
+    // luminance, geometric extent, and warm-mist axes. The +4 px
+    // absolute lift (64 → 68) stays well inside the safe area on 1280×720
+    // (the upper-right echo at (1024, 202) sits ≈ 115 px from the moon at
+    // (1100, 115) — so the echo stays ≈ 47 px beyond the new halo rim
+    // rather than crowded by it), and the halo's outermost pixels stay at
+    // alpha ≤ halo_peak * (1 - (68-64)² / halo_span²) ≈ 0.072 * 0.98 ≈
+    // 0.071 — well under the inscribed glow (~0.20+) and the hero bloom
+    // (~0.55) so the focal line keeps its exclusive claim on the page's
+    // light (ART_DIRECTION §四 "高光只落在主句"). The σ 8 body bell, the
+    // 4-px halo fade-in, the σ 80 sky bell, the ±26 % / 0.140 amber-tint
+    // terminator cap, the 0.65 multiplier, sky_peak 0.034, body_pulse
+    // 0.021, halo_pulse 0.0735, halo_peak 0.072, body 0.682, warm bells
+    // 7.225, supporting mist bell 7.225, title ambient warmth 7.225,
+    // cool tint 0.13583, moon proximity 0.102, lower-left alpha 0.612,
+    // title alpha 0.529, title v 0.83, inscribed-breath base 0.5340,
+    // title breath 0.3096, and the supporting slots' positions and drifts
+    // are all unchanged so only the halo's geometric extent shifts and
+    // the moon's geometric structure stays identical. With the halo's
+    // outer rim now meeting the sky bell's outer reach at d=68 vs d=80
+    // px — the three nested atmospheric layers now share one coupled
+    // geometric-extent cadence at the +6.25 % boundary the supporting
+    // mist bell established — 《寻隐者不遇》 reads as one Tang quatrain
+    // inscribed in moonlit air whose moon's three nested atmospheric
+    // layers now share one proportional cadence across geometric extent,
+    // breath, luminance, and warm-mist axes, and the moon's reach onto
+    // the upper-right echo 《只在此山中》 extends one more restrained step
+    // into the page's quiet atmosphere at the same +6.25 % boundary the
+    // supporting mist bell established.
+    let moon_halo_r = 68.0_f32;
     let moon_halo_r2 = moon_halo_r * moon_halo_r;
     // Body peak 0.55 → 0.58 → 0.612 → 0.646 → 0.682 (+5.6 %, the fifth
     // step in the moon's atmospheric arc): the moon's brightest single
