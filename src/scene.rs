@@ -2288,8 +2288,8 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
                 // restraint cadence and the disc reads as one
                 // luminous body whose body and halo breathe together
                 // in moonlit air.
-                let body_pulse = 1.0 + pulse * 0.022;
-                let halo_pulse = 1.0 + pulse * 0.0770;
+                let body_pulse = 1.0 + pulse * 0.023;
+                let halo_pulse = 1.0 + pulse * 0.0807;
                 let body_a = body_peak * body_k * term * body_pulse;
                 let halo_a = halo_peak * halo_k * halo_pulse;
                 if body_a > 0.003 || halo_a > 0.003 {
@@ -2863,7 +2863,7 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
     // on one proportional +6.25 % geometric cadence across two
     // restrained passes.
     let sky_sigma = 90.3_f32;
-    let sky_pulse = 1.0 + pulse * 0.0373;
+    let sky_pulse = 1.0 + pulse * 0.0391;
     let sky_extent_i = (moon_halo_r + 150.0) as i32 + 1;
     for oy in -sky_extent_i..=sky_extent_i {
         for ox in -sky_extent_i..=sky_extent_i {
