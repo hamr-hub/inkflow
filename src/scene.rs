@@ -567,6 +567,107 @@ impl Composition {
                 fade_out: 0.7,
                 stagger: 0.34,
             },
+            // alpha 0.646 → 0.662 (+2.48 %, the gentlest step on the
+            //   inscribed-stroke alpha axis after the +2.63 % subtitle
+            //   alpha lift in 1c2fb98 — the +2.48 % sits exactly between
+            //   the body σ +2.35 % gentlest-step register 4695311 just
+            //   completed on the moon-side geometric-extent axis and the
+            //   terminator alpha +2.69 % / terminator cap +2.86 %
+            //   gentlest-step register the directional-modulation and
+            //   warm-tint cap axes have just completed (47ac018 /
+            //   4077850), so the inscribed-stroke alpha axis now steps
+            //   onto the same +2.35–2.86 % gentlest rung the page-wide
+            //   +2-3 % material refinement band the most-refined axes
+            //   have settled into — body σ +2.35 % (4695311); cool_tint
+            //   +2.4 % / +2.5 % / +2.7 % (0ce6e37, 610ee7a, f595bff,
+            //   77b520e); vignette +2.5 % (7304555); halo radius +2.5 %
+            //   (28af5b6); subtitle alpha +2.63 % (1c2fb98); terminator
+            //   alpha +2.69 % (47ac018); terminator cap +2.86 %
+            //   (4077850)) rather than the warm-horizon echo stroke's
+            //   alpha quietly sitting at its post-12fac53 +5.5 % register
+            //   while every surrounding material axis stepped past it
+            //   at +2.35 % / +2.5 % / +2.63 % / +2.69 % / +2.86 %. The
+            //   +2.48 % (0.646 → 0.662) lifts the warm-horizon echo's
+            //   peak inscribed contribution from 0.646 × inscribed-glow
+            //   ≈ 0.646 × 0.20+ ≈ 0.129 to 0.662 × 0.20+ ≈ 0.132 (+0.003
+            //   absolute, +2.5 % relative, well inside the inscribed-
+            //   glow family and clearly under the inscribed glow band
+            //   0.20+ and the hero bloom ~0.55), so the focal line
+            //   《松下问童子》 keeps its exclusive claim on the page's
+            //   light (ART_DIRECTION §四 "高光只落在主句" holds) and
+            //   《云深不知处》 now reads one restrained step more visibly
+            //   as ink dissolving into the warm horizon band rather
+            //   than as a barely-there trailing edge. The +0.016 absolute
+            //   alpha lift stays inside the safe-area margin (the lower-
+            //   left's inscribed contribution peak is still bounded by
+            //   the inscribed glow band 0.20+ which is well below the
+            //   hero bloom's combined ~0.7 effective alpha — so the
+            //   supporting tier stays clearly subordinate to the focal
+            //   line), the focal hierarchy (hero / subtitle / upper-
+            //   right / lower-left / seal) is unchanged, the brush-
+            //   weight gradient (subtitle brightest → upper-right →
+            //   lower-left → title dimmest) holds with the lower-left
+            //   → title gap widening 0.064 → 0.080 so the seal stays
+            //   clearly the dimmest stroke, the warm / cool axis
+            //   (subtitle + lower-left warm, upper-right cool) holds,
+            //   and the inscribed-stroke alpha axis now extends the
+            //   gentlest-step +2.48 % register the page-wide +2-3 %
+            //   material refinement band the most-refined axes have
+            //   settled into. The shadow_mix 0.42, the em_scale 0.28,
+            //   the y_frac 0.74, the drift 3.0/2.0/0.13/0.21/2.8, the
+            //   fade_in 0.6, the fade_out 0.7, the stagger 0.50, the
+            //   subtitle alpha 0.78, the upper-right alpha 0.756, the
+            //   upper-right em_scale 0.32, the upper-right y_frac 0.27,
+            //   the upper-right shadow_mix 0.26, the upper-right drift
+            //   3.0/2.0/0.15/0.19/1.4, the lower-left em_scale 0.28,
+            //   the lower-left y_frac 0.74, the lower-left shadow_mix
+            //   0.42, the title alpha 0.582, the title v 0.83, the
+            //   title target_px 23, the title breath 0.3096, the
+            //   inscribed-breath base 0.5340, the supporting mist bell
+            //   7.677, the warm bell 7.677, the title ambient_warmth
+            //   share 0.2222, the supporting mist_warmth share 0.2222,
+            //   the subtitle mist_warmth share 0.0895, the lower-left
+            //   mist_warmth share 0.1064, the terminator alpha 0.267,
+            //   the terminator cap 0.144, the cool_tint 0.13908, the
+            //   moon_proximity 0.107, the body 0.682, the halo_peak
+            //   0.080, the sky_peak 0.0384, the moon_halo_r 69.7, the
+            //   body σ 8.7, the sky σ 90.3, the body_pulse 0.023, the
+            //   halo_pulse 0.0807, the sky_pulse 0.0391, the
+            //   bloom2_alpha ceiling 0.063, the nebula alphas
+            //   0.022/0.016, the vignette pow(0.75), and the vignette
+            //   ceiling 0.74 are all unchanged so only the lower-left's
+            //   inscribed-stroke alpha shifts and the warm-horizon
+            //   echo's alpha catches up with the gentlest-step +2.48 %
+            //   register the page-wide +2-3 % material refinement band
+            //   the moon-side geometric-extent and inscribed-stroke
+            //   alpha axes have just completed. Restraint (ART_DIRECTION
+            //   §四 "克制统一的调色板" / "高光只落在主句") holds: the
+            //   +0.016 absolute lift stays inside the cream family, the
+            //   lower-left's brightest inscribed contribution peak still
+            //   sits well under the inscribed glow (~0.20+) and the hero
+            //   bloom (~0.55), and the warm-horizon echo still reads as
+            //   ink dissolving into the warm horizon band 《寻隐者不遇》
+            //   sits over rather than as a clearly-readable text — just
+            //   ink catching one more restrained step of the warm mist
+            //   the surrounding material axes have just caught up to.
+            //   With the warm-horizon echo now catching one more
+            //   restrained step of the page's warm mist — at the
+            //   gentlest +2.48 % step on the inscribed-stroke alpha
+            //   axis, exactly between the body σ +2.35 % gentlest-step
+            //   register 4695311 just completed on the moon-side
+            //   geometric-extent axis and the subtitle alpha +2.63 %
+            //   gentlest-step register 1c2fb98 just completed on the
+            //   inscribed-stroke alpha axis — 《寻隐者不遇》 reads as
+            //   one Tang quatrain inscribed in moonlit air whose
+            //   warm-horizon echo now registers one more gentle step
+            //   of the page's warm mist, and the four inscribed strokes
+            //   plus the calligrapher's seal continue to share one
+            //   proportional cadence across alpha, breath, size,
+            //   luminance, geometric extent, warm-mist, and outer-corona
+            //   axes, with the inscribed-stroke alpha axis finally
+            //   stepping onto the gentlest +2.48 % register the
+            //   page-wide +2-3 % material refinement band the
+            //   most-refined axes have settled into.
             // 3 — Lower left (small body, left-aligned). The "far-faint"
             //   closing echo — the verse's last line (《云深不知处》) is
             //   already a confession of not-knowing, so the ink itself
@@ -678,7 +779,7 @@ impl Composition {
                 em_scale: 0.28,
                 target_w_frac: 0.0,
                 max_chars: 5,
-                alpha: 0.646,
+                alpha: 0.662,
                 shadow_mix: 0.42,
                 drift_x: 3.0,
                 drift_y: 2.0,
