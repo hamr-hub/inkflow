@@ -6402,7 +6402,71 @@ fn paint_poem_title(
     // than to a printed label. Drawing glyph-by-glyph (rather than via
     // draw_phrase) lets us pick the scale freely; draw_phrase locks to
     // the bucket's native em.
-    let target_px = 23.0_f32;
+    //
+    // target 23 → 23.575 (+2.5 %, the gentlest step on the
+    // supporting-tier size axis after the lower-left em_scale
+    // +2.5 % lift in 19059c2 — the +2.5 % sits exactly inside
+    // the +2.35-2.86 % gentlest rung the page-wide +2-3 %
+    // material refinement band the most-refined axes have
+    // settled into (body σ +2.35 % in 4695311; halo radius
+    // +2.5 % in 28af5b6; sky σ +2.55 % in c28ed51; halo_peak
+    // +2.5 % in 3b8028b; sky_peak +2.5 % in 78959d2; body_pulse
+    // +2.61 % / halo_pulse +2.48 % / sky_pulse +2.56 % in
+    // 43fc830; cool_tint +2.4 % / +2.5 % / +2.7 % in 0ce6e37,
+    // 610ee7a, f595bff, 77b520e; vignette +2.5 % in 7304555;
+    // terminator alpha +2.69 % in 47ac018; terminator cap
+    // +2.86 % in 4077850; subtitle alpha +2.63 % in 1c2fb98;
+    // upper-right alpha +2.65 % in 867377c; lower-left alpha
+    // +2.48 % in 70c9147; title/seal alpha +2.58 % in 69ce9b1;
+    // subtitle em_scale +2.5 % in a2a3f48; upper-right em_scale
+    // +2.5 % in 2bf7493; lower-left em_scale +2.5 % in
+    // 19059c2; bloom2_alpha ceiling +2.5 % in 095ef01) rather
+    // than the title's target_px quietly sitting at its post-
+    // b804477 +4.55 % register while the moon-side geometric-
+    // extent, luminance, breath, inscribed-stroke alpha,
+    // supporting-tier subtitle / upper-right / lower-left
+    // em_scale, and focal-line outer-corona axes stepped past
+    // it at +2.35-2.86 %. The +2.5 % (23 → 23.575) lifts the
+    // calligrapher's seal target_px by +0.575 absolute, so
+    // 《寻隐者不遇》's title now registers one restrained step
+    // into the page's proportional cadence on the
+    // supporting-tier size axis the lower-left em_scale has
+    // just settled onto. The Q8 scale rounds (23.575 / 128) *
+    // 256 ≈ 47.15 → 47, so the rendered scale steps 46 → 47
+    // (+2.17 % actual scale change, well inside the gentlest
+    // rung the page has settled into), and the seal still sits
+    // at ≈47.15 px vs the subtitle's ≈94.5 px (a 2.0× ratio
+    // preserved) and the lower-left's ≈73.5 px (a 1.56×
+    // ratio preserved) so the supporting inscription's brush-
+    // weight gradient (subtitle brightest → upper-right →
+    // lower-left → title dimmest) still steps down monotonically
+    // across all four inscribed strokes, the focal hierarchy
+    // (hero / subtitle / upper-right / lower-left / seal) is
+    // unchanged, the warm / cool axis (subtitle + lower-left
+    // warm, upper-right cool, title as the warm-side closing
+    // signature) holds, and the title/seal size axis now
+    // extends the gentlest-step +2.5 % register the supporting-
+    // tier subtitle / upper-right / lower-left em_scale axes
+    // have just settled onto. The drift_x 1.6, the drift_y
+    // 1.0, the drift_phase 3.7, the title v 0.83, the title
+    // alpha 0.6119, the title breath 0.3096, the
+    // inscribed-breath base 0.5340, the bell coefficient
+    // 7.677, the ambient_warmth share 0.2222, the
+    // mist_warmth share 0.2222, the terminator alpha 0.267,
+    // the terminator cap 0.144, the cool_tint 0.13908, the
+    // moon_proximity 0.107, the body 0.682, the halo_peak
+    // 0.082, the sky_peak 0.0394, the moon_halo_r 69.7, the
+    // body σ 8.7, the sky σ 92.6, the body_pulse 0.0236, the
+    // halo_pulse 0.0827, the sky_pulse 0.0401, the
+    // bloom2_alpha ceiling 0.0646, the nebula alphas 0.022 /
+    // 0.016, the vignette pow(0.75), and the vignette ceiling
+    // 0.74 are all unchanged so only the title's target_px
+    // shifts and the supporting-tier size axis catches up
+    // with the gentlest-step +2.5 % register the page-wide
+    // +2-3 % material refinement band the supporting-tier
+    // subtitle / upper-right / lower-left em_scale axes have
+    // just settled onto.
+    let target_px = 23.575_f32;
     let per_char = (target_px * 1.06) as i32;
     let total_w = per_char * (n as i32 - 1).max(0) + target_px as i32;
     // y_frac 0.90 → 0.85 → 0.83 — sits ~65 px below the lower-left echo
