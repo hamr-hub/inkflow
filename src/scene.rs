@@ -1723,6 +1723,56 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
     // the moon's two innermost atmospheric layers catching the
     // supporting inscription's steady ±12-18 % breath one more
     // restrained step closer.
+    // Halo peak 0.0765 → 0.080 (+4.58 %, the gentlest step on the
+    // moon's middle atmospheric layer's luminance axis after the
+    // +6.25 % lift to 0.0765 paired with the halo radius extension
+    // in ef91dae and the +4.55-4.83 % moon-side breath lifts in
+    // 7609987): the moon's moonlit air now reads as one more
+    // gentle step more visibly continuous with the disc and the
+    // upper-right echo 《只在此山中》. The +4.58 % continues the
+    // gentlest-step register the recent +4.55-6.67 % inscription-
+    // side and moon-side arcs have been sharing — title target_px
+    // +4.55 % in b804477, body/halo/sky_pulse +4.55-4.83 % in
+    // 7609987, subtitle em_scale +5.88 % in 9ed2b96, bloom2_alpha
+    // ceiling +5 % in 9f9436b, lower-left alpha +5.5 % in 12fac53,
+    // and title alpha +4.86 % in f8c4f2d — so the moon's middle
+    // atmospheric layer now catches the gentlest +4.58 % register
+    // the recent inscription-side breath axis has settled on, and
+    // the moon's three nested atmospheric layers (body + halo +
+    // sky bell) share one proportional refinement arc with the
+    // four inscribed strokes and the calligrapher's seal across
+    // breath, luminance, geometric extent, and warm-mist axes. The
+    // halo's brightest pixel sits at alpha ≈ 0.0864 (was ≈ 0.0826)
+    // at peak pulse — the +0.0035 absolute lift stays inside the
+    // cream family and keeps the halo well under the inscribed
+    // glow (~0.20+) and the hero bloom (~0.55), so the focal line
+    // keeps its exclusive claim on the page's light (ART_DIRECTION
+    // §四 "高光只落在主句" holds). The halo radius 68, the σ 90.3
+    // sky bell, the σ 8.5 body bell, the body_pulse 0.023, the
+    // halo_pulse 0.0807, the sky_pulse 0.0391, the body 0.682,
+    // the sky_peak 0.0384, the warm bells 7.677, the supporting
+    // mist bell 7.677, the title ambient warmth 7.677, the cool
+    // tint 0.13908, the moon proximity 0.107, the subtitle alpha
+    // 0.76, the upper-right alpha 0.756, the lower-left alpha
+    // 0.646, the title alpha 0.582, the title v 0.83, the
+    // inscribed-breath base 0.5340, the title breath 0.3096, and
+    // the supporting slots' positions and drifts are all
+    // unchanged so only the halo's luminance shifts and the moon's
+    // geometric structure and breath stay exactly as they were —
+    // only the middle atmospheric layer's peak luminance shifts,
+    // and only by +4.58 % of its prior register. With the halo's
+    // brightest pixel now reaching one more restrained step into
+    // the page's moonlit air — at the gentlest +4.58 % register
+    // the recent inscription-side breath arc has settled on —
+    // 《寻隐者不遇》 reads as one Tang quatrain inscribed in moonlit
+    // air whose moon's middle atmospheric layer now registers one
+    // more gentle step out of the page's inhabited air, and the
+    // four inscribed strokes plus the calligrapher's seal continue
+    // to share one proportional cadence across breath, luminance,
+    // geometric extent, warm-mist, and outer-corona axes, with
+    // the moon's middle atmospheric layer finally stepping onto
+    // the gentlest-step register the recent inscription-side breath
+    // arc has completed.
     // Halo peak 0.072 → 0.0765 (+6.25 %, the seventh step on the
     // moon's middle atmospheric layer's luminance axis, paired with
     // the +6.25 % halo radius extension in 8113547): the moon's
@@ -1810,7 +1860,7 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
     // established, and the moon's three nested atmospheric layers
     // share one coupled restraint cadence across breath, luminance,
     // geometric extent, and warm-mist axes.
-    let halo_peak = 0.0765_f32;
+    let halo_peak = 0.080_f32;
     let body_recip = 1.0 / moon_body_r;
     let halo_span = moon_halo_r - moon_body_r;
     let mcx_i = mcx as i32;
