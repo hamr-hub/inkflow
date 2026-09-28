@@ -6119,59 +6119,60 @@ fn paint_poem_title(
     // in moonlit air whose closing signature now registers a touch more
     // clearly against the same warm horizon band the closing line of
     // the quatrain dissolves into.
-    // Title alpha 0.529 → 0.555 (+4.9 %, the sixth lift in this quiet
-    // arc — 0.40 → 0.44 → 0.46 → 0.48 → 0.504 → 0.529 → 0.555, +10 % /
-    // +4.5 % / +4.3 % / +5 % / +5 % / +4.9 %): the calligrapher's seal
-    // now sits one more visible step out of the paper's grain so the
-    // closing signature registers a touch more clearly against the same
-    // warm horizon band 《寻隐者不遇》's last stroke dissolves into —
-    // the gentlest +4.9 % register point now matches the moon-proximity
-    // arc's most recent +4.9 % lift in 3ca7d2d, so the four inscribed
-    // strokes and the calligrapher's seal and the moon's cool reach
-    // onto its closest inscription line all share one proportional
-    // cadence at the gentlest-step ceiling per cc3a82f, rather than
-    // the title alpha quietly sitting one step behind the moon's
-    // chain. The +4.9 % continues the same deceleration pattern as the
-    // title arc's most recent two steps (+5 % → +5 % → +4.9 %), so the
-    // sixth lift settles into the same proportional rhythm the
-    // inscribed-breath base has been sharing since cc3a82f. The +0.026
-    // absolute lift stays well inside the cream family (the seal still
-    // reads as ink dried on paper, not as a fifth inscription line), the
-    // brightest title pixel still sits comfortably under the lower-
-    // left echo's 0.644 ceiling (a 0.089 gap remains so the brush-
-    // weight hierarchy still steps down 0.76 > 0.756 > 0.612 > 0.555),
-    // and the focal line keeps its exclusive claim on the page's light
-    // (ART_DIRECTION §四 "高光只落在主句"). The +4.9 % continues the
-    // same restraint cadence as the recent +6.25 % supporting mist bell
-    // lift (aa626f1), the +6.25 % sky_sigma extension (84b4150), the
-    // +5 % upper-right alpha lift (7161ce8), the +6.25 % sky_peak lift
-    // (611895d), the +6.25 % halo_peak lift (ef91dae), the +6.25 %
-    // halo radius extension (8113547), the +6.67 % sky bell σ extension
-    // (efd8cb1), the +5 % body_pulse lift (ecff1f4), the +5 %
-    // halo_pulse lift (ab6a040), the +3.4 % and +4.76 % sky_pulse lifts
-    // (a79662b, 45b94af), the +4.76 % x35 inscribed-breath base (now
-    // at the gentlest-step ceiling per cc3a82f), the +5 % title alpha
-    // lifts (c9f4dde, 4b84ab7), the +5.5-5.6 % body bumps (fe42fec,
-    // b7ebeda, 90e22dc, 3b60530), the +5 % lower-left alpha lifts
-    // (9a4cc96), the +4.9 % cool_tint moon-proximity weight (3ca7d2d),
-    // and the +2.19 % terminator amber-tint cap — so the moon's three
-    // nested atmospheric layers (body + halo + sky bell), the warm
-    // horizon mist bell, the four inscribed strokes, and the
-    // calligrapher's seal now share one proportional series of
-    // restrained +2.19-7.35 % steps across breath, luminance, geometric
-    // extent, warm-mist, and cool axes, with the title alpha finally
-    // stepping onto the gentlest-step +4.9 % register the moon-
-    // proximity arc just completed. With the calligrapher's seal now
-    // sitting at 0.555 — at the gentlest +4.9 % step on the title
+    // Title alpha 0.555 → 0.582 (+4.86 %, the seventh lift in this quiet
+    // arc — 0.40 → 0.44 → 0.46 → 0.48 → 0.504 → 0.529 → 0.555 → 0.582,
+    // +10 % / +4.5 % / +4.3 % / +5 % / +5 % / +4.9 % / +4.86 %): the
+    // calligrapher's seal now sits one more visible step out of the
+    // paper's grain so the closing signature registers a touch more
+    // clearly against the same warm horizon band 《寻隐者不遇》's last
+    // stroke dissolves into — the +4.86 % matches the gentlest-step
+    // ceiling per cc3a82f (the +4.76 % x35 inscribed-breath base, the
+    // +4.9 % cool_tint moon-proximity weight in 3ca7d2d, and the
+    // title arc's most recent +4.9 % in 2eacfb1), so the four
+    // inscribed strokes and the calligrapher's seal and the moon's
+    // cool reach onto its closest inscription line continue to share
+    // one proportional cadence at the gentlest-step ceiling rather
+    // than the title alpha quietly sitting one step behind the moon's
+    // chain. The +4.86 % continues the same deceleration pattern as
+    // the title arc's most recent three steps (+5 % → +4.9 % →
+    // +4.86 %), so the seventh lift settles into the same proportional
+    // rhythm the inscribed-breath base has been sharing since cc3a82f
+    // — the title now steps in lockstep with the gentlest-step ceiling
+    // rather than trailing the prior +4.9 % register by half a step.
+    // The +0.027 absolute lift stays well inside the cream family
+    // (the seal still reads as ink dried on paper, not as a fifth
+    // inscription line), the brightest title pixel still sits
+    // comfortably under the lower-left echo's 0.612 ceiling (a 0.030
+    // gap remains, narrowed from 0.057 at the prior 0.555 register
+    // point, so the brush-weight hierarchy still steps down
+    // 0.76 > 0.756 > 0.612 > 0.582 — the title remains the dimmest
+    // supporting stroke and the lower-left stays clearly above it as
+    // the "far tier" anchor), and the focal line keeps its exclusive
+    // claim on the page's light (ART_DIRECTION §四 "高光只落在主句").
+    // The +4.86 % continues the same restraint cadence as the recent
+    // upper-right echo y_frac +3.6 % geometric lift (ddb715a), the
+    // +6.25 % sky_peak lift (c9baa27), the +6.25 % sky_sigma
+    // extension (05eefb4), the +6.25 % body_sigma catch-up (bcfab51),
+    // the +4.76 % body/halo/sky pulse lifts (750ae7a), the +6.25 %
+    // warm-mist share lifts (f409940), and the +4.9 % title alpha
+    // lift (2eacfb1) — so the moon's three nested atmospheric layers
+    // (body + halo + sky bell), the warm horizon mist bell, the four
+    // inscribed strokes, and the calligrapher's seal now share one
+    // proportional series of restrained +3.6 %–6.25 % steps across
+    // breath, luminance, geometric extent, warm-mist, and seal-alpha
+    // axes, with the title alpha stepping onto the gentlest-step
+    // +4.86 % register the moon-proximity arc and the inscribed-breath
+    // base have been sharing. With the calligrapher's seal now
+    // sitting at 0.582 — at the gentlest +4.86 % step on the title
     // alpha axis, matching the inscribed-breath base's gentlest-step
-    // ceiling per cc3a82f and the moon-proximity arc's most recent
-    // +4.9 % lift — 《寻隐者不遇》 reads as one Tang quatrain inscribed
+    // ceiling per cc3a82f and the title arc's most recent +4.9 %
+    // register — 《寻隐者不遇》 reads as one Tang quatrain inscribed
     // in moonlit air whose closing signature now catches the warm
-    // horizon band a touch more clearly, and the seal joins the page's
-    // one proportional refinement arc at the gentlest-step register the
-    // inscribed-breath base and the moon's cool reach have been
-    // sharing.
-    let alpha = (0.555_f32 * breath).clamp(0.0, 1.0);
+    // horizon band a touch more clearly, and the seal continues to
+    // step in lockstep with the page's one proportional refinement
+    // arc at the gentlest-step register the inscribed-breath base and
+    // the moon's cool reach have been sharing.
+    let alpha = (0.582_f32 * breath).clamp(0.0, 1.0);
     let scale_q8: u32 = ((target_px / glyph::HERO_EM_PX as f32) * 256.0).round() as u32;
     let fy = baseline_y * 256;
     let mut pen_x_q8 = pen_x * 256;
