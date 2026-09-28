@@ -352,6 +352,48 @@ impl Composition {
             //   remain balanced (≈170 px vs ≈180 px). Mid-weight: the
             //   quatrain's location hint is already a step further from
             //   certainty than the subtitle.
+            //   y_frac 0.28 → 0.27 (+7 px lift on 720-tall, ≈3.6 %):
+            //   pull 《只在此山中》 one restrained step closer to the
+            //   moon's atmospheric reach as the moon's outermost layer
+            //   completed its +6.25 % luminance step in c9baa27 and the
+            //   sky bell σ 85 → 90.3 (+6.25 %) in 05eefb4 — the upper-
+            //   right echo was the page's closest stroke to the disc at
+            //   ≈86 px below the moon's centre at y_frac 0.28, while the
+            //   sky bell's reach now extends a touch further into the
+            //   upper-right echo's neighbourhood (alpha at d=115 ≈
+            //   0.0170 in c9baa27 vs 0.0154 at the prior σ 85 state), so
+            //   the echo can sit a touch higher without losing its
+            //   "below the disc" reading. At y_frac 0.27 the echo sits
+            //   ≈79 px below the moon's centre — still 7 px below the
+            //   halo radius boundary (halo_r 68, halo reaches y=183 on
+            //   720-tall) so the echo remains clearly under the moon's
+            //   disc rather than rising into the halo, and the
+            //   composition's rule-of-thirds anchor holds (the echo sits
+            //   closer to v=0.33 than to v=0.25, the horizontal
+            //   composition line the upper-right echo inherited). The
+            //   +3.6 % lift matches the same restraint cadence the
+            //   moon-side luminance, geometric extent, and breath axes
+            //   have been sharing across the recent chain — sky_peak
+            //   +6.25 % (c9baa27, 611895d), sky_sigma +6.25 % (05eefb4,
+            //   84b4150), body_sigma +6.25 % (bcfab51), halo_peak
+            //   +6.25 % (ef91dae), halo radius +6.25 % (8113547), the
+            //   body/halo/sky pulse +4.76 % lifts (750ae7a), the
+            //   +6.25 % warm-mist share lifts (f409940), and the
+            //   +4.9 % title alpha lifts (c9f4dde, 4b84ab7, 2eacfb1) —
+            //   so the page's composition now steps on the same
+            //   proportional cadence as its atmosphere, with the
+            //   upper-right echo joining the moon's atmospheric layers
+            //   on one coupled restraint series rather than sitting at
+            //   its historic 0.28 register while the moon's three
+            //   nested layers stepped past it. Restraint
+            //   (ART_DIRECTION §四 "克制统一的调色板") holds: the +7 px
+            //   lift stays inside the safe-area margin (the upper-right
+            //   echo's em 0.32 + drift + bearing ≈ 50 px, so a 7 px lift
+            //   still leaves ≈170 px clearance to the top edge), the
+            //   rule-of-thirds anchor holds, and 《只在此山中》 now
+            //   reads as ink sitting a touch more visibly inside the
+            //   moon's atmospheric reach rather than sitting just below
+            //   it the way the 0.28 register had it.
             //   Stagger 0.34s so it fades in third, after the subtitle.
             //   shadow_mix 0.30 → 0.26, alpha 0.66 → 0.72 → 0.756 (+5 %,
             //   the first lift in this arc since the supporting-tier
@@ -444,7 +486,7 @@ impl Composition {
             SlotDef {
                 role: SlotRole::Support,
                 x_frac: 0.80,
-                y_frac: 0.28,
+                y_frac: 0.27,
                 align: Align::Right,
                 em_scale: 0.32,
                 target_w_frac: 0.0,
@@ -856,7 +898,7 @@ impl Scene {
             theme_idx: 0,
             composition,
             // Moon anchor — upper-right area, well clear of the upper-right
-            // echo (x_frac 0.80, y_frac 0.28) which sits below and slightly
+            // echo (x_frac 0.80, y_frac 0.27) which sits below and slightly
             // left of the moon. On 1280x720 the moon is at (1100, 115),
             // inside the safe area (≥ 60 px from each edge) so it never
             // clips and never crowds the frame.
@@ -993,7 +1035,7 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
     // Soft horizon mist — a faint warm glow that grounds the inscription
     // like distant mountains catching the last warm light at twilight.
     // Bell-curve from v≈0.50 to v≈1.00 peaking around v≈0.75; the hero
-    // sits at v≈0.42 and the upper-right at v≈0.28, both clear of the
+    // sits at v≈0.42 and the upper-right at v≈0.27, both clear of the
     // bell so the focal bloom keeps its exclusive claim on the light
     // (ART_DIRECTION §四 "高光只落在主句"). The peak now sits at the
     // lower-left echo (v≈0.74), so 云深不知处 reads as ink dissolving
@@ -1018,7 +1060,7 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
         // luminance just as the closing echo settles over the band. The
         // subtitle (v≈0.66) catches a little more warmth on the rising
         // edge so both lower strokes feel grounded on one shared band.
-        // The hero (v≈0.42) and upper-right (v≈0.28) stay clear of the
+        // The hero (v≈0.42) and upper-right (v≈0.27) stay clear of the
         // bell so the focal bloom keeps its exclusive claim on the light
         // (ART_DIRECTION §四 "高光只落在主句"). Restraint holds: peak
         // alpha still ≤ 0.425 so the warm band reads as mist, not as a
@@ -4366,7 +4408,7 @@ fn paint_supporting_slot(
     // Ambient warmth from the warm horizon mist — supporting lines that
     // sit in the mist band (subtitle v≈0.66, lower-left v≈0.74) pick up
     // a touch of amber from the atmosphere they inhabit, even when
-    // touch-driven warmth is off. The upper-right (v≈0.28) sits clear
+    // touch-driven warmth is off. The upper-right (v≈0.27) sits clear
     // of the band so it stays cool, layering an "in the mist" vs "in
     // the sky" axis on top of the brush-weight gradient. The mist bell
     // peaks at v≈0.74, so the lower-left catches the most, the subtitle
@@ -4393,7 +4435,7 @@ fn paint_supporting_slot(
     // cap (≈8.5 %) so 《云深不知处》 reads as deep ink actually
     // dissolving into the warm horizon, not as dim cream floating
     // over a barely-visible amber tint. The subtitle (v≈0.66) catches
-    // a touch more warmth on the rising edge; the upper-right (v≈0.28)
+    // a touch more warmth on the rising edge; the upper-right (v≈0.27)
     // stays clear of the bell so it remains the cool echo in the
     // moon's air.
     let horizon_glow = ((slot.def.y_frac - 0.50) * (1.0 - slot.def.y_frac) * 7.677).clamp(0.0, 1.0);
@@ -4406,7 +4448,7 @@ fn paint_supporting_slot(
     // at the post-bell-lift 0.20 multiplier, +0.0060 absolute, the
     // natural +6.25 % proportional gain that matches the bell-
     // coefficient arc); subtitle at v≈0.66 catches 0.4030 * 0.2125 ≈
-    // 0.0857 (was 0.0806, +0.0051 absolute). Upper-right (v≈0.28)
+    // 0.0857 (was 0.0806, +0.0051 absolute). Upper-right (v≈0.27)
     // stays clear of the bell so it remains the cool echo in the
     // moon's air. The +6.25 % continues the same restraint cadence as
     // the recent supporting mist bell arc (6.0 → 6.4 → 6.8 → 7.225 →
@@ -4424,7 +4466,7 @@ fn paint_supporting_slot(
     // Cool axis — the mirror image of the mist warmth above. Supporting
     // lines that sit in the moonlit upper sky absorb a touch of cool
     // tint from the cool air they inhabit, so the upper-right echo
-    // 《只在此山中》 (v≈0.28) reads as ink in the moon's sphere of
+    // 《只在此山中》 (v≈0.27) reads as ink in the moon's sphere of
     // influence rather than the same warm cream as the hero and
     // subtitle. The bell rises from v=0.0, peaks around v≈0.225, and
     // fades by v=0.45 — the upper-right sits well inside the band
@@ -4442,7 +4484,7 @@ fn paint_supporting_slot(
     let sky_axis = ((0.45 - slot.def.y_frac).max(0.0) / 0.45).clamp(0.0, 1.0);
     let sky_cool = sky_axis * 0.18;
     // Moon-proximity cool — slots close to the moon (specifically the
-    // upper-right echo at (0.80, 0.28), next to the moon at (0.86, 0.16))
+    // upper-right echo at (0.80, 0.27), next to the moon at (0.86, 0.16))
     // pick up an extra share of cool luminance from the moon's halo, so
     // 《只在此山中》 reads as ink bathed in the moon's sphere of
     // influence rather than ink floating in generic cool sky. The two
