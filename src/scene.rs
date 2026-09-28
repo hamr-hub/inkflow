@@ -4859,7 +4859,54 @@ pub fn paint_hero(
     // bloom2_alpha base stays the dominant light contributor at every
     // pixel the corona still covers.
     let bloom2_scale_q8: u32 = ((scale_q8.max(1) as f32) * 1.10).round() as u32;
-    let bloom2_alpha = (0.022 + 0.02 * pulse + 0.01 * warmth + beat_glow * 0.015).clamp(0.0, 0.06);
+    // Outer-corona ceiling 0.06 → 0.063 (+5%, the gentlest step the
+    // supporting-side breath / warm-mist / alpha arcs have been sharing —
+    // matching the title alpha +4.86 % arc (2eacfb1 → f8c4f2d), the
+    // lower-left alpha +5.5 % arc (9a4cc96 → 12fac53), the supporting
+    // tier body lifts (+5–5.6 % x5 in fe42fec, b7ebeda, 90e22dc,
+    // 3b60530), the title alpha +5 % arc (c9f4dde, 4b84ab7, 2eacfb1),
+    // and the inscribed-breath base +4.76 % gentlest-step ceiling
+    // passes): the title's outermost corona now reaches one more
+    // restrained step into the moonlit air around the focal line, so
+    // 《松下问童子》 reads as ink glowing one step deeper into the
+    // same moon-atmosphere the upper-right echo 《只在此山中》
+    // inhabits rather than the corona quietly sitting at its post-
+    // hardening 0.06 register while every other inscription / moon-
+    // side restraint cadence climbed past it. The +0.003 absolute
+    // ceiling lift stays well inside the muted-cream family (the
+    // corona still reads as moonlit cream spreading outward, not as a
+    // second amber ring), the peak corona pixel still sits well under
+    // the inscribed glow (~0.20+) and the hero bloom (~0.55) — peak
+    // bloom2_alpha unchanged at 0.022 base, +0.02 pulse, +0.01 warmth,
+    // +0.015 beat_glow, just the ceiling opens 0.06 → 0.063 — so the
+    // focal line keeps its exclusive claim on the page's light
+    // (ART_DIRECTION §四 "高光只落在主句"). The 1.10× outer-corona
+    // scale, the ±26 % / 0.140 amber-tint terminator cap, the 0.65
+    // multiplier, the σ 8.5 body bell, the halo radius 68, the σ 90.3
+    // sky bell, the body 0.682, halo peak 0.0765, sky peak 0.0384,
+    // warm bells 7.677, supporting mist bell 7.677, title ambient
+    // warmth 7.677, cool tint 0.13908, moon proximity 0.107, subtitle
+    // alpha 0.76, upper-right alpha 0.756, lower-left alpha 0.646,
+    // title alpha 0.582, title v 0.83, inscribed-breath base 0.5340,
+    // title breath 0.3096, body_pulse 0.022, halo_pulse 0.0770,
+    // sky_pulse 0.0373, sky_peak 0.0384, and the supporting slots'
+    // positions and drifts are all unchanged so only the title's
+    // outermost corona ceiling shifts and the page's restraint cadence
+    // continues on its 1 × gentlest-step register the recent
+    // +4.76–6.25 % ladder has been sharing. With 《松下问童子》's
+    // outermost corona now reaching one more restrained step into the
+    // moon's air — at the page's +5 % outer-corona-ceiling register,
+    // matching the title alpha +4.86 % arc and the lower-left alpha
+    // +5.5 % arc — 《寻隐者不遇》 reads as one Tang quatrain inscribed
+    // in moonlit air whose focal line now glows one step more clearly
+    // into the same moon-atmosphere the upper-right echo inhabits, and
+    // the four inscribed strokes plus the calligrapher's seal and the
+    // moon's three nested atmospheric layers (body + halo + sky bell)
+    // continue to share one proportional cadence across alpha, breath,
+    // luminance, geometric extent, and warm-mist axes, with the
+    // focal line's outer corona finally stepping onto the +5 %
+    // register the inscription-side arc has just completed.
+    let bloom2_alpha = (0.022 + 0.02 * pulse + 0.01 * warmth + beat_glow * 0.015).clamp(0.0, 0.063);
     // Outer halo color — kept close to the inner bloom (warmth mix 0.3
     // → 0.1) so the corona reads as moonlit cream spreading outward, not
     // as a separate amber ring. The hero's bloom is meant to look like
