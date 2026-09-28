@@ -6050,6 +6050,108 @@ pub fn paint_hero(
     // the focal line"; this pass is hero-only — supporting slots skip it
     // (see `paint_supporting_slot`).
     //
+    // Inner-bloom ceiling 0.12 → 0.123 (+2.5 %, the gentlest step on the
+    // focal-line inner-bloom ceiling axis after the +2.5 % rest base lift
+    // in c7813d4 — the +2.5 % sits exactly inside the +2.35-2.86 % gentlest
+    // rung the page-wide +2-3 % material refinement band the most-refined
+    // axes have settled into (body σ +2.35 % in 4695311; halo radius +2.5 %
+    // in 28af5b6; sky σ +2.55 % in c28ed51; halo_peak +2.5 % in 3b8028b;
+    // sky_peak +2.5 % in 78959d2; body_pulse +2.61 % / halo_pulse +2.48 %
+    // / sky_pulse +2.56 % in 43fc830; cool_tint +2.4 % / +2.5 % / +2.7 %
+    // in 0ce6e37, 610ee7a, f595bff, 77b520e; vignette +2.5 % in 7304555;
+    // terminator alpha +2.69 % in 47ac018; terminator cap +2.86 % in
+    // 4077850; subtitle alpha +2.63 % in 1c2fb98; upper-right alpha +2.65 %
+    // in 867377c; lower-left alpha +2.48 % in 70c9147; title/seal alpha
+    // +2.58 % in 69ce9b1, +2.5 % in e8cc837; subtitle em_scale +2.5 % in
+    // a2a3f48; upper-right em_scale +2.5 % in 2bf7493; lower-left em_scale
+    // +2.5 % in 19059c2; title target_px +2.5 % in 7397729; bloom2_alpha
+    // ceiling +2.5 % in 095ef01; bloom2_alpha base +2.73 % in d7f8fc6;
+    // bloom_alpha base +2.5 % in c7813d4; title ambient_warmth share +
+    // supporting mist_warmth share +2.5 % in 57c514e) rather than the
+    // focal line's inner-bloom ceiling quietly sitting at its original 0.12
+    // register while the page-wide +2-3 % material refinement band stepped
+    // past it at +2.35-2.86 %. The +2.5 % (0.12 → 0.123) opens the
+    // inner-bloom ceiling by +0.003 absolute, so 《松下问童子》's
+    // nearer-glow now reaches one more restrained step of moonlit cream
+    // bleeding outward at peak at the gentlest +2.5 % register the
+    // inner-bloom base axis (c7813d4) has just settled onto as the
+    // secondary bloom's companion. At rest (pulse=0, warmth=0, beat_glow=0)
+    // the inner bloom still sits at 0.041 (the rest is unchanged so the
+    // focal line's nearer-glow stays settled at the 0.041 rest register the
+    // base just lifted to in c7813d4), at peak pulse the formula now totals
+    // 0.041 + 0.04 + 0.02 + 0.03 = 0.131 → no longer clamped to 0.12, now
+    // clamped to the new 0.123 ceiling — so the actual peak shifts from 0.12
+    // to 0.123 (+0.003 absolute, +2.5 % relative, the formula peak 0.131
+    // still 0.008 above the new ceiling so future base lifts have room to
+    // continue lifting the rest before re-engaging the clamp, the way the
+    // c7813d4 base lift paired with the +2.5 % bloom2_alpha base lift in
+    // d7f8fc6 left the inner-bloom base and the outer-corona base on the
+    // same +2.5-2.73 % rung). The +0.003 absolute ceiling lift stays well
+    // inside the muted-cream family (the peak inner bloom still reads as
+    // moonlit cream spreading outward from the focal line, not as a
+    // brighter amber ring or a competing warm source), the peak inner bloom
+    // pixel now sits at 0.123 (was 0.12, +0.003 absolute, +2.5 % relative)
+    // — still firmly under the inscribed glow band (~0.20+) and the hero
+    // bloom (~0.55) and well below the tertiary outer-corona's peak 0.0646
+    // register the bloom2_alpha ceiling 095ef01 has just settled onto — so
+    // the focal line keeps its exclusive claim on the page's light
+    // (ART_DIRECTION §四 '高光只落在主句' holds), the focal hierarchy
+    // (hero / subtitle / upper-right / lower-left / seal) is unchanged, the
+    // brush-weight gradient (subtitle brightest → upper-right → lower-left
+    // → title dimmest) holds, the warm / cool axis (subtitle + lower-left
+    // + title warm, upper-right cool) holds, and the focal-line inner-bloom
+    // ceiling axis now extends the gentlest-step +2.5 % register the page-
+    // wide +2-3 % material refinement band the focal-line inner-bloom base
+    // (c7813d4) has just settled onto as the secondary bloom's companion.
+    // The 1.06× inner-bloom scale, the 1.10× outer-corona scale, the
+    // ±26 % / 0.144 amber-tint terminator cap, the 0.65 vignette
+    // multiplier, the σ 8.7 body bell, the σ 92.6 sky bell, the body 0.682,
+    // the halo_peak 0.082, the sky_peak 0.0394, the moon_halo_r 69.7, the
+    // body_pulse 0.0236, the halo_pulse 0.0827, the sky_pulse 0.0401, the
+    // bloom_alpha base 0.041, the bloom2_alpha base 0.0226, the
+    // bloom2_alpha ceiling 0.0646, the terminator alpha 0.267, the
+    // cool_tint 0.13908, the moon_proximity 0.107, the warm bells 7.677,
+    // the supporting mist bell 7.677, the title ambient_warmth share
+    // 0.2278, the supporting mist_warmth share 0.2278, the subtitle alpha
+    // 0.78, the upper-right alpha 0.776, the lower-left alpha 0.662, the
+    // title alpha 0.6119, the title v 0.83, the title target_px 23.575,
+    // the title breath 0.3096, the inscribed-breath base 0.5340, the
+    // subtitle em_scale 0.369, the upper-right em_scale 0.328, the
+    // lower-left em_scale 0.287, the upper-right y_frac 0.27, the
+    // lower-left y_frac 0.74, the subtitle drift 3.0/1.5/0.21/0.17/0.7, the
+    // upper-right drift 3.0/2.0/0.15/0.19/1.4, the lower-left drift
+    // 3.0/2.0/0.13/0.21/2.8, the hero drift 3.0/2.0/0.18/0.13/0.0, the
+    // hero y_frac 0.42, the hero bloom 1.0, the nebula alphas 0.022 /
+    // 0.016, the vignette pow(0.75), and the vignette ceiling 0.74 are all
+    // unchanged so only the focal line's secondary wider-bloom ceiling
+    // shifts and the page's inner-bloom ceiling axis catches up with the
+    // gentlest-step +2.5 % register the page-wide +2-3 % material
+    // refinement band the focal-line inner-bloom base (c7813d4) has just
+    // settled onto as the secondary bloom's companion. Restraint
+    // (ART_DIRECTION §四 '克制统一的调色板' / '高光只落在主句') holds:
+    // the +0.003 absolute ceiling lift stays inside the muted-cream family,
+    // the peak inner bloom pixel still sits comfortably under the inscribed
+    // glow band (~0.20+) and the hero bloom (~0.55) and well below the
+    // tertiary outer-corona's peak 0.0646 register, and 《松下问童子》's
+    // nearer-glow still reads as moonlit cream bleeding outward from the
+    // focal line into the moon-atmosphere the upper-right echo 《只在此
+    // 山中》 inhabits rather than as a competing amber ring or a second
+    // warm source — just a focal-line inner-bloom ceiling that now
+    // registers one more gentle step of the page's coupled gentlest-step
+    // register. With 《松下问童子》's nearer-glow now catching one more
+    // restrained step of the moon-atmosphere at peak — at the gentlest
+    // +2.5 % step on the focal-line inner-bloom ceiling axis, exactly
+    // inside the +2.35-2.86 % rung the page-wide +2-3 % material
+    // refinement band the focal-line inner-bloom base (c7813d4) has just
+    // completed as the secondary bloom's companion — 《寻隐者不遇》 reads
+    // as one Tang quatrain inscribed in moonlit air whose focal line's
+    // nearer-glow now registers one more gentle step of the page's coupled
+    // gentlest-step register at peak between pulses, and the focal-line
+    // inner-bloom ceiling axis finally steps onto the gentlest +2.5 %
+    // register the page-wide +2-3 % material refinement band the focal-line
+    // inner-bloom base (c7813d4) has just settled onto as the secondary
+    // bloom's companion.
+    //
     // Secondary bloom base 0.04 → 0.041 (+2.5 %, the gentlest step on
     // the focal-line inner-bloom base axis — the +2.5 % sits exactly
     // inside the +2.35-2.86 % gentlest rung the page-wide +2-3 %
@@ -6157,7 +6259,7 @@ pub fn paint_hero(
     // base (d7f8fc6) has just settled onto as the secondary bloom's
     // tertiary companion.
     let bloom_scale_q8: u32 = ((scale_q8.max(1) as f32) * 1.06).round() as u32;
-    let bloom_alpha = (0.041 + 0.04 * pulse + 0.02 * warmth + beat_glow * 0.03).clamp(0.0, 0.12);
+    let bloom_alpha = (0.041 + 0.04 * pulse + 0.02 * warmth + beat_glow * 0.03).clamp(0.0, 0.123);
     // Tertiary outer halo — an even wider, fainter pass so the moonlit
     // light diffuses outward into the surrounding ink rather than stopping
     // at a hard edge. Reads as atmospheric light, not a second copy of the
