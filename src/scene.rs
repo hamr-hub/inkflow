@@ -1039,7 +1039,58 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
         // calligrapher's seal sit a touch more clearly grounded in the
         // warm horizon mist without crossing the "horizon line" threshold
         // the focal-bloom envelope guards against.
-        let horizon_glow = ((v - 0.50) * (1.0 - v) * 7.225).clamp(0.0, 1.0);
+        // Supporting mist bell 7.225 → 7.677 (+6.25 %, the next gentle step
+        // on the warm-horizon band after the +6.25 % lift in 7c27f49, following
+        // the suggested "different axis" pivot in cc3a82f's ceiling note):
+        // the warm horizon atmosphere that grounds 《言师采药去》, 《云深不
+        // 知处》, and 《寻隐者不遇》 now deepens one more restrained step
+        // toward the inscription's three lowest strokes, so the warm/cool axis
+        // (subtitle + lower-left warm, upper-right cool) tightens one more
+        // step as the band the brush dissolves into lifts by +6.25 %. The
+        // bell peak at v=0.75 climbs from 0.4516 → 0.4799 (+6.25 %, the same
+        // proportional gain the +6.25 % sky_peak / halo_peak / moon_halo_r
+        // lifts established on the moon-side atmospheric arc), the lower-
+        // left catches 0.4508 → 0.4790 / mist 0.0902 → 0.0958, the title
+        // catches 0.4052 → 0.4306 / mist 0.0810 → 0.0861, the subtitle
+        // catches 0.3793 → 0.4030 / mist 0.0759 → 0.0806, and the background
+        // band itself blends at horizon_glow * 0.12 (still ≤ 0.0576, well
+        // under the inscribed glow ~0.20+ and the hero bloom ~0.55). The
+        // +6.25 % continues the same restraint cadence as the recent
+        // +6.25 % supporting mist bell lift (7c27f49), the +6.25 % sky_peak
+        // lifts (80e27d5, 9ec99ff), the +6.25 % halo_peak lift (ef91dae), the
+        // +6.25 % moon_halo_r extension (8113547), the +6.67 % sky bell σ
+        // extension (efd8cb1), the +5 % upper-right alpha lift (7161ce8),
+        // the +5.5-5.6 % body bumps (fe42fec, b7ebeda, 90e22dc, 3b60530),
+        // the +5 % lower-left alpha lift (9a4cc96), the +5 % title alpha
+        // lifts (c9f4dde, 4b84ab7), the +5 % body_pulse lift (ecff1f4), the
+        // +5 % halo_pulse lift (ab6a040), the +4.76 % sky_pulse lifts
+        // (a79662b, 45b94af), and the gentlest-step inscribed-breath base
+        // lifts (cc3a82f ceiling) — so the moon's three nested atmospheric
+        // layers, the four inscribed strokes, the calligrapher's seal, and
+        // the warm horizon mist bell now share one proportional series of
+        // restrained +2.19-7.35 % steps across breath, luminance, geometric
+        // extent, and warm-mist axes, with the warm horizon band picking up
+        // its next +6.25 % step on the same cadence. The supporting mist
+        // bell is intentionally lifted in lockstep with the supporting
+        // slot's per-line mist warmth (line 4014) and the title's ambient
+        // warmth (line 4573) so all three warm layers — the background
+        // atmosphere, each supporting line's warm tint, and the seal's
+        // ambient warmth — stay in sync per the 4ac2395 / c253209 / 7c27f49
+        // alignment. Restraint (ART_DIRECTION §四 "克制统一的调色板") holds:
+        // the +0.452 absolute bell-peak lift stays inside the cream family,
+        // the brightest mist pixel still sits well under the inscribed glow
+        // (~0.20+) and the hero bloom (~0.55), and the warm horizon continues
+        // to read as the band the inscription's lowest strokes dissolve into
+        // rather than as a competing warm source. With the warm horizon now
+        // lifting one more restrained step into the page's inhabited range
+        // — at the standard +6.25 % step the moon's three nested atmospheric
+        // layers just completed — 《寻隐者不遇》 reads as one Tang quatrain
+        // inscribed in moonlit air whose three lowest strokes now catch the
+        // warm horizon band a touch more clearly, the brush closing on
+        // 《寻隐者不遇》 now dissolves into a band one step more visibly
+        // inhabited by the same warm mist the supporting inscription
+        // breathes.
+        let horizon_glow = ((v - 0.50) * (1.0 - v) * 7.677).clamp(0.0, 1.0);
         for x in 0..w {
             let dx = x as f32 - cx;
             let dy = y as f32 - cy;
@@ -4011,7 +4062,7 @@ fn paint_supporting_slot(
     // a touch more warmth on the rising edge; the upper-right (v≈0.28)
     // stays clear of the bell so it remains the cool echo in the
     // moon's air.
-    let horizon_glow = ((slot.def.y_frac - 0.50) * (1.0 - slot.def.y_frac) * 7.225).clamp(0.0, 1.0);
+    let horizon_glow = ((slot.def.y_frac - 0.50) * (1.0 - slot.def.y_frac) * 7.677).clamp(0.0, 1.0);
     let mist_warmth = horizon_glow * 0.20;
     // Cool axis — the mirror image of the mist warmth above. Supporting
     // lines that sit in the moonlit upper sky absorb a touch of cool
@@ -4570,7 +4621,7 @@ fn paint_poem_title(
     // ambient lift stays inside the muted-ink family (CREAM → SHADOW
     // 0.35 base), and the seal still reads as ink dried on paper rather
     // than a second focal light.
-    let ambient_warmth = ((title_v - 0.50) * (1.0 - title_v) * 7.225).clamp(0.0, 1.0) * 0.20;
+    let ambient_warmth = ((title_v - 0.50) * (1.0 - title_v) * 7.677).clamp(0.0, 1.0) * 0.20;
     // Title base sits one step into the muted ink family (mix CREAM toward
     // SHADOW 0.0 → 0.35) so the seal reads as ink dried on paper rather
     // than a fifth inscription line at 40 % opacity. CREAM (rgb 232, 212,
