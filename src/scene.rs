@@ -523,6 +523,47 @@ impl Composition {
             //   still leans furthest into shadow), but the viewer now
             //   sees a full quatrain on the page rather than two lines
             //   and two absences.
+            //   alpha 0.612 → 0.646 (+5.5 %, the fifth lift in this arc —
+            //   0.50 → 0.55 → 0.58 → 0.612 → 0.646, +10 % / +5.45 % / +5.5 %
+            //   / +5.5 %): lift 《云深不知处》 one more restrained step
+            //   into view so the philosophical closing line of the
+            //   quatrain reads a touch more clearly against the warm
+            //   horizon band — the title alpha arc stepped onto the
+            //   gentlest +4.86 % register in f8c4f2d, so the four
+            //   inscribed strokes and the calligrapher's seal now share
+            //   one proportional cadence across alpha, and the lower-
+            //   left was the last supporting stroke still sitting one
+            //   step behind the body's +5.5 % chain (body 0.50 → 0.55 →
+            //   0.58 → 0.612 → 0.646 → 0.682 in fe42fec, b7ebeda,
+            //   90e22dc, 3b60530 — the lower-left now matches the
+            //   body's fourth step). The +0.034 absolute lift stays
+            //   inside the cream family and the closing stroke still
+            //   dissolves into the mist the way a real inscribed
+            //   closing line should — the far-faint reading still
+            //   holds: 0.646 stays clearly below upper-right 0.756 and
+            //   subtitle 0.76 (the brush-weight hierarchy now steps
+            //   down 0.76 > 0.756 > 0.646 > title 0.582, with the
+            //   lower-left→title gap widening 0.030 → 0.064 so the
+            //   seal stays clearly the dimmest stroke), and the lower-
+            //   left's shadow_mix 0.42 still keeps it the deepest into
+            //   shadow. The +5.5 % continues the same restraint cadence
+            //   as the recent chain — title alpha 0.555 → 0.582
+            //   (+4.86 % in f8c4f2d, the gentlest-step ceiling), upper-
+            //   right y_frac 0.28 → 0.27 (+3.6 % in ddb715a), the moon's
+            //   three nested atmospheric layers (body σ 8 → 8.5 in
+            //   bcfab51, sky σ 85 → 90.3 in 05eefb4, sky_peak 0.0361 →
+            //   0.0384 in c9baa27), the +6.25 % supporting mist bell
+            //   lift (7c27f49 / aa626f1), and the body's +5.5 % chain
+            //   (fe42fec et al) — so the four inscribed strokes, the
+            //   calligrapher's seal, and the moon's atmospheric layers
+            //   now share one proportional series of restrained
+            //   +3.6 %–6.25 % steps across alpha, geometric, luminance,
+            //   and warm-mist axes, with the lower-left now stepping
+            //   onto the body's +5.5 % register rather than sitting
+            //   one step behind at 0.612. Restraint (ART_DIRECTION §四
+            //   "克制统一的调色板") holds: the lower-left stays the
+            //   dimmest of the supporting strokes, and the focal line
+            //   keeps its exclusive claim on the page's light.
             //   alpha 0.58 → 0.612 (+5.5 %): lift 《云深不知处》 one more
             //   step into view as the moon-side luminance arc reached
             //   saturation (body 0.682 / halo 0.064 / sky 0.034, the
@@ -573,7 +614,7 @@ impl Composition {
                 em_scale: 0.28,
                 target_w_frac: 0.0,
                 max_chars: 5,
-                alpha: 0.612,
+                alpha: 0.646,
                 shadow_mix: 0.42,
                 drift_x: 3.0,
                 drift_y: 2.0,
