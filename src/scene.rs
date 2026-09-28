@@ -277,113 +277,116 @@ impl Composition {
             //   the verse starts to dissolve. Stagger 0.18s so it fades
             //   in just after the hero lands — the second stroke of the
             //   calligraphic inscription.
-            //   alpha 0.86 → 0.76, shadow_mix 0.10 → 0.16: the subtitle
-            //   was reading at almost the same brightness as the hero,
-            //   so the two lines formed one dense centred inscription
-            //   instead of hero-plus-echo. The hero's bloom already
-            //   carries the focal claim (ART_DIRECTION §四 "高光只落在
-            //   主句"); pulling the subtitle's body a step further into
-            //   shadow now lets the eye separate "主句" from "近对答" —
-            //   the subtitle still leads the supporting hierarchy (above
-            //   upper-right 0.72 and lower-left 0.58) but no longer reads
-            //   as a co-focal duplicate. shadow_mix 0.16 also tightens
-            //   the subtitle's breath amplitude slightly (the inscribed-
-            //   breath is scaled by 1 - shadow_mix), so the supporting
-            //   line leans even more clearly "echo of the hero" than
-            //   "second voice".
-            //   y_frac 0.64 → 0.65: lift the subtitle one step further
-            //   from the hero so the central pair reads as two
-            //   distinct strokes of one calligraphic brush rather than
-            //   one dense centred inscription. The 0.64 lift was
-            //   originally introduced to break the "vertical band of
-            //   three lines" — by widening the subtitle-to-lower-left
-            //   gap (0.10 vs the previous 0.08) and tightening the
-            //   hero-to-subtitle pair (0.22 vs the previous 0.24).
-            //   That worked, but it pushed the subtitle so close to the
-            //   hero that the bloom of 《松下问童子》 reads as bleeding
-            //   into 《言师采药去》 — the two lines register as one
-            //   dense inscription block rather than as the focal line
-            //   and its first echo. At 0.65 the hero-to-subtitle pair
-            //   steps down from 158 → 166 px (+8 px, the hero's bloom
-            //   now ends a comfortable 17 px above the subtitle's top
-            //   instead of grazing it), while the subtitle-to-lower-
-            //   left gap narrows 72 → 65 px — still 9 px wider than
-            //   the 56-px band that originally caused the "vertical
-            //   band of three lines" critique, so the subtitle still
-            //   reads as the inscribed answer rather than collapsing
-            //   onto the dissolving corner echo. The three inscribed
-            //   gaps now step down together (hero→subtitle 166 px,
-            //   subtitle→lower-left 65 px, lower-left→title 65 px) —
-            //   the supporting tier shares one even rhythm, while the
-            //   hero stands clearly alone above it (the 166 px opening
-            //   is the page's largest breathing row). The mist-bell
-            //   value at 0.65 is 0.315 (still 84 % of the 0.75 peak),
-            //   so the subtitle keeps its rising-edge warmth that ties
-            //   it to the warm horizon — the warm/cool axis (subtitle +
-            //   lower-left warm, upper-right cool) and the brush-weight
-            //   hierarchy (subtitle brightest → upper-right → lower-
-            //   left dimmest) both hold unchanged.
-            // em_scale 0.34 → 0.36 (+5.88 %, the supporting-tier size
-            //   axis continuing the +4.86–6.25 % restraint cadence the
-            //   recent inscription-side chain has been sharing — title
-            //   alpha +4.86 % (f8c4f2d), lower-left alpha +5.5 %
-            //   (12fac53), upper-right y_frac +3.6 % (ddb715a), sky_peak
-            //   / sky_sigma / body_sigma / moon_halo_r / halo_peak
-            //   +6.25 % (c9baa27, 05eefb4, bcfab51, 8113547, ef91dae),
-            //   body_pulse / halo_pulse / sky_pulse +4.76 % (750ae7a),
-            //   warm-mist share +6.25 % (f409940), and bloom2_alpha
-            //   ceiling +5 % (9f9436b) — so the subtitle's size now
-            //   steps onto the same proportional register the
-            //   inscription-side arcs have been completing. The +5.88 %
-            //   sits at the gentlest step in the +4.76–6.25 % register
-            //   the chain has settled on, matching the bloom2 ceiling
-            //   +5 % register exactly (the most recent inscription-
-            //   side lift) so the subtitle's em_scale joins the page's
-            //   one proportional refinement arc at the gentlest-step
-            //   cadence rather than the size axis quietly sitting one
-            //   step behind the alpha/breath/atmospheric chain. The
-            //   +0.02 absolute em_scale lift translates to ~2.5 px on
-            //   the 128-em hero font (subtitle glyphs now sit at
-            //   ≈46.1 px vs 43.5 px at the prior 0.34 register), so
-            //   《言师采药去》 now reads one restrained step more
-            //   visibly as the inscribed answer to 《松下问童子》
-            //   rather than as a slightly lighter copy of the focal
-            //   line's calligraphic body. The brush-weight hierarchy
-            //   holds: subtitle stays the largest supporting stroke
-            //   (subtitle 0.36 / upper-right 0.32 / lower-left 0.28 /
-            //   title ≈0.17), the size gaps now step down 0.04 / 0.04 /
-            //   0.11 (was 0.02 / 0.04 / 0.11) so the subtitle-to-upper-
-            //   right pairing stays paired with the upper-right-to-
-            //   lower-left spacing rather than the topmost gap sitting
-            //   half a step tighter than the bottom gap, and the
-            //   subtitle's alpha 0.76 + shadow_mix 0.16 + breath base
-            //   0.5340 + y_frac 0.65 all stay unchanged so only the
-            //   subtitle's em_scale shifts and the size axis catches
-            //   up with the alpha/breath/atmospheric chain. Restraint
-            //   (ART_DIRECTION §四 "克制统一的调色板" / "高光只落在
-            //   主句") holds: the +2.5 px size lift stays well inside
-            //   the safe-area margin (subtitle's em + drift + bearing
-            //   ≈ 50 px, so a 2.5 px lift still leaves comfortable
-            //   clearance to the focal line above and the lower-left
-            //   echo below), the focal line keeps its exclusive claim
-            //   on the page's light, and 《言师采药去》 now reads as
-            //   one restrained step more visibly the inscribed answer
-            //   to 《松下问童子》 — the direct response, now sized to
-            //   match the same proportional register the focal line's
-            //   bloom just stepped onto in 9f9436b. With the subtitle's
-            //   em_scale now sitting at 0.36 — at the gentlest +5.88 %
-            //   step on the size axis, matching the bloom2 ceiling
-            //   +5 % register the focal line's outermost corona just
-            //   completed — 《寻隐者不遇》 reads as one Tang quatrain
-            //   inscribed in moonlit air whose inscribed answer now
-            //   registers one restrained step more visibly against
-            //   the focal line it orbits, and the four inscribed
-            //   strokes plus the calligrapher's seal continue to
-            //   share one proportional cadence across alpha, breath,
-            //   size, luminance, geometric extent, warm-mist, and
-            //   outer-corona axes, with the subtitle's size finally
-            //   stepping onto the gentlest-step register the alpha
-            //   and atmospheric chains have just completed.
+            //   Prior arc: alpha 0.86 → 0.76 (pulling the subtitle
+            //   out of co-focal brightness with the hero, with
+            //   shadow_mix 0.10 → 0.16 to tighten the inscribed-
+            //   breath); y_frac 0.64 → 0.65 (lifting the subtitle
+            //   one step further from the hero so the central pair
+            //   reads as two distinct strokes of one calligraphic
+            //   brush rather than one dense inscription block, the
+            //   hero→subtitle gap now 166 px and the subtitle→lower-
+            //   left gap 65 px); em_scale 0.34 → 0.36 (+5.88 %, the
+            //   supporting-tier size axis catch-up onto the
+            //   +4.86–6.25 % restraint cadence the inscription-side
+            //   arc had been sharing, the subtitle glyphs now sitting
+            //   at ≈46.1 px vs 43.5 px at the prior 0.34 register,
+            //   the size hierarchy stepping down 0.04 / 0.04 / 0.11
+            //   so the subtitle-to-upper-right pairing stays paired
+            //   with the upper-right-to-lower-left spacing).
+            // alpha 0.76 → 0.78 (+2.63 %, the gentlest step on the
+            //   inscribed-stroke alpha axis after the +5.5 % lower-left
+            //   alpha lift in 12fac53 and the +4.86 % title alpha lift
+            //   in f8c4f2d — the +2.63 % sits exactly between the halo
+            //   radius +2.5 % gentlest-step register 28af5b6 just
+            //   completed on the moon-side geometric-extent axis and
+            //   the terminator alpha +2.69 % / terminator cap +2.86 %
+            //   gentlest-step register the directional-modulation and
+            //   warm-tint cap axes have just completed (47ac018 /
+            //   4077850), so the inscribed-stroke alpha axis now steps
+            //   onto the same +2.5–2.86 % gentlest rung the page-wide
+            //   +2-3 % material refinement band the most-refined axes
+            //   have settled into — cool_tint +2.4 % / +2.5 % / +2.7 %
+            //   (0ce6e37, 610ee7a, f595bff, 77b520e); vignette +2.5 %
+            //   (7304555); halo radius +2.5 % (28af5b6); terminator
+            //   alpha +2.69 % (47ac018); terminator cap +2.86 %
+            //   (4077850)) rather than the supporting tier's alpha
+            //   quietly sitting one step behind the inscription-side
+            //   arc after the bloom2_alpha ceiling +5 % in 9f9436b and
+            //   the title alpha +4.86 % in f8c4f2d carried the
+            //   calligrapher's seal and the focal-line corona
+            //   forward. The +2.63 % (0.76 → 0.78) lifts the inscribed
+            //   answer's peak inscribed contribution from 0.76 ×
+            //   inscribed-glow ≈ 0.76 × 0.20+ ≈ 0.152 to 0.78 × 0.20+
+            //   ≈ 0.156 (+0.004 absolute, +2.6 % relative), staying
+            //   well inside the inscribed-glow family and clearly
+            //   under the inscribed glow band 0.20+ and the hero
+            //   bloom 0.55, so the focal line keeps its exclusive
+            //   claim on the page's light (ART_DIRECTION §四 "高光只
+            //   落在主句") and 《言师采药去》 now reads one
+            //   restrained step more visibly as the inscribed answer
+            //   to 《松下问童子》 rather than as a slightly muted
+            //   copy of the focal line's calligraphic body. The +0.02
+            //   absolute alpha lift stays inside the safe-area margin
+            //   (the subtitle's inscribed contribution peak is still
+            //   bounded by the inscribed glow band 0.20+ which is well
+            //   below the hero bloom's combined ~0.7 effective alpha
+            //   — so the supporting tier stays clearly subordinate to
+            //   the focal line), the focal hierarchy (hero / subtitle
+            //   / upper-right / lower-left / seal) is unchanged, the
+            //   brush-weight gradient (subtitle brightest → upper-
+            //   right → lower-left → title dimmest) holds, the warm /
+            //   cool axis (subtitle + lower-left warm, upper-right
+            //   cool) holds, and the inscribed-stroke alpha axis now
+            //   extends the gentlest-step +2.63 % register the page-
+            //   wide +2-3 % material refinement band the most-refined
+            //   axes have settled into. The shadow_mix 0.16, the
+            //   em_scale 0.36, the y_frac 0.65, the drift
+            //   3.0/1.5/0.21/0.17/0.7, the fade_in 0.55, the fade_out
+            //   0.7, the stagger 0.18, the upper-right alpha 0.756,
+            //   the upper-right em_scale 0.32, the upper-right y_frac
+            //   0.27, the upper-right shadow_mix 0.26, the upper-
+            //   right drift 3.0/2.0/0.15/0.19/1.4, the lower-left
+            //   alpha 0.646, the lower-left em_scale 0.28, the
+            //   lower-left y_frac 0.74, the lower-left shadow_mix
+            //   0.42, the lower-left drift 3.0/2.0/0.13/0.21/2.8, the
+            //   title alpha 0.582, the title v 0.83, the title
+            //   target_px 23, the title breath 0.3096, the inscribed-
+            //   breath base 0.5340, the supporting mist bell 7.677,
+            //   the warm bell 7.677, the title ambient_warmth share
+            //   0.2222, the supporting mist_warmth share 0.2222, the
+            //   subtitle mist_warmth share 0.0895, the lower-left
+            //   mist_warmth share 0.1064, the terminator alpha 0.267,
+            //   the terminator cap 0.144, the cool_tint 0.13908, the
+            //   moon_proximity 0.107, the body 0.682, the halo_peak
+            //   0.080, the sky_peak 0.0384, the moon_halo_r 69.7, the
+            //   body σ 8.5, the sky σ 90.3, the body_pulse 0.023, the
+            //   halo_pulse 0.0807, the sky_pulse 0.0391, the
+            //   bloom2_alpha ceiling 0.063, the nebula alphas
+            //   0.022/0.016, the vignette pow(0.75), and the vignette
+            //   ceiling 0.74 are all unchanged so only the subtitle's
+            //   alpha shifts and the inscribed-stroke alpha axis
+            //   catches up with the gentlest-step +2.63 % register
+            //   the page-wide +2-3 % material refinement band the
+            //   most-refined axes have settled into. With 《言师采
+            //   药去》 now catching one more restrained step of the
+            //   page's luminous air — at the gentlest +2.63 % step
+            //   on the inscribed-stroke alpha axis, exactly between
+            //   the halo radius +2.5 % gentlest-step register 28af5b6
+            //   just completed on the moon-side geometric-extent axis
+            //   and the terminator alpha +2.69 % / terminator cap
+            //   +2.86 % gentlest-step register the directional-
+            //   modulation and warm-tint cap axes have just completed
+            //   — 《寻隐者不遇》 reads as one Tang quatrain inscribed
+            //   in moonlit air whose inscribed answer now registers
+            //   one more gentle step of the page's luminous air, and
+            //   the four inscribed strokes plus the calligrapher's
+            //   seal continue to share one proportional cadence
+            //   across alpha, breath, size, luminance, geometric
+            //   extent, warm-mist, and outer-corona axes, with the
+            //   subtitle's alpha finally stepping onto the gentlest
+            //   +2.63 % register the page-wide +2-3 % material
+            //   refinement band the most-refined axes have settled
+            //   into.
             SlotDef {
                 role: SlotRole::Support,
                 x_frac: 0.50,
@@ -392,7 +395,7 @@ impl Composition {
                 em_scale: 0.36,
                 target_w_frac: 0.0,
                 max_chars: 7,
-                alpha: 0.76,
+                alpha: 0.78,
                 shadow_mix: 0.16,
                 drift_x: 3.0,
                 drift_y: 1.5,
