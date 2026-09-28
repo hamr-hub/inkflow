@@ -6012,11 +6012,19 @@ pub fn paint_hero(
     let baseline_y0 = baseline_y0 + dy as i32;
 
     // Phase-aware motion (existing behaviour).
+    //
+    // Rest phase used to map to ep=0.0, which dropped the focal line
+    // entirely between phrases — ART_DIRECTION §一 "可读性：任何帧截
+    // 图都能看清句子" requires every frame to keep the focal line
+    // readable, so the rest now reads as a low "ghost" alpha (0.30)
+    // instead of a hard blackout. The previous beat's phrase stays
+    // visible at a quiet breath register while the engine waits out the
+    // gap before the next entrance, so the page never loses its anchor.
     let ep = match beat.phase {
         Phase::Entrance => beat.entrance_progress(),
         Phase::Hold => 1.0,
         Phase::Exit => 1.0 - beat.exit_progress(),
-        Phase::Rest => 0.0,
+        Phase::Rest => 0.30,
     };
     let ep_eased = color::smootherstep(ep);
 
