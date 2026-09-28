@@ -1135,8 +1135,32 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
             let p = mix(p, color::bg::DEEP, vig_dark);
             // ambient luminance wave
             let p = blend_add_lin(p, color::star::WARM, ambient * (1.0 - vig_dark * 0.6));
-            // horizon mist — final atmospheric layer.
-            let p = blend_screen(p, horizon_color, horizon_glow * 0.12);
+            // Horizon-band blend share 0.12 → 0.1275 (+6.25 %, fresh
+            // from the bell-coefficient arc that settled at 7.677 per
+            // aa626f1): the warm horizon band now catches one more
+            // restrained step of the page's inhabited mist at the same
+            // +6.25 % step the bell arc established. Max blend at the
+            // bell peak (v=0.75, horizon_glow ≈ 0.4799) is 0.4799 *
+            // 0.1275 ≈ 0.0612 (was 0.0576 at * 0.12, +0.0036 absolute)
+            // — still well under the inscribed glow (~0.20+) and the
+            // hero bloom (~0.55), so the warm horizon continues to read
+            // as the band the brush dissolves into rather than as a
+            // competing warm source. The lift is intentionally in
+            // lockstep with the per-slot mist_warmth share 0.20 →
+            // 0.2125 (line 4146) and the title ambient_warmth share
+            // 0.20 → 0.2125 (line 4783), all three lifting the SHARE
+            // of the warm mist bell at each site rather than the bell's
+            // amplitude (which has already reached its gentlest-step
+            // ceiling at 7.677), so the inscription's three lowest
+            // strokes plus the calligrapher's seal now catch a touch
+            // more of the warm band the brush dissolves into. The
+            // +6.25 % continues the same restraint cadence as the
+            // supporting mist bell arc (6.0 → 6.4 → 6.8 → 7.225 →
+            // 7.677, +6.7 % / +6.25 % x3) and the sky_sigma / sky_peak
+            // / halo_peak / moon_halo_r +6.25 % geometric cadence, now
+            // pivoting to the per-site multipliers rather than
+            // continuing the bell amplitude up.
+            let p = blend_screen(p, horizon_color, horizon_glow * 0.1275);
             fb[(y * w + x) as usize] = p;
         }
     }
@@ -4143,7 +4167,30 @@ fn paint_supporting_slot(
     // stays clear of the bell so it remains the cool echo in the
     // moon's air.
     let horizon_glow = ((slot.def.y_frac - 0.50) * (1.0 - slot.def.y_frac) * 7.677).clamp(0.0, 1.0);
-    let mist_warmth = horizon_glow * 0.20;
+    // Mist-warmth share 0.20 → 0.2125 (+6.25 %, the next step on the
+    // warm-mist share axis after the bell coefficient reached its
+    // gentlest-step ceiling at 7.677 per aa626f1): each supporting
+    // line that catches the warm horizon band now reads ink a touch
+    // more clearly bathed in the page's inhabited mist. Lower-left at
+    // v≈0.74 catches mist_warmth 0.4790 * 0.2125 ≈ 0.1018 (was 0.0958
+    // at the post-bell-lift 0.20 multiplier, +0.0060 absolute, the
+    // natural +6.25 % proportional gain that matches the bell-
+    // coefficient arc); subtitle at v≈0.66 catches 0.4030 * 0.2125 ≈
+    // 0.0857 (was 0.0806, +0.0051 absolute). Upper-right (v≈0.28)
+    // stays clear of the bell so it remains the cool echo in the
+    // moon's air. The +6.25 % continues the same restraint cadence as
+    // the recent supporting mist bell arc (6.0 → 6.4 → 6.8 → 7.225 →
+    // 7.677, +6.7 % / +6.25 % x3) and the +6.25 % sky_sigma /
+    // sky_peak / halo_peak / moon_halo_r geometric cadence, all now
+    // pivoting to the per-site share multipliers rather than
+    // continuing the bell amplitude up. Maximum warm-mist catch stays
+    // comfortably under the upper-bound envelope (~8.5 %), so 《云深
+    // 不知处》 continues to read as deep ink actually dissolving into
+    // the warm horizon rather than as dim cream floating over a
+    // barely-visible amber tint. The +6.25 % is lifted in lockstep
+    // with the title ambient_warmth 0.20 → 0.2125 (line 4783) and the
+    // background horizon-band blend 0.12 → 0.1275 (line 1139).
+    let mist_warmth = horizon_glow * 0.2125;
     // Cool axis — the mirror image of the mist warmth above. Supporting
     // lines that sit in the moonlit upper sky absorb a touch of cool
     // tint from the cool air they inhabit, so the upper-right echo
@@ -4780,7 +4827,32 @@ fn paint_poem_title(
     // ambient lift stays inside the muted-ink family (CREAM → SHADOW
     // 0.35 base), and the seal still reads as ink dried on paper rather
     // than a second focal light.
-    let ambient_warmth = ((title_v - 0.50) * (1.0 - title_v) * 7.677).clamp(0.0, 1.0) * 0.20;
+    // Title ambient warmth share 0.20 → 0.2125 (+6.25 %, paired with
+    // the supporting mist_warmth share lift at line 4146 and the
+    // background horizon-band share lift at line 1139): the
+    // calligrapher's seal now catches one more restrained step of the
+    // page's warm horizon band so 《寻隐者不遇》 reads as ink a touch
+    // more clearly bathed in the same warm mist the supporting
+    // inscription dissolves into. Title ambient_warmth at v≈0.83 =
+    // 0.4307 * 0.2125 ≈ 0.0915 (was 0.0861 at the post-bell-lift 0.20
+    // multiplier, +0.0054 absolute, the natural +6.25 % proportional
+    // gain matching the warm-bell coefficient arc). The +6.25 % keeps
+    // the title within the supporting-tier warm-share envelope
+    // (subtitle mist_warmth 0.0857, lower-left mist_warmth 0.1018),
+    // so the seal stays a quiet ink mark dissolving into the lower-
+    // left's warm band rather than reading as a brighter signature on
+    // its own. Restraint (ART_DIRECTION §四 "克制统一的调色板") holds
+    // across all three synchronized +6.25 % lifts on the warm-mist
+    // share axis: the warmer reading stays inside the muted-ink
+    // family (CREAM → SHADOW 0.35 base), the focal line keeps its
+    // exclusive claim on the page's light (ART_DIRECTION §四 "高光只
+    // 落在主句"), and the upper-right cool echo remains untouched at
+    // its cool axis. The +6.25 % continues the same restraint cadence
+    // as the recent supporting mist bell arc and the geometric
+    // cadence (sky_sigma / sky_peak / halo_peak / moon_halo_r all
+    // +6.25 %), all three now pivoting to the per-site shares rather
+    // than continuing any single coefficient further up.
+    let ambient_warmth = ((title_v - 0.50) * (1.0 - title_v) * 7.677).clamp(0.0, 1.0) * 0.2125;
     // Title base sits one step into the muted ink family (mix CREAM toward
     // SHADOW 0.0 → 0.35) so the seal reads as ink dried on paper rather
     // than a fifth inscription line at 40 % opacity. CREAM (rgb 232, 212,
