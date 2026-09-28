@@ -323,12 +323,73 @@ impl Composition {
             //   lower-left warm, upper-right cool) and the brush-weight
             //   hierarchy (subtitle brightest → upper-right → lower-
             //   left dimmest) both hold unchanged.
+            // em_scale 0.34 → 0.36 (+5.88 %, the supporting-tier size
+            //   axis continuing the +4.86–6.25 % restraint cadence the
+            //   recent inscription-side chain has been sharing — title
+            //   alpha +4.86 % (f8c4f2d), lower-left alpha +5.5 %
+            //   (12fac53), upper-right y_frac +3.6 % (ddb715a), sky_peak
+            //   / sky_sigma / body_sigma / moon_halo_r / halo_peak
+            //   +6.25 % (c9baa27, 05eefb4, bcfab51, 8113547, ef91dae),
+            //   body_pulse / halo_pulse / sky_pulse +4.76 % (750ae7a),
+            //   warm-mist share +6.25 % (f409940), and bloom2_alpha
+            //   ceiling +5 % (9f9436b) — so the subtitle's size now
+            //   steps onto the same proportional register the
+            //   inscription-side arcs have been completing. The +5.88 %
+            //   sits at the gentlest step in the +4.76–6.25 % register
+            //   the chain has settled on, matching the bloom2 ceiling
+            //   +5 % register exactly (the most recent inscription-
+            //   side lift) so the subtitle's em_scale joins the page's
+            //   one proportional refinement arc at the gentlest-step
+            //   cadence rather than the size axis quietly sitting one
+            //   step behind the alpha/breath/atmospheric chain. The
+            //   +0.02 absolute em_scale lift translates to ~2.5 px on
+            //   the 128-em hero font (subtitle glyphs now sit at
+            //   ≈46.1 px vs 43.5 px at the prior 0.34 register), so
+            //   《言师采药去》 now reads one restrained step more
+            //   visibly as the inscribed answer to 《松下问童子》
+            //   rather than as a slightly lighter copy of the focal
+            //   line's calligraphic body. The brush-weight hierarchy
+            //   holds: subtitle stays the largest supporting stroke
+            //   (subtitle 0.36 / upper-right 0.32 / lower-left 0.28 /
+            //   title ≈0.17), the size gaps now step down 0.04 / 0.04 /
+            //   0.11 (was 0.02 / 0.04 / 0.11) so the subtitle-to-upper-
+            //   right pairing stays paired with the upper-right-to-
+            //   lower-left spacing rather than the topmost gap sitting
+            //   half a step tighter than the bottom gap, and the
+            //   subtitle's alpha 0.76 + shadow_mix 0.16 + breath base
+            //   0.5340 + y_frac 0.65 all stay unchanged so only the
+            //   subtitle's em_scale shifts and the size axis catches
+            //   up with the alpha/breath/atmospheric chain. Restraint
+            //   (ART_DIRECTION §四 "克制统一的调色板" / "高光只落在
+            //   主句") holds: the +2.5 px size lift stays well inside
+            //   the safe-area margin (subtitle's em + drift + bearing
+            //   ≈ 50 px, so a 2.5 px lift still leaves comfortable
+            //   clearance to the focal line above and the lower-left
+            //   echo below), the focal line keeps its exclusive claim
+            //   on the page's light, and 《言师采药去》 now reads as
+            //   one restrained step more visibly the inscribed answer
+            //   to 《松下问童子》 — the direct response, now sized to
+            //   match the same proportional register the focal line's
+            //   bloom just stepped onto in 9f9436b. With the subtitle's
+            //   em_scale now sitting at 0.36 — at the gentlest +5.88 %
+            //   step on the size axis, matching the bloom2 ceiling
+            //   +5 % register the focal line's outermost corona just
+            //   completed — 《寻隐者不遇》 reads as one Tang quatrain
+            //   inscribed in moonlit air whose inscribed answer now
+            //   registers one restrained step more visibly against
+            //   the focal line it orbits, and the four inscribed
+            //   strokes plus the calligrapher's seal continue to
+            //   share one proportional cadence across alpha, breath,
+            //   size, luminance, geometric extent, warm-mist, and
+            //   outer-corona axes, with the subtitle's size finally
+            //   stepping onto the gentlest-step register the alpha
+            //   and atmospheric chains have just completed.
             SlotDef {
                 role: SlotRole::Support,
                 x_frac: 0.50,
                 y_frac: 0.65,
                 align: Align::Center,
-                em_scale: 0.34,
+                em_scale: 0.36,
                 target_w_frac: 0.0,
                 max_chars: 7,
                 alpha: 0.76,
