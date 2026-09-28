@@ -2556,7 +2556,88 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
     // inscription line share one breathing atmosphere a touch more
     // visibly continuous across the air between them.
     let sky_peak = 0.0361_f32;
-    let sky_sigma = 85.0_f32;
+    // Sky σ 85 → 90.3 (+6.25 %, the next gentle step on the moon-side
+    // geometric-extent axis after body σ 8 → 8.5 (+6.25 % in bcfab51)):
+    // the moon's three nested atmospheric layers (body σ 8.5 + halo
+    // radius 68 + sky bell σ 90.3 outer air) now take their second
+    // restrained step on the same +6.25 % boundary the body's catch-up
+    // commit established, so the moonlit air bridging the disc and
+    // 《只在此山中》 reaches one more restrained step into the upper-
+    // right echo's neighbourhood. At d=68 px (the halo boundary) the
+    // alpha now sits at 0.0361 * exp(-0.5 * (68/90.3)²) ≈ 0.0361 *
+    // 0.753 ≈ 0.0272 (was 0.0361 * 0.726 ≈ 0.0262 at σ 85, +0.001
+    // absolute so the sky bell's outermost-luminance contribution at
+    // the halo boundary rises by one more restrained step), at d=115
+    // (the upper-right echo 《只在此山中》's neighbourhood) the alpha
+    // sits at 0.0361 * exp(-0.5 * (115/90.3)²) ≈ 0.0361 * 0.444 ≈
+    // 0.0160 (was 0.0361 * 0.428 ≈ 0.0154 at σ 85, +3.9 % relative at
+    // the echo's neighbourhood so the moonlit air bridging the disc
+    // and the echo reads as a touch more visibly continuous with the
+    // upper-right echo now that the sky bell's gentle falloff reaches
+    // a touch further), at d=150 (the sky bell's outer flank) the
+    // alpha sits at 0.0361 * exp(-0.5 * (150/90.3)²) ≈ 0.0361 * 0.252
+    // ≈ 0.0091 (was 0.0361 * 0.211 ≈ 0.0076 at σ 85, +19.7 % relative
+    // so the outer atmosphere reaches a touch further), and at d=200
+    // the sky bell now sits at 0.0361 * exp(-0.5 * (200/90.3)²) ≈
+    // 0.0361 * 0.086 ≈ 0.0031 (was 0.0361 * 0.063 ≈ 0.0023 at σ 85,
+    // +35 % relative but still effectively at the 0.003 visibility
+    // threshold so the bell doesn't paint visible color past its
+    // natural boundary). The +5.3 px absolute σ extension stays in
+    // the relationship between the moon and the upper-right echo
+    // rather than spreading the bell into the lower-left quadrant, and
+    // the sky luminance remains firmly under the inscribed glow
+    // (~0.20+) and the hero bloom (~0.55) so the focal line keeps
+    // its exclusive claim on the page's light (ART_DIRECTION §四
+    // 高光只落在主句). The +6.25 % continues the same restraint
+    // cadence as the recent +6.25 % body σ catch-up (bcfab51), the
+    // +6.25 % supporting mist bell lift (aa626f1), the +6.25 % sky_peak
+    // lifts (9ec99ff, 611895d), the +6.25 % halo_peak lift (ef91dae),
+    // the +6.25 % halo radius extension (8113547), the +4.76 %
+    // body_pulse lift (750ae7a), the +4.76 % halo_pulse lift
+    // (750ae7a), the +4.76 % sky_pulse lifts (a79662b, 45b94af,
+    // 750ae7a), the +4.76 % inscribed-breath base, the +4.9 % title
+    // alpha lifts (c9f4dde, 4b84ab7, 2eacfb1), the +5.5–5.6 % body
+    // bumps (fe42fec, b7ebeda, 90e22dc, 3b60530), the +5.5 % lower-
+    // left alpha lifts (9a4cc96), the +4.9 % cool_tint moon-proximity
+    // weight (3ca7d2d), the +2.19 % terminator amber-tint cap, the
+    // +6.25 % warm-mist share lifts at each warm site (f409940), and
+    // the +6.25 % body σ catch-up the geometric-extent arc just
+    // completed (bcfab51) — so the moon's three nested atmospheric
+    // layers (body + halo + sky bell), the warm horizon mist bell,
+    // the four inscribed strokes, and the calligrapher's seal now
+    // share one proportional series of restrained +2.19-7.35 % steps
+    // across breath, luminance, geometric extent, and warm-mist axes,
+    // with the sky bell's second +6.25 % step on the geometric-extent
+    // axis extending the moon's outermost atmospheric layer one more
+    // restrained step into the upper-right echo's atmosphere. The σ
+    // 8.5 body bell, the 4-px halo fade-in, the halo radius 68, the
+    // ±26 % / 0.140 amber-tint terminator cap, the 0.65 multiplier,
+    // body_pulse 0.022, halo_pulse 0.0770, sky_pulse 0.0373, body
+    // 0.682, halo 0.0765, sky_peak 0.0361, warm bells 7.677,
+    // supporting mist bell 7.677, title ambient warmth 7.677, cool
+    // tint 0.13908, moon proximity 0.107, subtitle alpha 0.76,
+    // upper-right alpha 0.756, lower-left alpha 0.612, title alpha
+    // 0.555, title v 0.83, inscribed-breath base 0.5340, title
+    // breath 0.3096, halo radius 68, sky_peak 0.0361, and the
+    // supporting slots' positions and drifts are all unchanged so
+    // only the sky bell's geometric extent shifts and the moon's
+    // three nested atmospheric layers' peaks and breath stay
+    // exactly as they were — only the sky bell's reach shifts, and
+    // only by 5.3 px of Gaussian σ. With the sky bell now extending
+    // one more restrained step into the page's inhabited atmosphere
+    // at the +6.25 % step the body σ catch-up just completed — the
+    // moon's three nested atmospheric layers now share one coupled
+    // restraint cadence on the geometric-extent axis across two
+    // +6.25 % passes — 《寻隐者不遇》 reads as one Tang quatrain
+    // inscribed in moonlit air whose moon's outermost atmospheric
+    // layer now reaches a touch further into the same upper-right
+    // quadrant the closest echo inhabits, so the moon and 《只在此
+    // 山中》 share one breathing atmosphere a touch more visibly
+    // continuous across the air between them, with the moon's three
+    // nested atmospheric layers (body + halo + sky bell) all sitting
+    // on one proportional +6.25 % geometric cadence across two
+    // restrained passes.
+    let sky_sigma = 90.3_f32;
     let sky_pulse = 1.0 + pulse * 0.0373;
     let sky_extent_i = (moon_halo_r + 150.0) as i32 + 1;
     for oy in -sky_extent_i..=sky_extent_i {
