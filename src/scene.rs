@@ -1710,7 +1710,7 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
         // 《寻隐者不遇》 now dissolves into a band one step more visibly
         // inhabited by the same warm mist the supporting inscription
         // breathes.
-        let horizon_glow = ((v - 0.50) * (1.0 - v) * 7.677).clamp(0.0, 1.0);
+        let horizon_glow = ((v - 0.50) * (1.0 - v) * 7.869).clamp(0.0, 1.0);
         for x in 0..w {
             let dx = x as f32 - cx;
             let dy = y as f32 - cy;
@@ -5578,7 +5578,7 @@ fn paint_supporting_slot(
     // a touch more warmth on the rising edge; the upper-right (v≈0.27)
     // stays clear of the bell so it remains the cool echo in the
     // moon's air.
-    let horizon_glow = ((slot.def.y_frac - 0.50) * (1.0 - slot.def.y_frac) * 7.677).clamp(0.0, 1.0);
+    let horizon_glow = ((slot.def.y_frac - 0.50) * (1.0 - slot.def.y_frac) * 7.869).clamp(0.0, 1.0);
     // Mist-warmth share 0.2125 → 0.2222 (+4.55 %, the gentlest-step
     // register the title's per-site ambient_warmth share caught up to
     // in df4a49e — unifying the two share multipliers at the same
@@ -7099,7 +7099,7 @@ fn paint_poem_title(
     // extent, luminance, breath, inscribed-stroke alpha, supporting-
     // tier size, focal-line outer-corona, directional-modulation,
     // warm-tint cap, chromatic, and frame axes have just settled into.
-    let ambient_warmth = ((title_v - 0.50) * (1.0 - title_v) * 7.677).clamp(0.0, 1.0) * 0.2278;
+    let ambient_warmth = ((title_v - 0.50) * (1.0 - title_v) * 7.869).clamp(0.0, 1.0) * 0.2278;
     // Title base sits one step into the muted ink family (mix CREAM toward
     // SHADOW 0.0 → 0.35) so the seal reads as ink dried on paper rather
     // than a fifth inscription line at 40 % opacity. CREAM (rgb 232, 212,
