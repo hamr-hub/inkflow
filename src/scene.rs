@@ -2128,29 +2128,35 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
                 // both when the horizon glow sits directly below it.
                 let t_term = (dy * body_recip).clamp(-1.0, 1.0);
                 let term = 1.0 + 0.26 * t_term;
-                // Term-warm cap 0.137 → 0.140 (+2.19 %, the gentlest step
-                // on the amber-tint axis after +8.3 % in c601184 and
-                // +5.4 % in 1c666a7) so the moon's bottom edge reads one
-                // touch more visibly as catching horizon light — the
-                // subtle amber rim now lifts from ≤ 13.7 % toward AMBER
-                // to ≤ 14.0 % toward AMBER, a single restrained step on
-                // the same material axis as the recent chain. The +2.19 %
-                // mirrors the page-wide restraint cadence that has now
-                // settled into the +2-3 % band for the most refined
-                // material axes (cool_tint +2.4 %, +2.5 %, +2.7 %; vignette
-                // +2.5 % neighbor; warm-tint cap approaching saturation),
-                // so the moon's terminator, the supporting tier's warm
-                // tint, and the page-wide material refinement share one
-                // quiet proportional rhythm — the bottom half now sits a
-                // touch more clearly inside the warm horizon band without
-                // the moon starting to read as amber-tinted. Restraint
-                // (ART_DIRECTION §四 "克制统一的调色板") holds: the +0.003
-                // absolute lift stays inside the cream/amber family, the
-                // 0.14 cap still sits clearly under the inscribed glow
-                // (~0.20+) and the focal bloom (~0.55), so the moon
-                // continues to read as one luminous body whose bottom
-                // catches horizon light rather than as a body wearing an
-                // amber ring. Pairs with the recent inscription-side
+                // Term-warm cap 0.140 → 0.144 (+2.86 %, the second
+                // gentlest step on the amber-tint axis after +8.3 % in
+                // c601184, +5.4 % in 1c666a7, and +2.19 % to 0.140) so
+                // the moon's bottom edge reads one touch more visibly as
+                // catching horizon light — the subtle amber rim now lifts
+                // from ≤ 14.0 % toward AMBER to ≤ 14.4 % toward AMBER, the
+                // second quietest rung on the page-wide +2-3 % material
+                // refinement band the most-refined axes have settled into
+                // (cool_tint +2.4 %, +2.5 %, +2.7 %; vignette +2.5 %
+                // neighbour; warm-tint cap approaching saturation), so
+                // the moon's terminator, the supporting tier's warm tint,
+                // and the page-wide material refinement share one
+                // proportional rhythm — the bottom half now sits a touch
+                // more clearly inside the warm horizon band without the
+                // moon starting to read as amber-tinted. Restraint
+                // (ART_DIRECTION §四 "克制统一的调色板" / "高光只落在主句")
+                // holds: the +0.004 absolute lift stays inside the
+                // cream/amber family, the 0.144 cap still sits clearly
+                // under the inscribed glow (~0.20+) and the focal bloom
+                // (~0.55), so the moon continues to read as one luminous
+                // body whose bottom catches horizon light rather than as
+                // a body wearing an amber ring; the terminator alpha
+                // ±26 %, the cool_tint 0.13908, the moon_proximity 0.107,
+                // the body 0.682, the halo_peak 0.080, the sky_peak
+                // 0.0384, and the title ambient_warmth share 0.2222 are
+                // all unchanged so only the amber-rim cap shifts on the
+                // warm/cool material axis and the moon's directional
+                // reading catches one more restrained step of horizon
+                // light. Pairs with the recent inscription-side
                 // refinement chain — title alpha 0.40 → 0.529 (+10 % /
                 // +4.5 % / +4.3 % / +5 % / +5 % in the prior arc and
                 // c9f4dde, 4b84ab7), inscribed-breath base 0.075 →
@@ -2181,22 +2187,22 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
                 // inscribed strokes, the calligrapher's seal, the page
                 // frame, and the moon's reach onto its closest
                 // inscription line now share one proportional series of
-                // restrained steps (+2.19 %, +2.4 %, +2.5 %, +2.7 %,
+                // restrained steps (+2.19 %, +2.4 %, +2.5 %, +2.7 %, +2.86 %,
                 // +4.3 %, +4.76 % x10, +5.0 %, +5.15 %, +5.26 %, +5.4 %,
                 // +5.43 %, +5.5 %, +5.56 %, +5.6 %, +5.75 %, +5.88 %,
                 // +6.1 %, +6.25 %, +6.5 %, +6.67 %, +6.7 %, +7.1 %,
                 // +8.3 %), and the page's moonlit atmosphere reads as
-                // one coherent refinement rather than twenty-four
+                // one coherent refinement rather than twenty-five
                 // independent tweaks. With the moon's bottom edge now
                 // catching a touch more visible amber — at the gentlest
-                // +2.19 % step on the amber-tint cap axis after +8.3 %
-                // and +5.4 %, decelerating into the page-wide
-                // +2-3 % restraint band that the material axes have
-                // settled into — the moon continues to read as one
-                // luminous body whose bottom catches horizon light, and
-                // the warm/cool axis the moon inhabits tightens one
+                // +2.86 % step on the amber-tint cap axis after +8.3 %,
+                // +5.4 %, and +2.19 % to 0.140, decelerating into the
+                // page-wide +2-3 % restraint band that the material
+                // axes have settled into — the moon continues to read as
+                // one luminous body whose bottom catches horizon light,
+                // and the warm/cool axis the moon inhabits tightens one
                 // more restrained step inside the cream/amber family.
-                let term_warm = (t_term * 0.140).max(0.0);
+                let term_warm = (t_term * 0.144).max(0.0);
                 // Body and halo now breathe independently — the disc sits
                 // at ±2.1 % (the still anchor, below every inscription line),
                 // the moonlit air at ±7 % (slightly more than the
@@ -4219,7 +4225,7 @@ fn paint_supporting_slot(
     // nested atmospheric layers, the four inscribed strokes, the
     // calligrapher's seal, the page frame, and the moon's reach onto
     // its closest inscription line now share one proportional series of
-    // restrained steps (+2.19 %, +2.4 %, +2.5 %, +2.7 %, +4.3 %, +4.76 %
+    // restrained steps (+2.19 %, +2.4 %, +2.5 %, +2.7 %, +2.86 %, +4.3 %, +4.76 %
     // x25, +5.0 %, +5.15 %, +5.26 %, +5.4 %, +5.43 %, +5.5 %, +5.56 %,
     // +5.6 %, +5.75 %, +5.88 %, +6.1 %, +6.25 %, +6.5 %, +6.67 %, +6.7 %,
     // +7.1 %, +8.3 %), and the supporting inscription now reads as one
