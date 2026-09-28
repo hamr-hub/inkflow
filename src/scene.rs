@@ -4591,19 +4591,87 @@ fn paint_supporting_slot(
     // stays clear of the bell so it remains the cool echo in the
     // moon's air.
     let horizon_glow = ((slot.def.y_frac - 0.50) * (1.0 - slot.def.y_frac) * 7.677).clamp(0.0, 1.0);
-    // Mist-warmth share 0.20 → 0.2125 (+6.25 %, the next step on the
-    // warm-mist share axis after the bell coefficient reached its
-    // gentlest-step ceiling at 7.677 per aa626f1): each supporting
-    // line that catches the warm horizon band now reads ink a touch
-    // more clearly bathed in the page's inhabited mist. Lower-left at
-    // v≈0.74 catches mist_warmth 0.4790 * 0.2125 ≈ 0.1018 (was 0.0958
-    // at the post-bell-lift 0.20 multiplier, +0.0060 absolute, the
-    // natural +6.25 % proportional gain that matches the bell-
-    // coefficient arc); subtitle at v≈0.66 catches 0.4030 * 0.2125 ≈
-    // 0.0857 (was 0.0806, +0.0051 absolute). Upper-right (v≈0.27)
-    // stays clear of the bell so it remains the cool echo in the
-    // moon's air. The +6.25 % continues the same restraint cadence as
-    // the recent supporting mist bell arc (6.0 → 6.4 → 6.8 → 7.225 →
+    // Mist-warmth share 0.2125 → 0.2222 (+4.55 %, the gentlest-step
+    // register the title's per-site ambient_warmth share caught up to
+    // in df4a49e — unifying the two share multipliers at the same
+    // 0.2222 register the page has settled on): each supporting line
+    // that catches the warm horizon band now reads ink a touch more
+    // clearly bathed in the same warm mist the calligrapher's seal
+    // dissolves into, completing the per-site-share pivot that
+    // 0.2125 → 0.2222 (df4a49e) started for the title — the two warm
+    // share multipliers now both sit at 0.2222, so the four inscribed
+    // strokes plus the calligrapher's seal share one warm-mist share
+    // register rather than the supporting tier quietly lagging one
+    // +4.55 % step behind the seal after the warm bell coefficient
+    // chain (6.0 → 6.4 → 7.225 → 7.677, the most recent +6.25 % lift
+    // in aa626f1) had carried the bell forward. Lower-left at v≈0.74
+    // catches mist_warmth 0.4791 * 0.2222 ≈ 0.1064 (was 0.1018 at
+    // the post-f409940 0.2125 multiplier, +0.0046 absolute, the
+    // natural +4.55 % proportional gain); subtitle at v≈0.66 catches
+    // 0.4030 * 0.2222 ≈ 0.0895 (was 0.0857, +0.0038 absolute).
+    // Upper-right (v≈0.27) stays clear of the bell so it remains the
+    // cool echo in the moon's air; hero (v≈0.42) likewise stays
+    // clear (the bell only reaches forward of v=0.50). The +4.55 %
+    // lift stays well inside the warm-mist envelope (lower-left
+    // mist_warmth 0.1064, subtitle 0.0895) and the restraint cap
+    // (≈8.5 %), so 《云深不知处》 continues to read as deep ink
+    // dissolving into the warm horizon rather than as dim cream
+    // floating over a more visible amber tint, and the warm/cool axis
+    // (subtitle + lower-left warm, upper-right cool) holds intact.
+    // The +4.55 % continues the same gentlest-step restraint cadence
+    // as the recent chain — halo_peak +4.58 % (e0b708c), title
+    // target_px +4.55 % (b804477), body/halo/sky_pulse +4.55-4.83 %
+    // (7609987), subtitle em_scale +5.88 % (9ed2b96), bloom2_alpha
+    // ceiling +5 % (9f9436b), lower-left alpha +5.5 % (12fac53),
+    // title alpha +4.86 % (f8c4f2d), and title ambient_warmth share
+    // +4.55 % (df4a49e) — so the supporting tier's per-site warm
+    // share now steps onto the gentlest-step register the title's
+    // per-site share caught up to in df4a49e, and the four inscribed
+    // strokes plus the calligrapher's seal now share one proportional
+    // series of restrained +4.55-6.67 % steps across breath,
+    // luminance, geometric extent, warm-mist, alpha, size, and
+    // outer-corona axes with the supporting tier's per-site
+    // warm-mist share finally stepping onto the gentlest-step
+    // register the title's per-site warm-mist share had just caught
+    // up to. The bell coefficient 7.677 stays at its post-aa626f1
+    // register so the warm horizon's *shape* (where on the page the
+    // warm band peaks) is unchanged — only the per-site *share* of
+    // that bell lifts by one gentlest-step +4.55 %, so the warm
+    // horizon reaches identically across the page while the
+    // inscribed strokes and the seal catch one more restrained step
+    // into it in unison. Restraint (ART_DIRECTION §四 '克制统一的
+    // 调色板' / '高光只落在主句') holds: the +0.0046 absolute lift on
+    // lower-left mist_warmth and the +0.0038 absolute lift on
+    // subtitle mist_warmth stay inside the muted-ink family (CREAM →
+    // SHADOW 0.35 base), the inscribed strokes still read as ink
+    // dissolving into the warm horizon rather than as brighter
+    // signatures on their own, the focal line keeps its exclusive
+    // claim on the page's light, and the upper-right cool echo
+    // remains untouched at its cool axis. With the supporting tier's
+    // per-site warm-mist share now sitting at the same 0.2222
+    // register the title's per-site ambient_warmth share caught up to
+    // in df4a49e — at the gentlest +4.55 % step the per-site-share
+    // pivot established — 《寻隐者不遇》 reads as one Tang quatrain
+    // inscribed in moonlit air whose four inscribed strokes plus the
+    // calligrapher's seal now catch one more restrained step of the
+    // warm horizon band together, completing the per-site-share
+    // pivot the bell coefficient chain had carried the bell forward
+    // to and the two share multipliers now unifying at one
+    // gentlest-step register across the page.
+    //
+    // (Prior chain preserved below for reference: Mist-warmth share
+    // 0.20 → 0.2125 (+6.25 %, paired with the bell coefficient
+    // 6.4 → 6.8 in c253209): each supporting line that catches the
+    // warm horizon band now reads ink a touch more clearly bathed
+    // in the page's inhabited mist. Lower-left at v≈0.74 catches
+    // mist_warmth 0.4790 * 0.2125 ≈ 0.1018 (was 0.0958 at the
+    // post-bell-lift 0.20 multiplier, +0.0060 absolute, the natural
+    // +6.25 % proportional gain that matches the bell-coefficient
+    // arc); subtitle at v≈0.66 catches 0.4030 * 0.2125 ≈ 0.0857
+    // (was 0.0806, +0.0051 absolute). Upper-right (v≈0.27) stays
+    // clear of the bell so it remains the cool echo in the moon's
+    // air. The +6.25 % continues the same restraint cadence as the
+    // recent supporting mist bell arc (6.0 → 6.4 → 6.8 → 7.225 →
     // 7.677, +6.7 % / +6.25 % x3) and the +6.25 % sky_sigma /
     // sky_peak / halo_peak / moon_halo_r geometric cadence, all now
     // pivoting to the per-site share multipliers rather than
@@ -4614,7 +4682,7 @@ fn paint_supporting_slot(
     // barely-visible amber tint. The +6.25 % is lifted in lockstep
     // with the title ambient_warmth 0.20 → 0.2125 (line 4783) and the
     // background horizon-band blend 0.12 → 0.1275 (line 1139).
-    let mist_warmth = horizon_glow * 0.2125;
+    let mist_warmth = horizon_glow * 0.2222;
     // Cool axis — the mirror image of the mist warmth above. Supporting
     // lines that sit in the moonlit upper sky absorb a touch of cool
     // tint from the cool air they inhabit, so the upper-right echo
