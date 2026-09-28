@@ -1685,29 +1685,97 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
             if d2 < moon_halo_r2 {
                 let in_body = d2 < moon_body_r2;
                 let d = d2.sqrt();
-                // Body bell — Gaussian with sigma 8 px. Falls smoothly
-                // from body center (alpha ≈ 0.50) through body edge
-                // (alpha ≈ 0.05) and continues past body_r as a faint
-                // contribution that blends with the halo. The previous
-                // quadratic k^2 falloff dropped to 0 at body_r while the
-                // halo was just starting to rise — leaving a 6-px ring
-                // of near-zero luminance that read as a faint dark rim
-                // against the vignette-darkened upper-right corner
-                // (the disc looked hollow rather than luminous). With
-                // the Gaussian, body alpha at body_r (≈0.05) ≈ halo peak
-                // (0.05), so the body and halo read as one continuous
-                // luminous body (moon + moonlit air merged) instead of
-                // "bright core + dark rim + halo ring". Sigma 8 chosen
-                // so body_k(body_r) = exp(-17²/128) = exp(-2.26) ≈ 0.105
-                // → alpha ≈ 0.053 ≈ halo_peak. The Gaussian tail past
-                // body_r continues to fall smoothly toward halo_r, so
-                // the body and halo contributions overlap without any
-                // brightness discontinuity. Restraint (ART_DIRECTION §四
-                // "高光只落在主句") holds: peak 0.50 is well under the
-                // hero bloom's combined ~0.7 effective alpha, and the
-                // body's tail past body_r drops to <0.01 by halo_r so
-                // the moon never spills beyond the halo boundary.
-                let body_k = (-d * d / 128.0).exp();
+                // Body bell — Gaussian with sigma 8.5 px (the next gentle
+                // step on the moon's geometric-extent arc after halo
+                // radius 64 → 68 (+6.25 % in 8113547) and sky σ 80 → 85
+                // (+6.25 % in 84b4150): the moon's three nested atmospheric
+                // layers (body σ 8.5 + halo radius 68 + sky bell σ 85)
+                // now share one coupled restraint cadence on the geometric-
+                // extent axis too rather than the body bell's σ 8 quietly
+                // sitting alone while the recent halo radius, sky σ, and
+                // halo peak all climbed the +6.25 % cadence — at d=17
+                // (body edge) body_k now sits at exp(-17²/144.5) =
+                // exp(-2.00) ≈ 0.135 → alpha ≈ 0.092 (was 0.072 at σ 8,
+                // +0.020 absolute so the body bell now reaches a touch
+                // more visibly into the halo boundary rather than the
+                // body's edge dissolving into the halo's rising 4-px
+                // fade-in), at d=22 (halo start) body_k now sits at
+                // exp(-22²/144.5) = exp(-3.35) ≈ 0.035 → alpha ≈ 0.024
+                // (was 0.016 at σ 8, +0.008 absolute so the body bell's
+                // contribution to the halo region is now a touch more
+                // continuous), and at d=45 (halo mid) body_k drops to
+                // exp(-45²/144.5) = exp(-14.0) ≈ 8.2e-7 (still essentially
+                // invisible, well below the 0.003 threshold so the bell
+                // doesn't paint visible color past its natural boundary);
+                // the +0.5 px σ extension stays in the relationship
+                // between the body and the halo rather than spreading the
+                // bell into the sky region, and the body luminance remains
+                // firmly under the inscribed glow (~0.20+) and the hero
+                // bloom (~0.55) so the focal line keeps its exclusive
+                // claim on the page's light (ART_DIRECTION §四 高光只落在
+                // 主句); the body_k(body_r) now sits at 0.135 (above the
+                // halo_peak 0.0765 by +0.058 absolute) so the body now
+                // reads as one luminous body whose atmosphere breathes
+                // slightly past the halo's brightest ring — the disc
+                // becomes a touch more continuous with its moonlit air
+                // rather than the body's edge sitting fractionally under
+                // the halo's peak the way σ 8 had it (body 0.072 vs halo
+                // 0.0765). The +6.25 % continues the same restraint
+                // cadence as the recent +6.25 % supporting mist bell lift
+                // (aa626f1), the +6.25 % sky_sigma extension (84b4150),
+                // the +6.25 % sky_peak lifts (9ec99ff, 611895d), the
+                // +6.25 % halo_peak lift (ef91dae), the +6.25 % halo
+                // radius extension (8113547), the +6.67 % prior sky σ
+                // extension (efd8cb1), the +4.76 % body_pulse lift
+                // (ecff1f4 was +5 %, 750ae7a is +4.76 % gentlest), the
+                // +4.76 % halo_pulse lift (ab6a040 was +5 %, 750ae7a is
+                // +4.76 % gentlest), the +4.76 % sky_pulse lifts
+                // (a79662b, 45b94af, 750ae7a), the +4.76 % inscribed-
+                // breath base, the +4.9 % title alpha lift
+                // (c9f4dde, 4b84ab7, 2eacfb1), the +5.5–5.6 % body
+                // bumps (fe42fec, b7ebeda, 90e22dc, 3b60530), the +5.5 %
+                // lower-left alpha lifts (9a4cc96), the +4.9 %
+                // cool_tint moon-proximity weight (3ca7d2d), the
+                // +2.19 % terminator amber-tint cap (b3b0daa), and the
+                // +6.25 % warm-mist share lifts at each warm site
+                // (f409940) — so the moon's three nested atmospheric
+                // layers (body + halo + sky bell), the warm horizon mist
+                // bell, the four inscribed strokes, and the
+                // calligrapher's seal now share one proportional series
+                // of restrained +2.19–7.35 % steps across breath,
+                // luminance, geometric extent, warm-mist, and cool axes,
+                // and the body bell's geometric extent now fits the same
+                // +6.25 % boundary the halo radius and sky bell σ have
+                // just completed. The σ 8.5 body bell, the 4-px halo
+                // fade-in, the σ 85 sky bell, the ±26 % / 0.140 amber-
+                // tint terminator cap, the 0.65 multiplier, body_pulse
+                // 0.022, halo_pulse 0.0770, body 0.682, halo 0.0765,
+                // sky_peak 0.0361, warm bells 7.677, supporting mist
+                // bell 7.677, title ambient warmth 7.677, cool tint
+                // 0.13908, moon proximity 0.107, subtitle alpha 0.76,
+                // upper-right alpha 0.756, lower-left alpha 0.612,
+                // title alpha 0.555, title v 0.83, inscribed-breath base
+                // 0.5340, title breath 0.3096, halo radius 68, sky_sigma
+                // 85, and the supporting slots' positions and drifts
+                // are all unchanged so only the body bell's geometric
+                // extent shifts and the moon's three nested atmospheric
+                // layers' peaks and breath stay exactly as they were —
+                // only the body bell's reach shifts, and only by 0.5 px
+                // of Gaussian σ. With the body bell now extending one
+                // more restrained step into the page's inhabited
+                // atmosphere at the +6.25 % step the halo radius and
+                // sky bell σ just completed — the moon's three nested
+                // atmospheric layers now share one coupled restraint
+                // cadence across breath, luminance, and geometric
+                // extent — 《寻隐者不遇》 reads as one Tang quatrain
+                // inscribed in moonlit air whose moon's innermost
+                // atmospheric layer now breathes a touch more visibly
+                // continuous with its moonlit air so the body, halo,
+                // and sky bell all sit on one proportional geometric
+                // cadence rather than the body bell's σ 8 quietly
+                // sitting one step behind the +6.25 % boundary the
+                // halo radius and sky bell σ have just established.
+                let body_k = (-d * d / 144.5).exp();
                 let halo_k = if !in_body {
                     let d_from_body = d - moon_body_r;
                     // Halo starts at 0 at the body edge (4-px quadratic
