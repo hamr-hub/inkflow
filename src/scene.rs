@@ -2155,7 +2155,90 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
     // established, and the moon's three nested atmospheric layers
     // share one coupled restraint cadence across breath, luminance,
     // geometric extent, and warm-mist axes.
-    let halo_peak = 0.080_f32;
+    // Halo peak 0.080 → 0.082 (+2.5 %, the gentlest step on the
+    // moon-side luminance axis after halo radius 68 → 69.7 (+2.5 %
+    // in 28af5b6) and sky σ 90.3 → 92.6 (+2.55 % in c28ed51) — the
+    // +2.5 % sits exactly inside the +2.35-2.86 % gentlest rung the
+    // moon-side geometric-extent axis has just completed (body σ
+    // +2.35 % in 4695311, halo radius +2.5 % in 28af5b6, sky σ
+    // +2.55 % in c28ed51) and the inscribed-stroke alpha axis has
+    // just settled onto (subtitle alpha +2.63 % in 1c2fb98,
+    // lower-left alpha +2.48 % in 70c9147, upper-right alpha
+    // +2.65 % in 867377c, title/seal alpha +2.58 % in 69ce9b1),
+    // so the moon's three nested atmospheric layers' geometric
+    // extent (body σ 8.7 + halo radius 69.7 + sky σ 92.6) and the
+    // middle layer's luminance peak (0.082) now share one coupled
+    // gentlest-step cadence across the extent and luminance axes
+    // rather than the halo's luminance peak quietly sitting at its
+    // post-9ec99ff +6.25 % register while the geometric-extent and
+    // inscribed-stroke alpha axes stepped past it at +2.35-2.65 %.
+    // The +2.5 % (0.080 → 0.082) lifts the moon's middle
+    // atmospheric layer's brightest pixel from 0.080 to 0.082
+    // (+0.002 absolute, well inside the cream family and clearly
+    // under the inscribed glow band 0.20+ and the hero bloom
+    // ~0.55), so the focal line 《松下问童子》 keeps its
+    // exclusive claim on the page's light (ART_DIRECTION §四 '高
+    // 光只落在主句' holds) and the moon's middle atmospheric
+    // layer now reads one restrained step more visibly continuous
+    // with the disc against the heavily vignette-darkened upper-
+    // right corner at the same gentlest-step register the moon-
+    // side geometric-extent axis has just completed. The +0.002
+    // absolute lift stays well inside the safe-area margin (the
+    // halo's brightest pixel peak is still bounded by 0.082 which
+    // is well below the inscribed glow ~0.20+ and the hero bloom
+    // ~0.55 — so the supporting tier stays clearly subordinate to
+    // the focal line), the focal hierarchy (hero / subtitle /
+    // upper-right / lower-left / seal) is unchanged, the brush-
+    // weight gradient (subtitle brightest → upper-right → lower-
+    // left → title dimmest) holds, and the moon-side luminance
+    // axis now extends the gentlest-step +2.5 % register the
+    // moon-side geometric-extent and inscribed-stroke alpha axes
+    // have just settled onto; the body_peak 0.682 (saturated, so
+    // the body bell's center stays exactly as it was), the sky_peak
+    // 0.0384, the body σ 8.7, the halo radius 69.7, the sky σ 92.6,
+    // the 4-px halo fade-in, the terminator alpha 0.267, the
+    // terminator cap 0.144, the cool_tint 0.13908, the
+    // moon_proximity 0.107, the body_pulse 0.023, the halo_pulse
+    // 0.0807, the sky_pulse 0.0391, the bloom2_alpha ceiling
+    // 0.063, the nebula alphas 0.022 / 0.016, the vignette pow
+    // (0.75), the vignette ceiling 0.74, the subtitle alpha 0.78,
+    // the upper-right alpha 0.776, the lower-left alpha 0.662,
+    // the title/seal alpha 0.597, the title v 0.83, the title
+    // target_px 23, the title breath 0.3096, the inscribed-breath
+    // base 0.5340, the supporting mist bell 7.677, the warm bells
+    // 7.677, the title ambient_warmth share 0.2222, the
+    // supporting mist_warmth share 0.2222, the subtitle
+    // mist_warmth share 0.0895, the lower-left mist_warmth share
+    // 0.1064, and the supporting slots' positions and drifts are
+    // all unchanged so only the halo's luminance peak shifts and
+    // the moon's middle atmospheric layer catches up with the
+    // gentlest-step +2.5 % register the moon-side geometric-extent
+    // axis has just completed. Restraint (ART_DIRECTION §四 '克制
+    // 统一的调色板' / '高光只落在主句') holds: the +0.002 absolute
+    // halo luminance lift stays inside the cream family, the
+    // brightest halo pixel still sits well under the inscribed
+    // glow (~0.20+) and the hero bloom (~0.55), and the moon's
+    // middle atmospheric layer still reads as moonlit air
+    // continuous with the disc rather than as a competing ring.
+    // With the halo's luminance peak now catching one more
+    // restrained step of the page's gentlest-step register — at
+    // the gentlest +2.5 % step on the moon-side luminance axis,
+    // exactly inside the +2.35-2.65 % rung the moon-side
+    // geometric-extent axis has just completed (body σ +2.35 %
+    // 4695311, halo radius +2.5 % 28af5b6, sky σ +2.55 % c28ed51)
+    // — 《寻隐者不遇》 reads as one Tang quatrain inscribed in
+    // moonlit air whose moon's middle atmospheric layer now
+    // registers one more gentle step of the page's moonlit air,
+    // and the moon's three nested atmospheric layers (body σ +
+    // halo r + sky σ on the geometric-extent axis, body_peak +
+    // halo_peak + sky_peak on the luminance axis) now share one
+    // coupled gentlest-step cadence across geometric extent and
+    // luminance axes together with the inscribed-stroke alpha
+    // axis the page has just settled onto, with the halo luminance
+    // axis finally stepping onto the gentlest +2.5 % register the
+    // page-wide +2-3 % material refinement band the most-refined
+    // axes have settled into.
+    let halo_peak = 0.082_f32;
     let body_recip = 1.0 / moon_body_r;
     let halo_span = moon_halo_r - moon_body_r;
     let mcx_i = mcx as i32;
