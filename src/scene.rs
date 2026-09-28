@@ -387,12 +387,93 @@ impl Composition {
             //   +2.63 % register the page-wide +2-3 % material
             //   refinement band the most-refined axes have settled
             //   into.
+            // em_scale 0.36 → 0.369 (+2.5 %, the gentlest step on
+            //   the supporting-tier size axis after the +5.88 %
+            //   catch-up in 9ed2b96 — the +2.5 % sits exactly
+            //   inside the +2.35-2.86 % gentlest rung the page-
+            //   wide +2-3 % material refinement band the most-
+            //   refined axes have settled into (body σ +2.35 % in
+            //   4695311; cool_tint +2.4 % / +2.5 % / +2.7 % in
+            //   0ce6e37, 610ee7a, f595bff, 77b520e; vignette
+            //   +2.5 % in 7304555; halo radius +2.5 % in 28af5b6;
+            //   sky σ +2.55 % in c28ed51; halo_peak +2.5 % in
+            //   3b8028b; body_pulse +2.61 % / halo_pulse +2.48 %
+            //   / sky_pulse +2.56 % in 43fc830; subtitle alpha
+            //   +2.63 % in 1c2fb98; terminator alpha +2.69 % in
+            //   47ac018; terminator cap +2.86 % in 4077850; lower-
+            //   left alpha +2.48 % in 70c9147; upper-right alpha
+            //   +2.65 % in 867377c; title/seal alpha +2.58 % in
+            //   69ce9b1) rather than the subtitle's glyph size
+            //   quietly sitting at its post-9ed2b96 +5.88 %
+            //   register while the moon-side geometric-extent,
+            //   luminance, and breath axes plus the inscribed-
+            //   stroke alpha axis stepped past it at +2.35-2.86 %.
+            //   The +2.5 % (0.36 → 0.369) lifts the inscribed
+            //   answer's glyph size from ≈46.1 px to ≈47.3 px
+            //   (+1.2 px absolute, well inside the subtitle→upper-
+            //   right size hierarchy at 0.32 → 0.369 / 0.32 ≈
+            //   1.153 vs the prior 0.36 / 0.32 = 1.125 so the
+            //   brush-weight gradient now steps down 0.049 / 0.04
+            //   from the subtitle through the upper-right to the
+            //   lower-left, the focal hierarchy (hero / subtitle /
+            //   upper-right / lower-left / seal) holds, and the
+            //   +0.009 absolute size lift stays inside the safe-
+            //   area margin so the supporting tier stays clearly
+            //   subordinate to the focal line. The shadow_mix
+            //   0.16, the y_frac 0.65, the drift
+            //   3.0/1.5/0.21/0.17/0.7, the fade_in 0.55, the
+            //   fade_out 0.7, the stagger 0.18, the alpha 0.78,
+            //   the upper-right em_scale 0.32, the upper-right
+            //   y_frac 0.27, the upper-right shadow_mix 0.26, the
+            //   upper-right drift 3.0/2.0/0.15/0.19/1.4, the upper-
+            //   right alpha 0.776, the lower-left em_scale 0.28,
+            //   the lower-left y_frac 0.74, the lower-left
+            //   shadow_mix 0.42, the lower-left drift
+            //   3.0/2.0/0.13/0.21/2.8, the lower-left alpha 0.662,
+            //   the title alpha 0.597, the title v 0.83, the title
+            //   target_px 23, the title breath 0.3096, the
+            //   inscribed-breath base 0.5340, the supporting mist
+            //   bell 7.677, the warm bell 7.677, the title
+            //   ambient_warmth share 0.2222, the supporting
+            //   mist_warmth share 0.2222, the subtitle
+            //   mist_warmth share 0.0895, the lower-left
+            //   mist_warmth share 0.1064, the terminator alpha
+            //   0.267, the terminator cap 0.144, the cool_tint
+            //   0.13908, the moon_proximity 0.107, the body
+            //   0.682, the halo_peak 0.082, the sky_peak 0.0384,
+            //   the moon_halo_r 69.7, the body σ 8.7, the sky σ
+            //   92.6, the body_pulse 0.0236, the halo_pulse
+            //   0.0827, the sky_pulse 0.0401, the bloom2_alpha
+            //   ceiling 0.063, the nebula alphas 0.022 / 0.016,
+            //   the vignette pow(0.75), and the vignette ceiling
+            //   0.74 are all unchanged so only the subtitle's
+            //   glyph size shifts and the supporting-tier size
+            //   axis catches up with the gentlest-step +2.5 %
+            //   register the moon-side geometric-extent, luminance,
+            //   breath, and inscribed-stroke alpha axes have just
+            //   settled onto. With 《言师采药去》 now catching one
+            //   more restrained step of the page's proportional
+            //   cadence — at the gentlest +2.5 % step on the
+            //   supporting-tier size axis, exactly inside the
+            //   +2.35-2.86 % rung the page-wide +2-3 % material
+            //   refinement band the most-refined axes have
+            //   settled into — 《寻隐者不遇》 reads as one Tang
+            //   quatrain inscribed in moonlit air whose inscribed
+            //   answer now registers one more gentle step of the
+            //   page's proportional cadence, and the supporting
+            //   inscription's size axis (subtitle em_scale + upper-
+            //   right em_scale + lower-left em_scale) finally
+            //   extends the gentlest-step +2.5 % register the
+            //   moon-side geometric-extent axis (body σ + halo
+            //   radius + sky σ) and the inscribed-stroke alpha
+            //   axis (subtitle + upper-right + lower-left + title)
+            //   have just completed.
             SlotDef {
                 role: SlotRole::Support,
                 x_frac: 0.50,
                 y_frac: 0.65,
                 align: Align::Center,
-                em_scale: 0.36,
+                em_scale: 0.369,
                 target_w_frac: 0.0,
                 max_chars: 7,
                 alpha: 0.78,
