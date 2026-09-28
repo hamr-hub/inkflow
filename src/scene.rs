@@ -488,6 +488,100 @@ impl Composition {
                 fade_out: 0.7,
                 stagger: 0.18,
             },
+            // em_scale 0.32 → 0.328 (+2.5 %, the gentlest step on the
+            //   supporting-tier size axis after the subtitle em_scale
+            //   +2.5 % lift in a2a3f48 — the +2.5 % sits exactly inside
+            //   the +2.35-2.86 % gentlest rung the page-wide +2-3 %
+            //   material refinement band the most-refined axes have
+            //   settled into (body σ +2.35 % in 4695311; halo radius
+            //   +2.5 % in 28af5b6; sky σ +2.55 % in c28ed51; halo_peak
+            //   +2.5 % in 3b8028b; body_pulse +2.61 % / halo_pulse
+            //   +2.48 % / sky_pulse +2.56 % in 43fc830; cool_tint
+            //   +2.4 % / +2.5 % / +2.7 % in 0ce6e37, 610ee7a, f595bff,
+            //   77b520e; vignette +2.5 % in 7304555; terminator alpha
+            //   +2.69 % in 47ac018; terminator cap +2.86 % in 4077850;
+            //   subtitle alpha +2.63 % in 1c2fb98; upper-right alpha
+            //   +2.65 % in 867377c; lower-left alpha +2.48 % in 70c9147;
+            //   title/seal alpha +2.58 % in 69ce9b1; subtitle em_scale
+            //   +2.5 % in a2a3f48) rather than the moon-side echo's
+            //   em_scale quietly sitting at its post-9ed2b96 register
+            //   while the moon-side geometric-extent, luminance, breath,
+            //   inscribed-stroke alpha, and supporting-tier subtitle
+            //   em_scale axes stepped past it at +2.35-2.86 %. The
+            //   +2.5 % (0.32 → 0.328) lifts the moon-side echo's
+            //   inscribed glyph size one restrained step into the page's
+            //   proportional cadence, so 《只在此山中》 now reads one
+            //   gentle step more visibly sized to its moonlit-air band
+            //   (the upper-right echo sits at ≈79 px below the moon's
+            //   center at y_frac 0.27 — well inside the moon's outermost
+            //   atmospheric layer's reach since the sky bell σ stepped
+            //   to 92.6 in c28ed51). The subtitle → upper-right gap
+            //   narrows 0.049 → 0.041 (the subtitle still clearly
+            //   brightest) and the upper-right → lower-left gap widens
+            //   0.04 → 0.048 (the upper-right still clearly above the
+            //   lower-left), so the supporting inscription's brush-
+            //   weight gradient (subtitle brightest → upper-right →
+            //   lower-left → title dimmest) still steps down
+            //   monotonically across all four inscribed strokes, the
+            //   focal hierarchy (hero / subtitle / upper-right / lower-
+            //   left / seal) is unchanged, the warm / cool axis
+            //   (subtitle + lower-left warm, upper-right cool, title as
+            //   the warm-side closing signature) holds, and the
+            //   supporting inscription's size axis (subtitle em_scale +
+            //   upper-right em_scale + lower-left em_scale) now extends
+            //   the gentlest-step +2.5 % register the moon-side
+            //   geometric-extent axis (body σ + halo radius + sky σ)
+            //   and the inscribed-stroke alpha axis (subtitle + upper-
+            //   right + lower-left + title) have just completed, with
+            //   the upper-right em_scale finally stepping onto the
+            //   gentlest +2.5 % register the page-wide +2-3 % material
+            //   refinement band the supporting-tier subtitle em_scale
+            //   has just settled into. The x_frac 0.80, the y_frac
+            //   0.27, the shadow_mix 0.26, the drift 3.0/2.0/0.15/0.19/
+            //   1.4, the alpha 0.776, the fade_in 0.6, the fade_out
+            //   0.7, the stagger 0.34, the subtitle em_scale 0.369,
+            //   the subtitle alpha 0.78, the lower-left em_scale 0.28,
+            //   the lower-left alpha 0.662, the title alpha 0.597, the
+            //   title v 0.83, the title target_px 23, the title breath
+            //   0.3096, the inscribed-breath base 0.5340, the supporting
+            //   mist bell 7.677, the warm bells 7.677, the title
+            //   ambient_warmth share 0.2222, the supporting mist_warmth
+            //   share 0.2222, the subtitle mist_warmth share 0.0895,
+            //   the lower-left mist_warmth share 0.1064, the terminator
+            //   alpha 0.267, the terminator cap 0.144, the cool_tint
+            //   0.13908, the moon_proximity 0.107, the body 0.682, the
+            //   halo_peak 0.082, the sky_peak 0.0384, the moon_halo_r
+            //   69.7, the body σ 8.7, the sky σ 92.6, the body_pulse
+            //   0.0236, the halo_pulse 0.0827, the sky_pulse 0.0401, the
+            //   bloom2_alpha ceiling 0.063, the nebula alphas 0.022 /
+            //   0.016, the vignette pow(0.75), and the vignette ceiling
+            //   0.74 are all unchanged so only the upper-right's
+            //   inscribed glyph size shifts and the moon-side echo
+            //   catches up with the gentlest-step +2.5 % register the
+            //   page-wide +2-3 % material refinement band the moon-side
+            //   geometric-extent, luminance, breath, inscribed-stroke
+            //   alpha, and supporting-tier subtitle em_scale axes have
+            //   just settled into. Restraint (ART_DIRECTION §四 '克制
+            //   统一的调色板' / '高光只落在主句') holds: the +0.008
+            //   absolute em_scale lift stays well inside the supporting-
+            //   tier size hierarchy (the upper-right's inscribed glyph
+            //   size stays below the subtitle's 0.369 and above the
+            //   lower-left's 0.28 — so the focal line keeps its
+            //   exclusive claim on the page's light and the supporting
+            //   tier stays clearly subordinate to the focal line), and
+            //   《只在此山中》 now reads as one Tang quatrain inscribed
+            //   in moonlit air whose moon-side echo now registers one
+            //   more gentle step of the page's proportional cadence, and
+            //   the supporting inscription's size axis (subtitle
+            //   em_scale + upper-right em_scale + lower-left em_scale)
+            //   continues to extend the gentlest-step +2.5 % register
+            //   the moon-side geometric-extent axis (body σ + halo
+            //   radius + sky σ) and the inscribed-stroke alpha axis
+            //   (subtitle + upper-right + lower-left + title) have just
+            //   completed, with the upper-right em_scale finally
+            //   stepping onto the gentlest +2.5 % register the page-wide
+            //   +2-3 % material refinement band the supporting-tier
+            //   subtitle em_scale has just settled into.
             // alpha 0.756 → 0.776 (+2.65 %, the gentlest step on the
             //   inscribed-stroke alpha axis after the +2.48 % lower-left
             //   alpha lift in 70c9147 — the +2.65 % sits exactly between
@@ -726,7 +820,7 @@ impl Composition {
                 x_frac: 0.80,
                 y_frac: 0.27,
                 align: Align::Right,
-                em_scale: 0.32,
+                em_scale: 0.328,
                 target_w_frac: 0.0,
                 max_chars: 5,
                 alpha: 0.776,
