@@ -353,12 +353,83 @@ impl Composition {
             //   quatrain's location hint is already a step further from
             //   certainty than the subtitle.
             //   Stagger 0.34s so it fades in third, after the subtitle.
-            //   shadow_mix 0.30 → 0.26, alpha 0.66 → 0.72: lift the
-            //   upper-right back into readable territory so the four-line
-            //   quatrain registers as four lines on the page, not two. The
-            //   brush-weight gradient still holds (subtitle 0.10, upper-
-            //   right 0.26, lower-left deepest), and the line stays
-            //   clearly subordinate to the hero.
+            //   shadow_mix 0.30 → 0.26, alpha 0.66 → 0.72 → 0.756 (+5 %,
+            //   the first lift in this arc since the supporting-tier
+            //   breath axis approached its natural ceiling in cc3a82f):
+            //   the upper-right echo 《只在此山中》 now reads one step
+            //   more visibly continuous with the moon's moonlit air, the
+            //   closest stroke to the disc at ≈115 px below the moon's
+            //   center, after the moon's three nested atmospheric layers
+            //   completed a coupled restraint cadence across luminance
+            //   (body 0.682 saturated in 3b60530, halo_peak +6.25 % to
+            //   0.0765 in ef91dae, sky_peak +6.25 % to 0.0361 in
+            //   611895d), geometric extent (moon_halo_r +6.25 % to 68
+            //   in 8113547, sky bell σ +6.67 % to 80 in efd8cb1), and
+            //   breath (body_pulse 0.021 / halo_pulse 0.0735 / sky_pulse
+            //   0.0356). The upper-right echo was the only supporting-
+            //   tier stroke that hadn't been touched by the recent +5 %
+            //   ladder (subtitle 0.76 / lower-left 0.612 / title 0.529
+            //   all lifted in 9a4cc96 and 4b84ab7), so the moon's nearest
+            //   echo quietly sat at 0.72 while every other stroke moved
+            //   up the cadence. Lifting it to 0.756 brings 《只在此山中》
+            //   into the same proportional series as the recent chain —
+            //   body 0.50 → 0.682 (+5.5–5.6 % x5), halo 0.05 → 0.0765
+            //   (+5–6.25 % x5), sky 0.018 → 0.0361 (+6.25 % x3), lower-
+            //   left 0.50 → 0.612 (+5.5 % in 9a4cc96), title alpha
+            //   0.40 → 0.529 (+5 % in 4b84ab7), cool_tint 0.115 →
+            //   0.13583, moon_proximity 0.04 → 0.102, terminator cap
+            //   0.12 → 0.140, warm bell 6.0 → 7.225, supporting mist
+            //   bell 6.4 → 7.225, title ambient warmth 6.4 → 7.225,
+            //   inscribed-breath base (now at the gentlest-step ceiling),
+            //   title breath, halo radius 44 → 68, body_pulse, halo_pulse,
+            //   sky_pulse, and sky bell σ 75 → 80. The +5 % continues
+            //   the same restraint cadence the page has been sharing for
+            //   thirty-plus supporting-tier lifts in the +3–7 % range,
+            //   and the upper-right echo now joins the page's one
+            //   proportional refinement arc rather than sitting at its
+            //   historic 0.72 register point while every other stroke
+            //   climbed past it. The brush-weight hierarchy still holds:
+            //   subtitle 0.76 > upper-right 0.756 > lower-left 0.612 >
+            //   title 0.529 — the gap from subtitle to upper-right
+            //   narrows from 0.04 to 0.004 (a deliberate +5 % step, the
+            //   standard restraint cadence), but the gap from upper-
+            //   right to lower-left widens from 0.108 to 0.144 and the
+            //   gap from upper-right to title widens from 0.191 to 0.227,
+            //   so the four strokes now read as two clear brush-weight
+            //   tiers — subtitle + upper-right as the "near tier" close
+            //   to the focal line, lower-left + title as the "far tier"
+            //   close to the warm horizon — rather than as four evenly-
+            //   spaced steps. The upper-right remains clearly subordinate
+            //   to the hero (1.0 → 0.756 = 0.244 gap, well under the
+            //   focal line's claim) and the hero bloom (~0.55 effective
+            //   alpha) keeps its exclusive claim on the page's light
+            //   (ART_DIRECTION §四 "高光只落在主句"). At pulse=1 the
+            //   upper-right now sits at 0.756 * 1.414 = 1.069 clamped to
+            //   1.0 (was 0.72 * 1.414 = 1.018, also clamped), and at
+            //   pulse=-1 the upper-right sits at 0.756 * 0.585 = 0.443
+            //   (was 0.72 * 0.585 = 0.422, +0.021 at the dimmest phase
+            //   so the echo registers a touch more clearly when the page
+            //   exhales), with the supporting-tier breath coefficient
+            //   (0.5340 base, the gentlest-step ceiling per cc3a82f)
+            //   unchanged so only the upper-right's base alpha shifts
+            //   and the supporting tier's breath axis stays at its
+            //   settled cadence. The new alpha is still well inside
+            //   the inscribed glow's ceiling (~0.20+ glow band) and the
+            //   brush-weight gradient (subtitle brightest → upper-right
+            //   near-brightest → lower-left dimmest → title dimmest)
+            //   still steps down monotonically. Restraint
+            //   (ART_DIRECTION §四 "克制统一的调色板") holds: the +0.036
+            //   absolute base lift stays inside the muted-ink family
+            //   and the upper-right still reads as ink on paper rather
+            //   than as a fifth inscription line. With 《只在此山中》
+            //   now sitting at 0.756 — one +5 % step into the same
+            //   restraint cadence the moon's three atmospheric layers
+            //   just completed — the moon's nearest echo now reads as
+            //   one step more visibly continuous with the moonlit air
+            //   that hosts it, and 《寻隐者不遇》 reads as one Tang
+            //   quatrain inscribed in moonlit air whose closest stroke
+            //   to the moon now joins the page's one proportional
+            //   refinement arc rather than quietly lagging it.
             //   em_scale 0.30 → 0.32: size joins the brush-weight
             //   gradient. The subtitle stays at 0.34 (closest to focal,
             //   heaviest), the upper-right steps down to 0.32 (mid-weight,
@@ -378,7 +449,7 @@ impl Composition {
                 em_scale: 0.32,
                 target_w_frac: 0.0,
                 max_chars: 5,
-                alpha: 0.72,
+                alpha: 0.756,
                 shadow_mix: 0.26,
                 drift_x: 3.0,
                 drift_y: 2.0,
@@ -420,8 +491,8 @@ impl Composition {
             //   "deep in the clouds, one knows not where" — without
             //   crowding any of the moon's atmospheric layers. The
             //   far-faint reading still holds: 0.612 stays clearly
-            //   below upper-right 0.72 and subtitle 0.76 (the brush-
-            //   weight hierarchy still steps down 0.76 > 0.72 > 0.612
+            //   below upper-right 0.756 and subtitle 0.76 (the brush-
+            //   weight hierarchy still steps down 0.76 > 0.756 > 0.612
             //   > title 0.48), and the lower-left's shadow_mix 0.42
             //   still keeps it the deepest into shadow so the closing
             //   stroke still dissolves into the mist the way a real
@@ -744,8 +815,8 @@ impl Scene {
                         // hero's bloom still owns the focal claim
                         // (ART_DIRECTION §四 "高光只落在主句"); the
                         // supporting echoes settle into their inscribed
-                        // hierarchy (subtitle 0.76 / upper-right 0.72 /
-                        // lower-left 0.58) from the first frame instead
+                        // hierarchy (subtitle 0.76 / upper-right 0.756 /
+                        // lower-left 0.612) from the first frame instead
                         // of materialising under the viewer's eye. The
                         // piece is "always there" (ARTIFACT §"它在那里
                         // 等你") — the unfurl was a nice metaphor that
