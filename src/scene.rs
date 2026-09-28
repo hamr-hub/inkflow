@@ -5369,7 +5369,80 @@ fn paint_poem_title(
     // cadence (sky_sigma / sky_peak / halo_peak / moon_halo_r all
     // +6.25 %), all three now pivoting to the per-site shares rather
     // than continuing any single coefficient further up.
-    let ambient_warmth = ((title_v - 0.50) * (1.0 - title_v) * 7.677).clamp(0.0, 1.0) * 0.2125;
+    //
+    // Title ambient warmth share 0.2125 → 0.2222 (+4.55 %, the
+    // gentlest-step register the recent inscription-side and moon-side
+    // arcs have just completed — halo_peak +4.58 % in e0b708c, title
+    // target_px +4.55 % in b804477, body/halo/sky_pulse +4.55-4.83 %
+    // in 7609987, subtitle em_scale +5.88 % in 9ed2b96, bloom2_alpha
+    // ceiling +5 % in 9f9436b, lower-left alpha +5.5 % in 12fac53, and
+    // title alpha +4.86 % in f8c4f2d — the +4.55 % sits at the
+    // gentlest step on the page's settled +4.55-6.67 % restraint
+    // cadence), so the calligrapher's seal now catches one more
+    // restrained step of the warm horizon band the supporting tier
+    // has been sharing — 《寻隐者不遇》 reads as ink registering one
+    // gentle step more clearly against the warm mist 《云深不知处》
+    // dissolves into, rather than sitting one register behind the
+    // supporting tier's warm-mist arc after the bell coefficient
+    // chain (6.0 → 6.4 → 7.225 → 7.677, the most recent +6.25 % lift
+    // in aa626f1) had carried the bell forward while the per-site
+    // share quietly lagged at its post-f409940 0.2125 register. The
+    // +4.55 % lift lands at the gentlest-step register the recent
+    // moon-side and inscription-side arcs have just completed, so the
+    // title's per-site share now steps onto the same proportional
+    // register as the supporting tier's most recent breath and
+    // luminance axes — the calligrapher's seal breathes, glows, and
+    // bathes in the warm horizon at the same gentlest-step cadence
+    // the page has settled on. Title ambient_warmth at v≈0.83 =
+    // 0.4307 * 0.2222 ≈ 0.0957 (was 0.0915 at the post-f409940 0.2125
+    // multiplier, +0.0042 absolute, the natural +4.55 % proportional
+    // gain matching the gentlest-step register). The +4.55 % keeps
+    // the title within the supporting-tier warm-share envelope
+    // (subtitle mist_warmth 0.0857, lower-left mist_warmth 0.1018),
+    // so the seal still sits at a +0.0060 absolute gap above
+    // subtitle and a −0.0061 absolute gap below lower-left in the
+    // warm-mist axis — the warm-share hierarchy (lower-left 0.1018
+    // > title 0.0957 > subtitle 0.0857) holds intact, and the title
+    // remains a quiet ink mark dissolving into the lower-left's warm
+    // band rather than reading as a brighter signature on its own.
+    // The bell coefficient 7.677 stays at its post-aa626f1 register
+    // so the warm horizon's *shape* (where on the page the warm
+    // band peaks) is unchanged — only the title's per-site *share* of
+    // that bell lifts by one gentlest-step +4.55 %, so the warm
+    // horizon reaches identically across the page while the seal
+    // catches one more restrained step into it. Restraint
+    // (ART_DIRECTION §四 "克制统一的调色板" / "高光只落在主句") holds:
+    // the +0.0042 absolute ambient lift stays inside the muted-ink
+    // family (CREAM → SHADOW 0.35 base), the seal still reads as ink
+    // dried on paper rather than a second focal light, the focal
+    // line keeps its exclusive claim on the page's light, and the
+    // upper-right cool echo remains untouched at its cool axis. The
+    // +4.55 % continues the same gentlest-step restraint cadence as
+    // the recent chain — halo_peak +4.58 % (e0b708c), title
+    // target_px +4.55 % (b804477), body/halo/sky_pulse +4.55-4.83 %
+    // (7609987), title alpha +4.86 % (f8c4f2d), supporting-tier body
+    // +5.5 % (3b60530), lower-left alpha +5.5 % (12fac53), subtitle
+    // em_scale +5.88 % (9ed2b96), and bloom2_alpha ceiling +5 %
+    // (9f9436b) — so the calligrapher's seal and the four inscribed
+    // strokes plus the moon's three nested atmospheric layers now
+    // share one proportional series of restrained +4.55-6.67 % steps
+    // across breath, luminance, geometric extent, warm-mist, alpha,
+    // size, and outer-corona axes, with the title's per-site
+    // warm-share finally stepping onto the gentlest-step register
+    // the bell coefficient chain carried the bell forward to. With
+    // the title's ambient warmth now sitting at +4.55 % on the
+    // gentlest-step register the recent inscription-side and
+    // moon-side arcs have just completed — 《寻隐者不遇》 reads as
+    // one Tang quatrain inscribed in moonlit air whose calligrapher's
+    // seal catches one more restrained step of the warm horizon band
+    // the supporting inscription dissolves into, and the four
+    // inscribed strokes plus the calligrapher's seal continue to
+    // share one proportional cadence across breath, luminance,
+    // geometric extent, warm-mist, alpha, size, and outer-corona
+    // axes, with the title's per-site warm-share finally stepping
+    // onto the gentlest-step register the supporting tier's most
+    // recent breath and luminance arcs have just completed.
+    let ambient_warmth = ((title_v - 0.50) * (1.0 - title_v) * 7.677).clamp(0.0, 1.0) * 0.2222;
     // Title base sits one step into the muted ink family (mix CREAM toward
     // SHADOW 0.0 → 0.35) so the seal reads as ink dried on paper rather
     // than a fifth inscription line at 40 % opacity. CREAM (rgb 232, 212,
