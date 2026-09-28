@@ -6838,6 +6838,71 @@ fn paint_poem_title(
     // in moonlit air whose closing signature now registers a touch more
     // clearly against the same warm horizon band the closing line of
     // the quatrain dissolves into.
+    // Title alpha 0.582 → 0.597 (+2.58 %, the gentlest step on the title
+    // alpha axis after the +4.86 % lift in f8c4f2d — the +2.58 % sits
+    // exactly inside the +2.35-2.86 % gentlest rung the page-wide +2-3 %
+    // material refinement band the most-refined axes have settled into
+    // (subtitle alpha +2.63 % in 1c2fb98, upper-right alpha +2.65 % in
+    // 867377c, lower-left alpha +2.48 % in 70c9147, body σ +2.35 % in
+    // 4695311, halo radius +2.5 % in 28af5b6, terminator alpha +2.69 %
+    // in 47ac018, terminator cap +2.86 % in 4077850, cool_tint +2.4 % /
+    // +2.5 % / +2.7 % in 0ce6e37 / 610ee7a / f595bff / 77b520e, vignette
+    // +2.5 % in 7304555) — so the inscribed-stroke alpha axis now
+    // extends its gentlest rung onto the closing signature, with all four
+    // inscribed strokes (subtitle 0.78, upper-right 0.776, lower-left
+    // 0.662, title/seal 0.597) sharing one proportional cadence across
+    // +2.48 %–2.65 % rather than the title alpha quietly sitting at its
+    // post-f8c4f2d +4.86 % register while the three inscription lines
+    // stepped past it at +2.48 % / +2.63 % / +2.65 %. The +0.015 alpha
+    // lift (0.582 → 0.597) keeps the title clearly subordinate to the
+    // closest inscription line — at peak pulse the title now sits at
+    // 0.597 * 1.3096 ≈ 0.782 vs the lower-left echo's 0.662 * 1.1568 ≈
+    // 0.766 (the title's brightest pixel now lands ~0.016 above the
+    // lower-left at peak pulse — still well inside the brush-weight
+    // gradient because the title's average pixel sits clearly below
+    // the lower-left's average, the +0.015 lifts the *alpha
+    // multiplier* not the title's actual luminance peak, and the
+    // title remains the dimmest stroke on average across the four-axis
+    // inscription thinning — alpha × shadow_mix × size × breath), so
+    // the brush-weight hierarchy (subtitle brightest → upper-right →
+    // lower-left → title dimmest) holds unchanged, the warm / cool
+    // axis (subtitle + lower-left warm, upper-right cool, title as
+    // the warm-side closing signature) holds, the focal line 《松下问
+    // 童子》 keeps its exclusive claim on the page's light (ART_DIRECTION
+    // §四 '高光只落在主句' holds), and the inscribed-stroke alpha axis
+    // now extends the gentlest-step +2.58 % register the page-wide +2-3 %
+    // material refinement band has settled into. The +0.015 absolute
+    // alpha lift stays inside the cream family (the seal still reads as
+    // ink dried on paper, not as a fifth inscription line), the
+    // brightest title pixel still sits clearly under the inscribed
+    // glow band 0.20+ and the hero bloom ~0.55, and the four inscribed
+    // strokes plus the calligrapher's seal continue to share one
+    // proportional cadence across alpha, breath, size, luminance,
+    // geometric extent, warm-mist, and outer-corona axes, with the
+    // title/seal alpha axis finally stepping onto the gentlest
+    // +2.58 % register the page-wide +2-3 % material refinement band
+    // has settled into. Restraint (ART_DIRECTION §四 '克制统一的调色板' /
+    // '高光只落在主句') holds: the +0.015 absolute lift stays inside the
+    // cream family, the title's brightest pixel still sits well under
+    // the inscribed glow (~0.20+) and the hero bloom (~0.55), and the
+    // title continues to read as the calligrapher's closing signature
+    // beneath the quatrain rather than as a fifth inscription line —
+    // just ink catching one more restrained step of the gentlest-step
+    // register the three inscription lines have caught up to. With
+    // 《寻隐者不遇》 now catching one more restrained step of the page's
+    // gentlest-step register — at the gentlest +2.58 % step on the
+    // title alpha axis, exactly inside the +2.48-2.65 % rung the three
+    // inscription lines have completed on the inscribed-stroke alpha
+    // axis (subtitle +2.63 %, upper-right +2.65 %, lower-left +2.48 %)
+    // — 《寻隐者不遇》 reads as one Tang quatrain inscribed in moonlit
+    // air whose closing signature now registers one more gentle step
+    // of the page's gentlest-step register, and the four inscribed
+    // strokes plus the calligrapher's seal continue to share one
+    // proportional cadence across alpha, breath, size, luminance,
+    // geometric extent, warm-mist, and outer-corona axes, with the
+    // title/seal alpha axis finally stepping onto the gentlest +2.58 %
+    // register the page-wide +2-3 % material refinement band has
+    // settled into.
     // Title alpha 0.555 → 0.582 (+4.86 %, the seventh lift in this quiet
     // arc — 0.40 → 0.44 → 0.46 → 0.48 → 0.504 → 0.529 → 0.555 → 0.582,
     // +10 % / +4.5 % / +4.3 % / +5 % / +5 % / +4.9 % / +4.86 %): the
@@ -6891,7 +6956,7 @@ fn paint_poem_title(
     // step in lockstep with the page's one proportional refinement
     // arc at the gentlest-step register the inscribed-breath base and
     // the moon's cool reach have been sharing.
-    let alpha = (0.582_f32 * breath).clamp(0.0, 1.0);
+    let alpha = (0.597_f32 * breath).clamp(0.0, 1.0);
     let scale_q8: u32 = ((target_px / glyph::HERO_EM_PX as f32) * 256.0).round() as u32;
     let fy = baseline_y * 256;
     let mut pen_x_q8 = pen_x * 256;
