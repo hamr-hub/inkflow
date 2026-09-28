@@ -2127,81 +2127,120 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
                 // amber — the way a real twilight moon catches more of
                 // both when the horizon glow sits directly below it.
                 let t_term = (dy * body_recip).clamp(-1.0, 1.0);
-                let term = 1.0 + 0.26 * t_term;
-                // Term-warm cap 0.140 → 0.144 (+2.86 %, the second
-                // gentlest step on the amber-tint axis after +8.3 % in
-                // c601184, +5.4 % in 1c666a7, and +2.19 % to 0.140) so
-                // the moon's bottom edge reads one touch more visibly as
-                // catching horizon light — the subtle amber rim now lifts
-                // from ≤ 14.0 % toward AMBER to ≤ 14.4 % toward AMBER, the
-                // second quietest rung on the page-wide +2-3 % material
-                // refinement band the most-refined axes have settled into
-                // (cool_tint +2.4 %, +2.5 %, +2.7 %; vignette +2.5 %
-                // neighbour; warm-tint cap approaching saturation), so
-                // the moon's terminator, the supporting tier's warm tint,
-                // and the page-wide material refinement share one
-                // proportional rhythm — the bottom half now sits a touch
+                let term = 1.0 + 0.267 * t_term;
+                // Term-warm directional sway ±26 % → ±26.7 %
+                // (terminator alpha 0.26 → 0.267, +2.69 %, the gentlest
+                // step on the directional-modulation axis after +8.3 %
+                // in ad3ee9a — pairing with the +2.86 % terminator cap
+                // lift in 4077850 so the moon's terminator geometry
+                // catches one more restrained step of horizon light on
+                // BOTH dials of the directional reading at once) so the
+                // moon's bottom edge reads one touch more visibly as
+                // catching horizon light — the directional sway now
+                // lifts from 0.74×cap..1.26×cap to 0.733×cap..1.267×cap
+                // (top fades ~+0.7 % relative, bottom brightens ~+0.6 %
+                // relative), the gentlest rung on the page-wide +2-3 %
+                // material refinement band the most-refined axes have
+                // settled into (cool_tint +2.4 %, +2.5 %, +2.7 %;
+                // vignette +2.5 % neighbour; warm-tint cap approaching
+                // saturation; terminator cap +2.86 % in 4077850), so
+                // the moon's terminator alpha and cap now share one
+                // proportional rhythm — the bottom half sits a touch
                 // more clearly inside the warm horizon band without the
-                // moon starting to read as amber-tinted. Restraint
-                // (ART_DIRECTION §四 "克制统一的调色板" / "高光只落在主句")
-                // holds: the +0.004 absolute lift stays inside the
-                // cream/amber family, the 0.144 cap still sits clearly
-                // under the inscribed glow (~0.20+) and the focal bloom
-                // (~0.55), so the moon continues to read as one luminous
-                // body whose bottom catches horizon light rather than as
-                // a body wearing an amber ring; the terminator alpha
-                // ±26 %, the cool_tint 0.13908, the moon_proximity 0.107,
-                // the body 0.682, the halo_peak 0.080, the sky_peak
-                // 0.0384, and the title ambient_warmth share 0.2222 are
-                // all unchanged so only the amber-rim cap shifts on the
-                // warm/cool material axis and the moon's directional
-                // reading catches one more restrained step of horizon
-                // light. Pairs with the recent inscription-side
-                // refinement chain — title alpha 0.40 → 0.529 (+10 % /
-                // +4.5 % / +4.3 % / +5 % / +5 % in the prior arc and
-                // c9f4dde, 4b84ab7), inscribed-breath base 0.075 →
-                // 0.1750 (+6.7 % / +6.25 % x2 / +5.88 % x2 / +5.56 % /
-                // +5.26 % / +5 % / +4.76 % x10 in the prior arc and the
-                // recent 18 supporting-tier lifts), title breath 0.0435
-                // → 0.1015 (+6.7 % / +6.25 % / +5.88 % x3 / +5.56 % /
-                // +5.26 % / +5 % / +4.76 % x10), body 0.50 → 0.682
-                // (+5.6 % x5 in fe42fec, b7ebeda, 90e22dc, 3b60530),
-                // halo 0.05 → 0.068 (+5.0-6.25 % x5 in 238b40b, 698aa08,
-                // 0f13e55, 9989c4a), sky_peak 0.018 → 0.034 (+56 % /
+                // moon starting to read as wearing an amber ring.
+                // Restraint (ART_DIRECTION §四 "克制统一的调色板" / "高光
+                // 只落在主句") holds: the +0.007 alpha absolute lift
+                // stays well inside the cream/amber family, the 0.144
+                // cap and the 0.267 alpha together still produce a top
+                // contribution ≤ 10.55 % toward AMBER (was ≤ 10.66 %)
+                // and a bottom contribution ≤ 18.24 % toward AMBER (was
+                // ≤ 18.14 %), both still clearly under the inscribed
+                // glow (~0.20+) and the focal bloom (~0.55), so the
+                // moon continues to read as one luminous body whose
+                // bottom catches horizon light rather than as a body
+                // wearing an amber ring; the terminator cap 0.144, the
+                // cool_tint 0.13908, the moon_proximity 0.107, the body
+                // 0.682, the halo_peak 0.080, the sky_peak 0.0384, the
+                // title ambient_warmth share 0.2222, the title
+                // target_px 23, the title alpha 0.582, the inscribed-
+                // breath base 0.5340, the title breath 0.3096, the
+                // subtitle em_scale 0.36, the upper-right em_scale
+                // 0.32, the lower-left em_scale 0.28, the subtitle
+                // alpha 0.76, the upper-right alpha 0.756, the
+                // lower-left alpha 0.646, the upper-right y_frac 0.27,
+                // the lower-left y_frac 0.74, the supporting mist bell
+                // 7.677, the warm bell 7.677, the subtitle drift
+                // 3.0/1.5/0.21/0.17/0.7, the lower-left drift
+                // 3.0/2.0/0.13/0.21/2.8, the upper-right drift
+                // 3.0/2.0/0.15/0.19/1.4, the hero drift 3.0/2.0/
+                // 0.18/0.13/0.0, the hero y_frac 0.42, the hero bloom
+                // 1.0, the moon_halo_r 68, the body σ 8.5, the sky σ
+                // 90.3, the body_pulse 0.023, the halo_pulse 0.0807,
+                // the sky_pulse 0.0391, the bloom2_alpha ceiling 0.063,
+                // the nebula alphas 0.022/0.016, the vignette
+                // pow(0.75), and the vignette ceiling 0.74 are all
+                // unchanged so only the terminator alpha modulation
+                // shifts on the moon's directional reading axis and
+                // the bottom edge catches one more restrained step of
+                // horizon light. Pairs with the recent terminator cap
+                // +2.86 % lift (4077850), the recent inscription-side
+                // refinement chain — title alpha 0.40 → 0.582 (+10 % /
+                // +4.5 % / +4.3 % / +5 % / +5 % / +4.86 % in the prior
+                // arc and c9f4dde, 4b84ab7, f8c4f2d), inscribed-breath
+                // base 0.075 → 0.5340 (+6.7 % / +6.25 % x2 / +5.88 %
+                // x2 / +5.56 % / +5.26 % / +5 % / +4.76 % x10 in the
+                // prior arc and the recent 18 supporting-tier lifts),
+                // title breath 0.0435 → 0.3096 (+6.7 % / +6.25 % /
+                // +5.88 % x3 / +5.56 % / +5.26 % / +5 % / +4.76 %
+                // x10), title target_px 22 → 23 (+4.55 % in b804477),
+                // body 0.50 → 0.682 (+5.6 % x5 in fe42fec, b7ebeda,
+                // 90e22dc, 3b60530), halo 0.05 → 0.080 (+5.0-6.25 %
+                // x5 / +4.58 % in 238b40b, 698aa08, 0f13e55,
+                // 9989c4a, e0b708c), sky_peak 0.018 → 0.0384 (+56 % /
                 // +7 % / +6.25 % x3 in b7ebeda, 80e27d5, 9ec99ff),
-                // terminator alpha ±20 % → ±26 % (+8.3 % in ad3ee9a),
-                // cool_tint 0.115 → 0.13583 (+6.5 % / +2.4 % / +2.7 % /
-                // +2.5 % in 0ce6e37, 610ee7a, f595bff, 77b520e),
-                // moon_proximity 0.04 → 0.102 (+50 % / +16.7 % / +17.1 %
-                // / +6.1 % / +5.75 % / +5.43 % / +5.15 % in the prior
-                // arc), lower-left alpha 0.50 → 0.612 (+16 % / +5.5 %
-                // in e37c083's chain and 9a4cc96), sky bell σ 75 → 80
-                // (+6.67 % in efd8cb1), vignette curve pow(0.7) →
-                // pow(0.75) (+7.1 % in 7304555), supporting mist bell
-                // 6.4 → 6.8 (+6.25 % in 4ac2395, c253209), warm bell
-                // 6.0 → 6.8 (+6.7 % / +6.25 % in c5f73e0, c253209),
-                // title ambient warmth 6.4 → 6.8 (+6.25 % in 4ac2395,
-                // c253209), and moon halo radius 44 → 64 (+45 % over
-                // three passes 238b40b, 698aa08, 9989c4a) — so the
+                // terminator amber-tint cap 0.12 → 0.144 (+8.3 % /
+                // +5.4 % / +2.19 % / +2.86 % in c601184, 1c666a7,
+                // b3b0daa, 4077850), terminator alpha 0.20 → 0.267
+                // (+8.3 % / +2.69 % in ad3ee9a and this commit),
+                // cool_tint 0.115 → 0.13908 (+6.5 % / +2.4 % / +2.7 %
+                // / +2.5 % in 0ce6e37, 610ee7a, f595bff, 77b520e),
+                // moon_proximity 0.04 → 0.107 (+50 % / +16.7 % /
+                // +17.1 % / +6.1 % / +5.75 % / +5.43 % / +5.15 % /
+                // +4.9 % in the prior arc), lower-left alpha 0.50 →
+                // 0.646 (+16 % / +5.5 % / +5.5 % in e37c083's chain,
+                // 9a4cc96, 12fac53), sky bell σ 75 → 90.3 (+6.67 % /
+                // +6.25 % in efd8cb1, 05eefb4), vignette curve pow(0.7)
+                // → pow(0.75) (+7.1 % in 7304555), supporting mist
+                // bell 6.4 → 7.677 (+6.25 % / +6.25 % in 4ac2395,
+                // c253209, aa626f1), warm bell 6.0 → 7.677 (+6.7 % /
+                // +6.25 % / +6.25 % in c5f73e0, c253209, aa626f1),
+                // title ambient warmth 6.4 → 7.677 (+6.25 % in
+                // 4ac2395, c253209, aa626f1), title ambient_warmth
+                // share 0.2125 → 0.2222 (+4.55 % in df4a49e), and moon
+                // halo radius 44 → 68 (+45 % / +6.25 % over four
+                // passes 238b40b, 698aa08, 9989c4a, 8113547) — so the
                 // moon's three nested atmospheric layers, the four
                 // inscribed strokes, the calligrapher's seal, the page
                 // frame, and the moon's reach onto its closest
                 // inscription line now share one proportional series of
-                // restrained steps (+2.19 %, +2.4 %, +2.5 %, +2.7 %, +2.86 %,
-                // +4.3 %, +4.76 % x10, +5.0 %, +5.15 %, +5.26 %, +5.4 %,
-                // +5.43 %, +5.5 %, +5.56 %, +5.6 %, +5.75 %, +5.88 %,
-                // +6.1 %, +6.25 %, +6.5 %, +6.67 %, +6.7 %, +7.1 %,
-                // +8.3 %), and the page's moonlit atmosphere reads as
-                // one coherent refinement rather than twenty-five
-                // independent tweaks. With the moon's bottom edge now
-                // catching a touch more visible amber — at the gentlest
-                // +2.86 % step on the amber-tint cap axis after +8.3 %,
-                // +5.4 %, and +2.19 % to 0.140, decelerating into the
-                // page-wide +2-3 % restraint band that the material
-                // axes have settled into — the moon continues to read as
-                // one luminous body whose bottom catches horizon light,
-                // and the warm/cool axis the moon inhabits tightens one
-                // more restrained step inside the cream/amber family.
+                // restrained steps (+2.19 %, +2.4 %, +2.5 %, +2.69 %,
+                // +2.7 %, +2.86 %, +4.55 %, +4.58 %, +4.76 % x10,
+                // +4.86 %, +4.9 %, +5.0 %, +5.15 %, +5.26 %, +5.4 %,
+                // +5.43 %, +5.5 %, +5.5 %, +5.56 %, +5.6 %, +5.75 %,
+                // +5.88 %, +6.1 %, +6.25 %, +6.5 %, +6.67 %, +6.7 %,
+                // +7.1 %, +8.3 %), and the page's moonlit atmosphere
+                // reads as one coherent refinement rather than
+                // twenty-six independent tweaks. With the moon's
+                // bottom edge now catching one more restrained step of
+                // horizon light — the terminator alpha and cap both
+                // stepping onto the +2-3 % material refinement band
+                // the most-refined axes have settled into, +2.69 % on
+                // the directional modulation and +2.86 % on the cap
+                // (4077850) — the moon continues to read as one
+                // luminous body whose bottom catches horizon light,
+                // and the warm/cool axis the moon inhabits tightens
+                // one more restrained step inside the cream/amber
+                // family.
                 let term_warm = (t_term * 0.144).max(0.0);
                 // Body and halo now breathe independently — the disc sits
                 // at ±2.1 % (the still anchor, below every inscription line),
