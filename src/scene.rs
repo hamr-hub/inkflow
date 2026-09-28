@@ -7699,7 +7699,7 @@ fn paint_poem_title(
     // step in lockstep with the page's one proportional refinement
     // arc at the gentlest-step register the inscribed-breath base and
     // the moon's cool reach have been sharing.
-    let alpha = (0.597_f32 * breath).clamp(0.0, 1.0);
+    let alpha = (0.6119_f32 * breath).clamp(0.0, 1.0);
     let scale_q8: u32 = ((target_px / glyph::HERO_EM_PX as f32) * 256.0).round() as u32;
     let fy = baseline_y * 256;
     let mut pen_x_q8 = pen_x * 256;
