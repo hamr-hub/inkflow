@@ -4278,7 +4278,86 @@ fn paint_supporting_slot(
     // closest inscription line settles further into the same +5-7 %
     // restraint cadence as the rest of the page's recent
     // refinements.
-    let cool_tint = (sky_cool + moon_proximity * 0.102).clamp(0.0, 0.14);
+    //
+    // Moon-proximity cool-tint weight 0.102 → 0.107 (+4.9 %, the
+    // ninth step in the moon-proximity arc — 0.04 → 0.06 → 0.07 →
+    // 0.082 → 0.087 → 0.092 → 0.097 → 0.102 → 0.107, +50 % / +16.7 %
+    // / +17.1 % / +6.1 % / +5.75 % / +5.43 % / +5.15 % / +4.9 %): the
+    // upper-right echo 《只在此山中》 now leans one more restrained step
+    // into the moon's sphere of influence after the moon-side chain
+    // completed its +6.25 % cadence across geometric extent (halo_r 64
+    // → 68 in 8113547, sky_sigma 80 → 85 in 84b4150) and luminance
+    // (halo_peak 0.072 → 0.0765 in ef91dae, sky_peak 0.034 → 0.0361
+    // in 611895d) — the cool axis (moon_proximity → cool_tint
+    // contribution) was the last moon-side atmospheric axis that
+    // hadn't joined the proportional series the moon's three nested
+    // atmospheric layers, the warm horizon mist bell, and the four
+    // inscribed strokes have been sharing since 84b4150 completed
+    // the geometric-extent arc and aa626f1 lifted the warm axis. The
+    // +4.9 % (0.102 → 0.107) continues the moon-proximity arc's
+    // gentlest-step deceleration pattern (5.15 % → 4.9 %, the same
+    // gentlest-end cadence the inscribed-breath base settled into
+    // per cc3a82f), so the moon's cool reach onto its closest
+    // inscription line now matches the proportional arc rather than
+    // quietly sitting one step behind. At moon_proximity ≈ 0.665
+    // (the upper-right's normalised distance from the moon centre)
+    // the cool_tint now sits at 0.068 + 0.665 * 0.107 = 0.1391
+    // (was 0.068 + 0.665 * 0.102 = 0.1358, +2.4 % absolute so the
+    // upper-right's cool ambient tint rises by one more natural
+    // +2.5 % proportional gain — matching the +2.5 % cool_tint lift
+    // in 77b520e and the +2.4 % / +2.7 % / +2.5 % gentlest-end
+    // cadence that the cool axis has been sharing), and the 0.14
+    // cap stays well clear (now 0.0009 of headroom, ≈+1.3 % more
+    // weight before re-engaging). The +4.9 % continues the same
+    // restraint cadence as the recent +6.25 % supporting mist bell
+    // lift (aa626f1), the +6.25 % sky_sigma extension (84b4150),
+    // the +5 % upper-right alpha lift (7161ce8), the +6.25 % sky_peak
+    // lift (611895d), the +6.25 % halo_peak lift (ef91dae), the
+    // +6.25 % halo radius extension (8113547), the +6.67 % sky bell
+    // σ extension (efd8cb1), the +5 % body_pulse lift (ecff1f4), the
+    // +5 % halo_pulse lift (ab6a040), the +3.4 % and +4.76 %
+    // sky_pulse lifts (a79662b, 45b94af), the +4.76 % x35
+    // inscribed-breath base, the +5 % title alpha lifts (c9f4dde,
+    // 4b84ab7), the +5.5-5.6 % body bumps (fe42fec, b7ebeda,
+    // 90e22dc, 3b60530), the +5 % lower-left alpha lifts (9a4cc96),
+    // and the +2.19 % terminator amber-tint cap — so the moon's
+    // three nested atmospheric layers (body + halo + sky bell), the
+    // warm horizon mist bell, the four inscribed strokes, and the
+    // moon's cool reach onto its closest inscription line now share
+    // one proportional series of restrained +2.19-7.35 % steps
+    // across breath, luminance, geometric extent, warm-mist, and
+    // cool axes. The σ 8 body bell, the 4-px halo fade-in, the σ 85
+    // sky bell, the ±26 % / 0.140 amber-tint terminator cap, the 0.65
+    // multiplier, body_pulse 0.021, halo_pulse 0.0735, body 0.682,
+    // halo 0.0765, sky_peak 0.0361, warm bells 7.677, supporting
+    // mist bell 7.677, title ambient warmth 7.677, cool tint cap
+    // 0.14, subtitle alpha 0.76, lower-left alpha 0.612, title alpha
+    // 0.529, title v 0.83, inscribed-breath base 0.5340, title breath
+    // 0.3096, halo radius 68, and the supporting slots' positions and
+    // drifts are all unchanged so only the moon's cool reach onto
+    // 《只在此山中》 shifts and the moon's geometric structure stays
+    // identical. Restraint (ART_DIRECTION §四 "克制统一的调色板" + "高
+    // 光只落在主句") holds: the +0.0033 absolute moon_cool lift stays
+    // inside the cream family, the brightest pixel of 《只在此山中》
+    // still sits well under the inscribed glow (~0.20+) and the hero
+    // bloom (~0.55) so the focal line keeps its exclusive claim on
+    // the page's light, and the 0.14 cap stays put so the warm/cool
+    // axis (subtitle + lower-left warm, upper-right cool) holds and
+    // 《只在此山中》 continues to read as cream ink bathed in moon's
+    // air rather than cyan. With 《只在此山中》 now leaning one more
+    // restrained step into the moon's sphere of influence — at the
+    // gentlest +4.9 % step in the moon-proximity arc, settling
+    // further into the same +2.5-6.25 % restraint cadence as the
+    // recent moon-side chain and matching the inscribed-breath
+    // base's gentlest-step ceiling per cc3a82f — the moon's cool
+    // reach onto its closest inscription line now shares one
+    // proportional cadence with the moon-side geometric extent and
+    // luminance chain that 84b4150 completed, and 《寻隐者不遇》 reads
+    // as one Tang quatrain inscribed in moonlit air whose closest
+    // stroke to the moon now catches the moon's cool air a touch
+    // more visibly while the rest of the page's cool axis holds its
+    // restrained palette.
+    let cool_tint = (sky_cool + moon_proximity * 0.107).clamp(0.0, 0.14);
     let warmth_tint = (warmth * (1.0 - slot.def.shadow_mix) * 0.30 + mist_warmth).clamp(0.0, 1.0);
     let mut base_color = mix(raw_base, color::ink::WARM, warmth_tint);
     if cool_tint > 0.0 {
