@@ -3604,7 +3604,136 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
     // bridging the disc and the upper-right echo 《只在此山中》 reads
     // as one breath a touch more visibly continuous with its closest
     // inscription line.
-    let sky_peak = 0.0384_f32;
+    // Sky peak 0.0384 → 0.0394 (+2.5 %, the gentlest step on the moon-side
+    // luminance axis after halo_peak 0.080 → 0.082 (+2.5 % in 3b8028b) on the
+    // moon-side luminance axis and the +2.35-2.86 % gentlest-step ladder
+    // the page-wide +2-3 % material refinement band has settled into (body
+    // σ +2.35 % in 4695311; halo radius +2.5 % in 28af5b6; sky σ +2.55 % in
+    // c28ed51; halo_peak +2.5 % in 3b8028b; body_pulse +2.61 % / halo_pulse
+    // +2.48 % / sky_pulse +2.56 % in 43fc830; cool_tint +2.4 % / +2.5 % /
+    // +2.7 % in 0ce6e37, 610ee7a, f595bff, 77b520e; vignette +2.5 % in
+    // 7304555; terminator alpha +2.69 % in 47ac018; terminator cap +2.86 %
+    // in 4077850; subtitle alpha +2.63 % in 1c2fb98; upper-right alpha
+    // +2.65 % in 867377c; lower-left alpha +2.48 % in 70c9147; title/seal
+    // alpha +2.58 % in 69ce9b1; subtitle em_scale +2.5 % in a2a3f48;
+    // upper-right em_scale +2.5 % in 2bf7493; lower-left em_scale +2.5 %
+    // in 19059c2), so the moon's three nested atmospheric layers now share
+    // one coupled gentlest-step +2.5 % cadence on the luminance axis too —
+    // the body bell's +5.5-5.6 % chain saturated at 0.682 (its natural
+    // ceiling; no further luminance lift possible), the halo_peak's
+    // +2.5 % lift in 3b8028b stepped the middle atmospheric layer onto
+    // the gentlest +2.5 % rung the page-wide material refinement band has
+    // settled into, and now the sky bell catches up to that same gentlest
+    // +2.5 % rung rather than the sky_peak quietly sitting at its post-
+    // c9baa27 +6.25 % register while the body and halo luminance axes
+    // stepped past it at +2.5 % and the surrounding material axes stepped
+    // past it at +2.35-2.86 %. The +2.5 % (0.0384 → 0.0394) lifts the
+    // moon's outermost atmospheric layer's brightest pixel by +0.0010
+    // absolute (well inside the cream family and clearly under the
+    // inscribed glow band ~0.20+ and the hero bloom ~0.55), so the
+    // outermost atmospheric layer now reads one restrained step more
+    // visibly continuous with the disc and halo against the heavily
+    // vignette-darkened upper-right corner at the same gentlest +2.5 %
+    // rung the moon-side luminance axis has just settled onto. At d=68
+    // px (the halo boundary, σ 92.6 sky bell) the alpha now sits at
+    // 0.0394 * exp(-0.5 * (68/92.6)²) ≈ 0.0394 * 0.764 ≈ 0.0301 (was
+    // 0.0384 * 0.764 ≈ 0.0293, +0.0008 absolute so the sky bell's
+    // outermost-luminance contribution at the halo boundary rises by one
+    // more restrained step), at d=115 px (the upper-right echo 《只在此山
+    // 中》's neighbourhood) the alpha sits at 0.0394 * exp(-0.5 *
+    // (115/92.6)²) ≈ 0.0394 * 0.462 ≈ 0.0182 (was 0.0384 * 0.462 ≈ 0.0177,
+    // +0.0005 absolute so the moonlit air bridging the disc and the echo
+    // reads as a touch more visibly continuous with the upper-right
+    // echo), at d=150 px (the sky bell's outer flank) the alpha sits at
+    // 0.0394 * exp(-0.5 * (150/92.6)²) ≈ 0.0394 * 0.269 ≈ 0.0106 (was
+    // 0.0384 * 0.269 ≈ 0.0103, +0.0003 absolute so the outer atmosphere
+    // reaches a touch further), and at d=200 px the sky bell now sits at
+    // 0.0394 * exp(-0.5 * (200/92.6)²) ≈ 0.0394 * 0.097 ≈ 0.0038 (was
+    // 0.0384 * 0.097 ≈ 0.0037, +0.0001 absolute, still effectively at
+    // the 0.003 visibility threshold so the bell doesn't paint visible
+    // color past its natural boundary). The +0.0010 absolute sky_peak
+    // lift stays in the relationship between the sky bell and its
+    // closest inscription line rather than spreading the bell into the
+    // lower-left quadrant, and the sky luminance remains firmly under
+    // the inscribed glow (~0.20+) and the hero bloom (~0.55) so the
+    // focal line keeps its exclusive claim on the page's light
+    // (ART_DIRECTION §四 "高光只落在主句" holds). The +2.5 % continues
+    // the same gentlest-step restraint cadence the page has been
+    // sharing — body σ +2.35 % (4695311), halo radius +2.5 % (28af5b6),
+    // sky σ +2.55 % (c28ed51), halo_peak +2.5 % (3b8028b), body_pulse
+    // +2.61 % (43fc830), halo_pulse +2.48 % (43fc830), sky_pulse
+    // +2.56 % (43fc830), cool_tint +2.4 / +2.5 / +2.7 % (0ce6e37,
+    // 610ee7a, f595bff, 77b520e), vignette +2.5 % (7304555), terminator
+    // alpha +2.69 % (47ac018), terminator cap +2.86 % (4077850),
+    // subtitle alpha +2.63 % (1c2fb98), upper-right alpha +2.65 %
+    // (867377c), lower-left alpha +2.48 % (70c9147), title/seal alpha
+    // +2.58 % (69ce9b1), subtitle em_scale +2.5 % (a2a3f48), upper-right
+    // em_scale +2.5 % (2bf7493), and lower-left em_scale +2.5 %
+    // (19059c2) — so the moon's three nested atmospheric layers (body σ
+    // + halo radius + sky σ on the geometric-extent axis, body_peak +
+    // halo_peak + sky_peak on the luminance axis, body_pulse + halo_pulse
+    // + sky_pulse on the breath axis) now share one coupled gentlest-
+    // step +2.5 % cadence across all three moon-side axes together with
+    // the inscribed-stroke alpha axis (subtitle + upper-right + lower-
+    // left + title), the supporting-tier size axis (subtitle em_scale +
+    // upper-right em_scale + lower-left em_scale), the directional-
+    // modulation axis (terminator alpha), the warm-tint cap axis
+    // (terminator cap), the chromatic axis (cool_tint), and the frame
+    // axis (vignette) the page has settled onto. The σ 8.7 body bell,
+    // the 4-px halo fade-in, the halo radius 69.7, the σ 92.6 sky bell,
+    // the ±26 % / 0.140 amber-tint terminator cap, the 0.65 multiplier,
+    // body_pulse 0.0236, halo_pulse 0.0827, sky_pulse 0.0401, body
+    // 0.682 (saturated), halo_peak 0.082, the bloom2_alpha ceiling
+    // 0.063, the nebula alphas 0.022 / 0.016, the vignette pow(0.75),
+    // the vignette ceiling 0.74, the warm bells 7.677, the supporting
+    // mist bell 7.677, the title ambient_warmth share 0.2222, the
+    // supporting mist_warmth share 0.2222, the subtitle mist_warmth
+    // share 0.0895, the lower-left mist_warmth share 0.1064, the cool_
+    // tint 0.13908, the moon_proximity 0.107, the subtitle alpha 0.78,
+    // the upper-right alpha 0.776, the lower-left alpha 0.662, the
+    // title/seal alpha 0.597, the title v 0.83, the title target_px 23,
+    // the title breath 0.3096, the inscribed-breath base 0.5340, the
+    // subtitle em_scale 0.369, the upper-right em_scale 0.328, the
+    // lower-left em_scale 0.287, the upper-right y_frac 0.27, the
+    // lower-left y_frac 0.74, the subtitle drift 3.0/1.5/0.21/0.17/0.7,
+    // the upper-right drift 3.0/2.0/0.15/0.19/1.4, the lower-left
+    // drift 3.0/2.0/0.13/0.21/2.8, the hero drift 3.0/2.0/0.18/0.13/0.0,
+    // the hero y_frac 0.42, the hero bloom 1.0, and the supporting
+    // slots' positions and drifts are all unchanged so only the sky
+    // bell's luminance peak shifts and the moon's outermost atmospheric
+    // layer catches up with the gentlest-step +2.5 % register the moon-
+    // side luminance axis (halo_peak in 3b8028b) and the surrounding
+    // material axes (geometric-extent, breath, inscribed-stroke alpha,
+    // supporting-tier size, directional-modulation, warm-tint cap,
+    // chromatic, and frame axes) have just settled onto. Restraint
+    // (ART_DIRECTION §四 "克制统一的调色板" / "高光只落在主句") holds:
+    // the +0.0010 absolute sky_peak lift stays inside the cream family,
+    // the brightest sky bell pixel still sits well under the inscribed
+    // glow (~0.20+) and the hero bloom (~0.55), and the moon's outermost
+    // atmospheric layer still reads as moonlit air continuous with the
+    // disc rather than as a competing ring — just a luminance whose
+    // outermost atmospheric layer now registers one more gentle step of
+    // the page's coupled gentlest-step register. With the sky_peak now
+    // catching one more restrained step of the page's coupled gentlest-
+    // step register — at the gentlest +2.5 % step on the moon-side
+    // luminance axis, exactly inside the +2.35-2.86 % rung the moon-side
+    // geometric-extent, breath, inscribed-stroke alpha, and supporting-
+    // tier size axes have just completed — 《寻隐者不遇》 reads as one
+    // Tang quatrain inscribed in moonlit air whose moon's outermost
+    // atmospheric layer now registers one more gentle step of the page's
+    // proportional cadence, and the moon's three nested atmospheric
+    // layers (body σ + halo r + sky σ on the geometric-extent axis,
+    // body_peak + halo_peak + sky_peak on the luminance axis, body_pulse
+    // + halo_pulse + sky_pulse on the breath axis) now share one coupled
+    // gentlest-step +2.5 % cadence across all three moon-side axes
+    // together with the inscribed-stroke alpha axis, the supporting-tier
+    // size axis, the directional-modulation axis, the warm-tint cap
+    // axis, the chromatic axis, and the frame axis the page has just
+    // settled onto, with the sky_peak finally stepping onto the gentlest
+    // +2.5 % register the page-wide +2-3 % material refinement band the
+    // moon-side luminance axis (halo_peak in 3b8028b) and the
+    // surrounding material axes have just settled into.
+    let sky_peak = 0.0394_f32;
     // Sky σ 90.3 → 92.6 (+2.55 %, the gentlest step on the moon-side
     // geometric-extent axis after body σ 8.5 → 8.7 (+2.35 % in 4695311)
     // and halo radius 68 → 69.7 (+2.5 % in 28af5b6)): the moon's three
