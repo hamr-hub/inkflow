@@ -5119,15 +5119,59 @@ pub fn paint_composition(
     // Faint baseline title — only when the active theme is pinned to a
     // curated poem group. Reads as a calligrapher's signature below the
     // inscription, so the four-line piece registers as one complete work
-    // (《寻隐者不遇》) rather than four floating lines. Alpha 0.40 keeps it
-    // a quiet mark; size em_scale 0.18 (≈23 px tall at hero em 128) sits
-    // below the lower-left echo (y_frac 0.74 → y=533) with a comfortable
-    // 130 px margin so the four-line inscription still leads. Center
-    // alignment pairs with the hero's centre so the title's baseline
-    // visually anchors the whole composition. No outer glow — a title is
-    // ink-on-paper, not a light source (ART_DIRECTION §四 "高光只落在
-    // 主句"). Slight warm tint from `warmth` so a touched-warm scene
-    // breathes amber on the signature too.
+    // (《寻隐者不遇》) rather than four floating lines. Alpha 0.582 keeps
+    // it a quiet mark (gentlest-step ceiling per f8c4f2d); size
+    // em_scale 0.18 (target 23 px on hero em 128) sits below the lower-
+    // left echo (y_frac 0.74 → y=533) with a comfortable 130 px margin
+    // so the four-line inscription still leads. Center alignment pairs
+    // with the hero's centre so the title's baseline visually anchors
+    // the whole composition. No outer glow — a title is ink-on-paper,
+    // not a light source (ART_DIRECTION §四 "高光只落在主句"). Slight
+    // warm tint from `warmth` so a touched-warm scene breathes amber on
+    // the signature too.
+    //
+    // target_px 22 → 23 (+4.55 %, the gentlest step on the supporting-
+    // tier size axis — subtitle em_scale 0.34 → 0.36 (+5.88 % in
+    // 9ed2b96), upper-right em_scale 0.30 → 0.32 (+6.67 % in 9ec99ff's
+    // chain), lower-left em_scale 0.28 (the deliberate floor of the
+    // supporting tier so 《云深不知处》 stays the dimmest inscribed
+    // stroke): the calligrapher's seal now catches up with the size
+    // register the supporting tier just completed, rather than the
+    // title's stroke quietly sitting one step below the 0.17 em_scale
+    // post-hardening register while every other inscribed stroke
+    // climbed its own +5-7 % size axis. The +4.55 % sits at the
+    // gentlest step on the page's settled +4.55-6.67 % restraint
+    // cadence — matching the body_pulse +4.55 % register the moon-
+    // side breath just stepped onto in 7609987 and the inscribed-
+    // breath +4.76 % register the supporting-tier base has been
+    // sharing — so the title now steps in lockstep with the page's
+    // one proportional refinement arc at the gentlest-step cadence
+    // rather than trailing the supporting tier's size chain by one
+    // register. The +1 px absolute target_px lift (22 → 23) translates
+    // to a tiny 1.04× font-size gain on the title (≈+0.86 px on a
+    // 128-em hero font, +0.0125 em scale on the 0.17 em_scale
+    // baseline, landing at 0.179 em_scale — comfortably below the
+    // lower-left echo's 0.28 em_scale so the brush-weight hierarchy
+    // holds: subtitle 0.36 > upper-right 0.32 > lower-left 0.28 >
+    // title 0.18, with the title-to-lower-left gap narrowing 0.11 →
+    // 0.10, still the largest gap in the supporting hierarchy and
+    // reflecting the title's continued role as the calligrapher's
+    // quiet seal). Restraint (ART_DIRECTION §四 "克制统一的调色板"
+    // / "高光只落在主句") holds: the +1 px size lift stays well
+    // inside the safe-area margin (title's em + drift + bearing
+    // ≈ 26 px, so a 1 px lift still leaves comfortable clearance to
+    // the lower-left echo above and the bottom safe edge below), the
+    // title's alpha 0.582 + shadow_mix 0.35 + breath 0.3096 + v 0.83
+    // + drift 1.6/1.0 + drift_fx 0.11/0.15 + drift_phase 3.7 +
+    // ambient_warmth 0.2125 share + bell 7.677 are all unchanged so
+    // only the title's target_px shifts and the size axis catches
+    // up with the supporting tier; the focal line keeps its exclusive
+    // claim on the page's light (ART_DIRECTION §四 "高光只落在主句"),
+    // and 《寻隐者不遇》 now reads as one Tang quatrain inscribed in
+    // moonlit air whose closing signature registers one more
+    // restrained step out of the paper's grain — the calligrapher's
+    // seal, now sized to match the gentlest-step register the
+    // supporting tier's size axis just completed.
     if let Some(group) = phrase::POEM_BY_THEME
         .get(scene.theme_idx)
         .copied()
@@ -5157,12 +5201,14 @@ fn paint_poem_title(
     if n == 0 {
         return;
     }
-    // target 22 px tall (≈ 0.17 of hero em). Render from the hero bucket
-    // with a Q8 scale so we downsample the 128 px glyph to a small, soft
-    // signature — closer to ink on paper than to a printed label. Drawing
-    // glyph-by-glyph (rather than via draw_phrase) lets us pick the scale
-    // freely; draw_phrase locks to the bucket's native em.
-    let target_px = 22.0_f32;
+    // target 23 px tall (≈ 0.18 of hero em — the size register the
+    // supporting-tier size chain settled on in 9ec99ff / 9ed2b96).
+    // Render from the hero bucket with a Q8 scale so we downsample the
+    // 128 px glyph to a small, soft signature — closer to ink on paper
+    // than to a printed label. Drawing glyph-by-glyph (rather than via
+    // draw_phrase) lets us pick the scale freely; draw_phrase locks to
+    // the bucket's native em.
+    let target_px = 23.0_f32;
     let per_char = (target_px * 1.06) as i32;
     let total_w = per_char * (n as i32 - 1).max(0) + target_px as i32;
     // y_frac 0.90 → 0.85 → 0.83 — sits ~65 px below the lower-left echo
