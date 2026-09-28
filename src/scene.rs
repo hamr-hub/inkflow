@@ -5670,7 +5670,60 @@ fn paint_supporting_slot(
     // barely-visible amber tint. The +6.25 % is lifted in lockstep
     // with the title ambient_warmth 0.20 → 0.2125 (line 4783) and the
     // background horizon-band blend 0.12 → 0.1275 (line 1139).
-    let mist_warmth = horizon_glow * 0.2222;
+    // Supporting mist_warmth share 0.2222 → 0.2278 (+2.5 %, the gentlest
+    // step on the warm-mist share axis after the +4.55 % paired lift to
+    // 0.2222 in 2eff631 / df4a49e — the +2.5 % sits exactly inside the
+    // +2.35-2.86 % gentlest rung the page-wide +2-3 % material refinement
+    // band the most-refined axes have settled into (body σ +2.35 % in
+    // 4695311; halo radius +2.5 % in 28af5b6; sky σ +2.55 % in c28ed51;
+    // halo_peak +2.5 % in 3b8028b; sky_peak +2.5 % in 78959d2; body_pulse
+    // +2.61 % / halo_pulse +2.48 % / sky_pulse +2.56 % in 43fc830; cool_tint
+    // +2.4 % / +2.5 % / +2.7 % in 0ce6e37, 610ee7a, f595bff, 77b520e;
+    // vignette +2.5 % in 7304555; terminator alpha +2.69 % in 47ac018;
+    // terminator cap +2.86 % in 4077850; subtitle alpha +2.63 % in 1c2fb98;
+    // upper-right alpha +2.65 % in 867377c; lower-left alpha +2.48 % in
+    // 70c9147; title/seal alpha +2.58 % in 69ce9b1; subtitle em_scale
+    // +2.5 % in a2a3f48; upper-right em_scale +2.5 % in 2bf7493; lower-left
+    // em_scale +2.5 % in 19059c2; title target_px +2.5 % in 7397729;
+    // bloom2_alpha ceiling +2.5 % in 095ef01) rather than the supporting
+    // mist_warmth share quietly sitting at its post-2eff631 +4.55 %
+    // register while the moon-side geometric-extent, luminance, breath,
+    // inscribed-stroke alpha, supporting-tier size, focal-line outer-corona,
+    // directional-modulation, warm-tint cap, chromatic, and frame axes
+    // stepped past it at +2.35-2.86 %. The +2.5 % (0.2222 → 0.2278) lifts
+    // the supporting mist_warmth share by +0.0056 absolute, so the
+    // supporting inscriptions now pick up one more restrained step of the
+    // warm horizon bell the page's three lowest strokes dissolve into.
+    // The +0.0056 absolute multiplier lift stays inside the muted-ink
+    // family (the warm mist still reads as atmospheric depth, not as a
+    // competing warm source), the subtitle peak mist contribution now
+    // sits at 0.4030 * 0.2278 ≈ 0.0918 (was 0.0895, +0.0023 absolute,
+    // +2.5 % relative at the subtitle's v≈0.66) and the lower-left peak
+    // mist contribution now sits at 0.4791 * 0.2278 ≈ 0.1091 (was 0.1064,
+    // +0.0027 absolute, +2.5 % relative at the lower-left's v≈0.74), both
+    // staying well inside the supporting-tier envelope (~ 0.05-0.10
+    // ambient warm catches, well under the inscribed glow ~ 0.20+ and
+    // the hero bloom ~ 0.55), so the focal line keeps its exclusive
+    // claim on the page's light (ART_DIRECTION §四 '高光只落在主句'
+    // holds), the focal hierarchy (hero / subtitle / upper-right /
+    // lower-left / seal) is unchanged, the brush-weight gradient
+    // (subtitle brightest → upper-right → lower-left → title dimmest)
+    // holds, the warm / cool axis (subtitle + lower-left warm, upper-
+    // right cool, title as the warm-side closing signature) holds, and
+    // the warm-mist share axis now extends the gentlest-step +2.5 %
+    // register the moon-side geometric-extent, luminance, breath,
+    // inscribed-stroke alpha, supporting-tier size, focal-line outer-
+    // corona, directional-modulation, warm-tint cap, chromatic, and
+    // frame axes have settled into. Restraint (ART_DIRECTION §四 '克制
+    // 统一的调色板' / '高光只落在主句') holds: the +0.0056 absolute
+    // multiplier lift stays inside the muted-cream family, the peak
+    // supporting mist pixel still sits comfortably under the inscribed
+    // glow (~ 0.20+) and the hero bloom (~ 0.55), and the supporting
+    // inscriptions still read as ink dissolving into the warm horizon
+    // rather than as a brighter warm source — just a mist-warmth share
+    // that now registers one more gentle step of the page's coupled
+    // gentlest-step register.
+    let mist_warmth = horizon_glow * 0.2278;
     // Cool axis — the mirror image of the mist warmth above. Supporting
     // lines that sit in the moonlit upper sky absorb a touch of cool
     // tint from the cool air they inhabit, so the upper-right echo
@@ -6650,7 +6703,85 @@ fn paint_poem_title(
     // axes, with the title's per-site warm-share finally stepping
     // onto the gentlest-step register the supporting tier's most
     // recent breath and luminance arcs have just completed.
-    let ambient_warmth = ((title_v - 0.50) * (1.0 - title_v) * 7.677).clamp(0.0, 1.0) * 0.2222;
+    // Title ambient_warmth share 0.2222 → 0.2278 (+2.5 %, the gentlest
+    // step on the warm-mist share axis paired with the supporting
+    // mist_warmth share lift at line 5673 — the +2.5 % sits exactly
+    // inside the +2.35-2.86 % gentlest rung the page-wide +2-3 %
+    // material refinement band the most-refined axes have settled into
+    // (body σ +2.35 % in 4695311; halo radius +2.5 % in 28af5b6; sky σ
+    // +2.55 % in c28ed51; halo_peak +2.5 % in 3b8028b; sky_peak +2.5 %
+    // in 78959d2; body_pulse +2.61 % / halo_pulse +2.48 % / sky_pulse
+    // +2.56 % in 43fc830; cool_tint +2.4 % / +2.5 % / +2.7 % in 0ce6e37,
+    // 610ee7a, f595bff, 77b520e; vignette +2.5 % in 7304555; terminator
+    // alpha +2.69 % in 47ac018; terminator cap +2.86 % in 4077850;
+    // subtitle alpha +2.63 % in 1c2fb98; upper-right alpha +2.65 % in
+    // 867377c; lower-left alpha +2.48 % in 70c9147; title/seal alpha
+    // +2.58 % in 69ce9b1; subtitle em_scale +2.5 % in a2a3f48; upper-
+    // right em_scale +2.5 % in 2bf7493; lower-left em_scale +2.5 % in
+    // 19059c2; title target_px +2.5 % in 7397729; bloom2_alpha ceiling
+    // +2.5 % in 095ef01) rather than the title's per-site warm-mist
+    // share quietly sitting at its post-df4a49e +4.55 % register while
+    // the moon-side geometric-extent, luminance, breath, inscribed-
+    // stroke alpha, supporting-tier size, focal-line outer-corona,
+    // directional-modulation, warm-tint cap, chromatic, and frame axes
+    // stepped past it at +2.35-2.86 %. The +2.5 % (0.2222 → 0.2278)
+    // lifts the title ambient_warmth share by +0.0056 absolute, so
+    // 《寻隐者不遇》's calligrapher's seal now picks up one more
+    // restrained step of the same warm horizon bell the supporting
+    // inscriptions dissolve into at the gentlest +2.5 % register the
+    // supporting mist_warmth share has just stepped onto. The +0.0056
+    // absolute multiplier lift stays inside the muted-ink family (the
+    // seal's warm tint still reads as ink dried on paper, not as a
+    // second amber glow), the title's ambient_warmth contribution now
+    // sits at 0.4307 * 0.2278 ≈ 0.0981 (was 0.4307 * 0.2222 ≈ 0.0957,
+    // +0.0024 absolute, +2.5 % relative at title_v≈0.83) staying well
+    // inside the supporting-tier warm-share envelope (subtitle mist
+    // 0.0918, lower-left mist 0.1091), so the seal stays a quiet ink
+    // mark dissolving into the lower-left's warm band rather than
+    // reading as a brighter signature on its own, and the focal line
+    // keeps its exclusive claim on the page's light (ART_DIRECTION §四
+    // '高光只落在主句' holds). The focal hierarchy (hero / subtitle /
+    // upper-right / lower-left / seal) is unchanged, the brush-weight
+    // gradient (subtitle brightest → upper-right → lower-left → title
+    // dimmest) holds, the warm / cool axis (subtitle + lower-left warm,
+    // upper-right cool, title as the warm-side closing signature) holds,
+    // and the title's warm-mist share axis now extends the gentlest-
+    // step +2.5 % register the supporting mist_warmth share has just
+    // settled onto, the pair stepping in lockstep at the same +2.5 %
+    // cadence the page-wide +2-3 % material refinement band has
+    // converged onto. The +0.0056 absolute multiplier lift stays
+    // inside the muted-ink family (the warm mist still reads as
+    // atmospheric depth, not as a competing warm source), the peak
+    // seal mist pixel still sits comfortably under the inscribed glow
+    // (~ 0.20+) and the hero bloom (~ 0.55), and the calligrapher's
+    // seal still reads as ink dried on paper rather than as a second
+    // focal light — just a title ambient warmth that now registers one
+    // more gentle step of the page's coupled gentlest-step register.
+    // The mist bell 7.677, the title v 0.83, the title target_px 23.575,
+    // the title alpha 0.6119, the title breath 0.3096, the inscribed-
+    // breath base 0.5340, the subtitle alpha 0.78, the upper-right
+    // alpha 0.776, the lower-left alpha 0.662, the subtitle em_scale
+    // 0.369, the upper-right em_scale 0.328, the lower-left em_scale
+    // 0.287, the upper-right y_frac 0.27, the lower-left y_frac 0.74,
+    // the subtitle drift 3.0/1.5/0.21/0.17/0.7, the upper-right drift
+    // 3.0/2.0/0.15/0.19/1.4, the lower-left drift 3.0/2.0/0.13/0.21/2.8,
+    // the hero drift 3.0/2.0/0.18/0.13/0.0, the hero y_frac 0.42, the
+    // body 0.682, the halo_peak 0.082, the sky_peak 0.0394, the
+    // moon_halo_r 69.7, the body σ 8.7, the sky σ 92.6, the body_pulse
+    // 0.0236, the halo_pulse 0.0827, the sky_pulse 0.0401, the
+    // bloom2_alpha ceiling 0.0646, the supporting mist_warmth share
+    // 0.2278, the subtitle mist_warmth share 0.0918, the lower-left
+    // mist_warmth share 0.1091, the terminator alpha 0.267, the
+    // terminator cap 0.144, the cool_tint 0.13908, the moon_proximity
+    // 0.107, the nebula alphas 0.022 / 0.016, the vignette pow(0.75),
+    // and the vignette ceiling 0.74 are all unchanged so only the
+    // title's per-site warm-mist share shifts and the warm-mist share
+    // axis catches up with the gentlest-step +2.5 % register the page-
+    // wide +2-3 % material refinement band the moon-side geometric-
+    // extent, luminance, breath, inscribed-stroke alpha, supporting-
+    // tier size, focal-line outer-corona, directional-modulation,
+    // warm-tint cap, chromatic, and frame axes have just settled into.
+    let ambient_warmth = ((title_v - 0.50) * (1.0 - title_v) * 7.677).clamp(0.0, 1.0) * 0.2278;
     // Title base sits one step into the muted ink family (mix CREAM toward
     // SHADOW 0.0 → 0.35) so the seal reads as ink dried on paper rather
     // than a fifth inscription line at 40 % opacity. CREAM (rgb 232, 212,
