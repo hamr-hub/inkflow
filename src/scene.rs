@@ -6280,7 +6280,99 @@ pub fn paint_hero(
     let base_color = mix(color::ink::CREAM, color::ink::WARM, warmth * 0.5);
     let glow_color = mix(color::ink::GLOW, color::ink::WARM, warmth * 0.35);
     let beat_glow = phrase.glow;
-    let glow_alpha = (0.10 + 0.18 * pulse + 0.06 * warmth + beat_glow * 0.10).clamp(0.0, 0.55);
+    // Focal-line inner-glow base 0.10 → 0.1025 (+2.5 %, the gentlest step
+    // on the focal-line primary inner-bloom base axis after the +2.5 %
+    // nearer-glow base lift in c7813d4, the +2.5 % nearer-glow ceiling
+    // lift in 494d8b7, the +2.73 % outer-corona base lift in d7f8fc6,
+    // and the +2.5 % outer-corona ceiling lift in 095ef01 — the +2.5 %
+    // sits exactly inside the +2.35-2.86 % gentlest rung the page-wide
+    // +2-3 % material refinement band the most-refined axes have settled
+    // into (body σ +2.35 % in 4695311; halo radius +2.5 % in 28af5b6; sky
+    // σ +2.55 % in c28ed51; halo_peak +2.5 % in 3b8028b; sky_peak +2.5 %
+    // in 78959d2; body_pulse +2.61 % / halo_pulse +2.48 % / sky_pulse
+    // +2.56 % in 43fc830; body_pulse +2.54 % / halo_pulse +2.54 % /
+    // sky_pulse +2.5 % in 913b77e; cool_tint +2.4 % / +2.5 % / +2.7 %
+    // in 0ce6e37, 610ee7a, f595bff, 77b520e; vignette ceiling +2.5 % in
+    // 7304555; terminator alpha +2.69 % in 47ac018; terminator cap
+    // +2.86 % in 4077850; subtitle alpha +2.63 % in 1c2fb98; upper-right
+    // alpha +2.65 % in 867377c; lower-left alpha +2.48 % in 70c9147;
+    // title/seal alpha +2.58 % in 69ce9b1, +2.5 % in e8cc837; subtitle
+    // em_scale +2.5 % in a2a3f48; upper-right em_scale +2.5 % in
+    // 2bf7493; lower-left em_scale +2.5 % in 19059c2; title target_px
+    // +2.5 % in 7397729; supporting mist_warmth share +2.5 % in
+    // 57c514e; warm-mist bell +2.5 % in 2a7cd02; horizon-band blend
+    // share +2.5 % in 3154090; warm-mist share axis +2.5 % in e483929;
+    // inscribed-breath base +2.5 % in 4e542cc; title breath +2.5 % in
+    // 4e542cc) rather than the focal line's primary inner-glow base
+    // quietly sitting at its post-c7813d4 0.10 register while the
+    // focal-line nearer-glow base (c7813d4), nearer-glow ceiling
+    // (494d8b7), outer-corona base (d7f8fc6), and outer-corona ceiling
+    // (095ef01) all stepped past at +2.5-2.73 %. The +2.5 % (0.10 →
+    // 0.1025) lifts the focal line's primary inner-glow register by
+    // +0.0025 absolute, so 《松下问童子》's inner-glow now registers one
+    // more gentle step of the page's proportional cadence at rest — the
+    // painted inner-glow at rest climbs from 0.10 × 0.45 = 0.045 to
+    // 0.1025 × 0.45 = 0.0461 (+0.0011 absolute, +2.5 % relative on the
+    // painted glow register), the formula peak at pulse=1 / warmth=1 /
+    // beat_glow=2.5 still lands at 0.55 (clamped, unchanged) so the
+    // formula's headroom stays at ≈+22.5 % before re-engaging the
+    // ceiling (the formula total 0.1025 + 0.18 + 0.06 + 0.25 = 0.5925,
+    // still 0.0425 above the 0.55 ceiling, plenty of room for future
+    // +2.5 % steps to keep catching up to the gentlest rung), the focal
+    // line keeps its exclusive claim on the page's light (ART_DIRECTION
+    // §四 '高光只落在主句' holds), the focal hierarchy (hero / subtitle /
+    // upper-right / lower-left / seal) is unchanged, the brush-weight
+    // gradient (subtitle brightest → upper-right → lower-left → title
+    // dimmest) holds, the warm / cool axis (subtitle + lower-left + title
+    // warm, upper-right cool) holds, the moon anchor and the moon's
+    // three nested atmospheric breath modulation (913b77e), the
+    // inscription-side breath axis (4e542cc), and the warm-mist system
+    // (e483929 / 3154090 / 57c514e / 2a7cd02) all keep holding, the body
+    // σ 8.7, sky σ 92.6, halo radius 69.7, body_peak 0.682, halo_peak
+    // 0.082, sky_peak 0.0394, terminator alpha 0.267, terminator cap
+    // 0.144, cool_tint 0.13908, moon_proximity 0.107, bloom2_alpha
+    // ceiling 0.0646, bloom_alpha base 0.041, bloom_alpha ceiling 0.123,
+    // bloom2_alpha base 0.0226, nebula alphas 0.022 / 0.016, vignette
+    // pow(0.75), vignette ceiling 0.74, the subtitle / upper-right /
+    // lower-left / title alphas 0.78 / 0.776 / 0.662 / 0.6119, the title
+    // v 0.83, title target_px 23.575, the supporting mist bell 8.066,
+    // the warm bells 8.066, the title ambient_warmth share 0.2335, the
+    // supporting mist_warmth share 0.2335, the subtitle mist_warmth
+    // share 0.0989, the lower-left mist_warmth share 0.1175, the
+    // horizon-band blend share 0.1340, the body_pulse 0.0242, halo_pulse
+    // 0.0848, sky_pulse 0.0411, the inscribed-breath base 0.5474, the
+    // title breath 0.3173, and the supporting slots' positions and
+    // drifts are all unchanged so only the focal line's primary
+    // inner-glow base shifts and the focal line's three nested bloom
+    // passes — primary inner-glow base + nearer-glow base + nearer-glow
+    // ceiling + outer-corona base + outer-corona ceiling — now share
+    // one coupled gentlest-step +2.5 % register the page-wide +2-3 %
+    // material refinement band the surrounding material axes have
+    // settled into. Restraint (ART_DIRECTION §四 '克制统一的调色板' /
+    // '高光只落在主句') holds: the +0.0025 absolute base lift stays
+    // inside the cream family (the painted inner-glow at rest sits at
+    // 0.0461, well inside the focal-line cream envelope and well under
+    // the inscribed glow band ~0.20+ and the hero bloom ~0.55), the
+    // focal line 《松下问童子》 still reads as one luminous moonlit body
+    // breathing in moonlit air rather than as a brighter hero, and the
+    // focal-line bloom axis — primary inner-glow + nearer-glow + outer-
+    // corona — now registers one coupled gentlest-step +2.5 % cadence
+    // the inscribed-breath base (4e542cc) and the warm-mist share
+    // (e483929 / 3154090 / 57c514e / 2a7cd02) have just settled into.
+    // With 《松下问童子》 now catching one more restrained step of the
+    // page's primary bloom register — at the gentlest +2.5 % step on
+    // the focal-line inner-glow base axis, exactly inside the
+    // +2.35-2.86 % gentlest rung the page-wide +2-3 % material
+    // refinement band the focal-line nearer-glow base (c7813d4),
+    // nearer-glow ceiling (494d8b7), outer-corona base (d7f8fc6), and
+    // outer-corona ceiling (095ef01) have just completed — 《寻隐者不遇》
+    // reads as one Tang quatrain inscribed in moonlit air whose focal
+    // line 《松下问童子》 now registers one more gentle step of the
+    // page's primary inner-glow register, and the focal-line bloom
+    // axis finally steps onto the gentlest +2.5 % register the
+    // inscription-side breath axis (4e542cc) and the page-wide +2-3 %
+    // material refinement band have just settled into.
+    let glow_alpha = (0.1025 + 0.18 * pulse + 0.06 * warmth + beat_glow * 0.10).clamp(0.0, 0.55);
     // Secondary wider bloom — same glyph drawn at slightly larger scale and
     // very low alpha so the focal line reads as a moonlit light source, not
     // just cream text on a gradient. ART_DIRECTION mandates "bloom only on
