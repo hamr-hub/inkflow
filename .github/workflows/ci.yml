@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: -D warnings
+
+jobs:
+  gate:
+    # Linux is the only host that can *link* this crate — the DRM/fb0 backends
+    # call ioctl/mmap directly, so a macOS runner would only ever reach `check`.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - uses: Swatinem/rust-cache@v2
+
+      # --- the project contract -------------------------------------------
+      - name: Enforce the zero-dependency contract
+        run: |
+          deps=$(python3 - <<'PY'
+          import re, sys
+          src = open("Cargo.toml").read()
+          m = re.search(r"^\[dependencies\]\s*$(.*?)(?=^\[|\Z)", src, re.M | re.S)
+          body = m.group(1) if m else ""
+          print("\n".join(l for l in body.splitlines() if l.strip() and not l.strip().startswith("#")))
+          PY
+          )
+          if [ -n "$deps" ]; then
+            echo "::error::Cargo.toml [dependencies] must stay empty (ZERO_DEP.md):"
+            echo "$deps"
+            exit 1
+          fi
+          echo "ok: no third-party dependencies"
+
+      # --- the gate, mirroring scripts/pre-push ---------------------------
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Lint
+        run: cargo clippy --release --all-targets -- -D warnings
+
+      - name: Test
+        run: cargo test --release
+
+      - name: Build (release)
+        run: cargo build --release
+
+      # A committed sample that no longer matches the renderer is a silent lie
+      # in the README, so regenerate and diff it.
+      - name: Samples are up to date
+        run: |
+          cargo run --release -- --works-gallery --out=/tmp/ci-samples >/dev/null
+          ok=1
+          for pair in "0-0 xun-yinzhe" "1-0 jiangxue" "2-0 jingyesi" \
+                      "3-0 dengguanquelou" "4-0 chunxiao"; do
+            set -- $pair
+            if ! cmp -s "/tmp/ci-samples/works/$1.png" "docs/samples/$2.png"; then
+              echo "::error::docs/samples/$2.png is stale — re-run scripts/refresh-samples.sh"
+              ok=0
+            fi
+          done
+          [ "$ok" = 1 ]

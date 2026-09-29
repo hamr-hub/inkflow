@@ -1,7 +1,7 @@
 target/
 state/
+graphify-out/
 ._target
-Cargo.lock
 **/*.rs.bk
 **/*.rs.bak
 .DS_Store

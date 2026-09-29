@@ -126,9 +126,11 @@ def render_glyph(cp: int, px: int) -> tuple[bytes, int, int, int, int, int]:
     data = cropped.tobytes()  # raw 8-bit grayscale, length w*h
 
     # bearing_x = bbox[0] - bx0  (negative if pen is inside the bbox)
-    # bearing_y = -by0  (distance from baseline UP to top of bbox)
+    # bearing_y = ascent - by0  (distance from baseline UP to top of the ink;
+    #                            the ink is drawn with its own top at y=0, so
+    #                            the baseline lands `ascent - by0` below it)
     bearing_x = bbox[0] - bx0
-    bearing_y = -by0
+    bearing_y = ascent - by0
 
     return (data, w, h, bearing_x, bearing_y, advance_px)
 

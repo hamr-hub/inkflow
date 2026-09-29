@@ -84035,7 +84035,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 104,
         h: 130,
         bearing_x: 12,
-        bearing_y: -35,
+        bearing_y: 114,
         advance: 128,
     }, // U+0009 '\t'
     Glyph {
@@ -84059,7 +84059,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 18,
         h: 98,
         bearing_x: 12,
-        bearing_y: -53,
+        bearing_y: 96,
         advance: 41,
     }, // U+0021 '!'
     Glyph {
@@ -84067,7 +84067,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 39,
         h: 37,
         bearing_x: 11,
-        bearing_y: -50,
+        bearing_y: 99,
         advance: 61,
     }, // U+0022 '"'
     Glyph {
@@ -84075,7 +84075,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 13,
         h: 37,
         bearing_x: 11,
-        bearing_y: -50,
+        bearing_y: 99,
         advance: 36,
     }, // U+0027 '\''
     Glyph {
@@ -84083,7 +84083,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 23,
         h: 42,
         bearing_x: 6,
-        bearing_y: -132,
+        bearing_y: 17,
         advance: 36,
     }, // U+002C ','
     Glyph {
@@ -84091,7 +84091,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 18,
         h: 18,
         bearing_x: 9,
-        bearing_y: -133,
+        bearing_y: 16,
         advance: 36,
     }, // U+002E '.'
     Glyph {
@@ -84099,7 +84099,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 18,
         h: 70,
         bearing_x: 9,
-        bearing_y: -81,
+        bearing_y: 68,
         advance: 36,
     }, // U+003A ':'
     Glyph {
@@ -84107,7 +84107,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 23,
         h: 93,
         bearing_x: 6,
-        bearing_y: -81,
+        bearing_y: 68,
         advance: 36,
     }, // U+003B ';'
     Glyph {
@@ -84115,7 +84115,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 49,
         h: 99,
         bearing_x: 5,
-        bearing_y: -52,
+        bearing_y: 97,
         advance: 61,
     }, // U+003F '?'
     Glyph {
@@ -84123,7 +84123,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 17,
         h: 19,
         bearing_x: 27,
-        bearing_y: -93,
+        bearing_y: 56,
         advance: 72,
     }, // U+00B7 '·'
     Glyph {
@@ -84131,7 +84131,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 104,
         h: 8,
         bearing_x: 5,
-        bearing_y: -109,
+        bearing_y: 40,
         advance: 114,
     }, // U+2014 '—'
     Glyph {
@@ -84139,7 +84139,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 19,
         h: 39,
         bearing_x: 8,
-        bearing_y: -49,
+        bearing_y: 100,
         advance: 36,
     }, // U+2018 '‘'
     Glyph {
@@ -84147,7 +84147,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 19,
         h: 39,
         bearing_x: 9,
-        bearing_y: -49,
+        bearing_y: 100,
         advance: 36,
     }, // U+2019 '’'
     Glyph {
@@ -84155,7 +84155,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 44,
         h: 39,
         bearing_x: 8,
-        bearing_y: -49,
+        bearing_y: 100,
         advance: 61,
     }, // U+201C '“'
     Glyph {
@@ -84163,7 +84163,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 44,
         h: 39,
         bearing_x: 9,
-        bearing_y: -49,
+        bearing_y: 100,
         advance: 61,
     }, // U+201D '”'
     Glyph {
@@ -84171,7 +84171,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 104,
         h: 17,
         bearing_x: 12,
-        bearing_y: -92,
+        bearing_y: 57,
         advance: 128,
     }, // U+2026 '…'
     Glyph {
@@ -84179,7 +84179,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 38,
         h: 36,
         bearing_x: 6,
-        bearing_y: -120,
+        bearing_y: 29,
         advance: 128,
     }, // U+3001 '、'
     Glyph {
@@ -84187,7 +84187,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 40,
         h: 40,
         bearing_x: 5,
-        bearing_y: -117,
+        bearing_y: 32,
         advance: 128,
     }, // U+3002 '。'
     Glyph {
@@ -84195,7 +84195,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 57,
         h: 120,
         bearing_x: 67,
-        bearing_y: -40,
+        bearing_y: 109,
         advance: 128,
     }, // U+300A '《'
     Glyph {
@@ -84203,7 +84203,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 57,
         h: 120,
         bearing_x: 4,
-        bearing_y: -40,
+        bearing_y: 109,
         advance: 128,
     }, // U+300B '》'
     Glyph {
@@ -84211,7 +84211,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 118,
         h: 11,
         bearing_x: 5,
-        bearing_y: -93,
+        bearing_y: 56,
         advance: 128,
     }, // U+4E00 '一'
     Glyph {
@@ -84219,7 +84219,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 117,
         h: 110,
         bearing_x: 4,
-        bearing_y: -50,
+        bearing_y: 99,
         advance: 128,
     }, // U+4E07 '万'
     Glyph {
@@ -84227,7 +84227,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 116,
         h: 111,
         bearing_x: 6,
-        bearing_y: -42,
+        bearing_y: 107,
         advance: 128,
     }, // U+4E0A '上'
     Glyph {
@@ -84235,7 +84235,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 115,
         h: 110,
         bearing_x: 7,
-        bearing_y: -50,
+        bearing_y: 99,
         advance: 128,
     }, // U+4E0B '下'
     Glyph {
@@ -84243,7 +84243,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 118,
         h: 110,
         bearing_x: 5,
-        bearing_y: -50,
+        bearing_y: 99,
         advance: 128,
     }, // U+4E0D '不'
     Glyph {
@@ -84251,7 +84251,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 104,
         h: 120,
         bearing_x: 12,
-        bearing_y: -40,
+        bearing_y: 109,
         advance: 128,
     }, // U+4E2D '中'
     Glyph {
@@ -84259,7 +84259,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 122,
         h: 121,
         bearing_x: 3,
-        bearing_y: -39,
+        bearing_y: 110,
         advance: 128,
     }, // U+4E3E '举'
     Glyph {
@@ -84267,7 +84267,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 106,
         h: 117,
         bearing_x: 9,
-        bearing_y: -42,
+        bearing_y: 107,
         advance: 128,
     }, // U+4E61 '乡'
     Glyph {
@@ -84275,7 +84275,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 115,
         h: 110,
         bearing_x: 7,
-        bearing_y: -50,
+        bearing_y: 99,
         advance: 128,
     }, // U+4E91 '云'
     Glyph {
@@ -84283,7 +84283,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 121,
         h: 113,
         bearing_x: 4,
-        bearing_y: -45,
+        bearing_y: 104,
         advance: 128,
     }, // U+4EBA '人'
     Glyph {
@@ -84291,7 +84291,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 124,
         h: 119,
         bearing_x: 2,
-        bearing_y: -41,
+        bearing_y: 108,
         advance: 128,
     }, // U+4F4E '低'
     Glyph {
@@ -84299,7 +84299,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 125,
         h: 118,
         bearing_x: 1,
-        bearing_y: -40,
+        bearing_y: 109,
         advance: 128,
     }, // U+4F9D '依'
     Glyph {
@@ -84307,7 +84307,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 119,
         h: 120,
         bearing_x: 4,
-        bearing_y: -40,
+        bearing_y: 109,
         advance: 128,
     }, // U+5149 '光'
     Glyph {
@@ -84315,7 +84315,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 120,
         h: 112,
         bearing_x: 4,
-        bearing_y: -48,
+        bearing_y: 101,
         advance: 128,
     }, // U+5165 '入'
     Glyph {
@@ -84323,7 +84323,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 116,
         h: 120,
         bearing_x: 6,
-        bearing_y: -40,
+        bearing_y: 109,
         advance: 128,
     }, // U+524D '前'
     Glyph {
@@ -84331,7 +84331,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 116,
         h: 118,
         bearing_x: 6,
-        bearing_y: -42,
+        bearing_y: 107,
         advance: 128,
     }, // U+5343 '千'
     Glyph {
@@ -84339,7 +84339,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 116,
         h: 121,
         bearing_x: 6,
-        bearing_y: -40,
+        bearing_y: 109,
         advance: 128,
     }, // U+53BB '去'
     Glyph {
@@ -84347,7 +84347,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 113,
         h: 111,
         bearing_x: 7,
-        bearing_y: -49,
+        bearing_y: 100,
         advance: 128,
     }, // U+53EA '只'
     Glyph {
@@ -84355,7 +84355,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 113,
         h: 118,
         bearing_x: 9,
-        bearing_y: -41,
+        bearing_y: 108,
         advance: 128,
     }, // U+557C '啼'
     Glyph {
@@ -84363,7 +84363,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 117,
         h: 119,
         bearing_x: 4,
-        bearing_y: -40,
+        bearing_y: 109,
         advance: 128,
     }, // U+5728 '在'
     Glyph {
@@ -84371,7 +84371,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 120,
         h: 116,
         bearing_x: 4,
-        bearing_y: -40,
+        bearing_y: 109,
         advance: 128,
     }, // U+5730 '地'
     Glyph {
@@ -84379,7 +84379,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 117,
         h: 120,
         bearing_x: 3,
-        bearing_y: -40,
+        bearing_y: 109,
         advance: 128,
     }, // U+58F0 '声'
     Glyph {
@@ -84387,7 +84387,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 120,
         h: 120,
         bearing_x: 4,
-        bearing_y: -40,
+        bearing_y: 109,
         advance: 128,
     }, // U+5904 '处'
     Glyph {
@@ -84395,7 +84395,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 113,
         h: 120,
         bearing_x: 8,
-        bearing_y: -40,
+        bearing_y: 109,
         advance: 128,
     }, // U+591A '多'
     Glyph {
@@ -84403,7 +84403,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 122,
         h: 120,
         bearing_x: 3,
-        bearing_y: -40,
+        bearing_y: 109,
         advance: 128,
     }, // U+591C '夜'
     Glyph {
@@ -84411,7 +84411,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 115,
         h: 118,
         bearing_x: 7,
-        bearing_y: -41,
+        bearing_y: 108,
         advance: 128,
     }, // U+5934 '头'
     Glyph {
@@ -84419,7 +84419,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 117,
         h: 112,
         bearing_x: 6,
-        bearing_y: -48,
+        bearing_y: 101,
         advance: 128,
     }, // U+5B50 '子'
     Glyph {
@@ -84427,7 +84427,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 122,
         h: 119,
         bearing_x: 4,
-        bearing_y: -41,
+        bearing_y: 108,
         advance: 128,
     }, // U+5B64 '孤'
     Glyph {
@@ -84435,7 +84435,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 120,
         h: 120,
         bearing_x: 4,
-        bearing_y: -40,
+        bearing_y: 109,
         advance: 128,
     }, // U+5BD2 '寒'
     Glyph {
@@ -84443,7 +84443,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 115,
         h: 112,
         bearing_x: 8,
-        bearing_y: -46,
+        bearing_y: 103,
         advance: 128,
     }, // U+5BFB '寻'
     Glyph {
@@ -84451,7 +84451,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 120,
         h: 120,
         bearing_x: 4,
-        bearing_y: -40,
+        bearing_y: 109,
         advance: 128,
     }, // U+5C11 '少'
     Glyph {
@@ -84459,7 +84459,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 121,
         h: 114,
         bearing_x: 4,
-        bearing_y: -46,
+        bearing_y: 103,
         advance: 128,
     }, // U+5C3D '尽'
     Glyph {
@@ -84467,7 +84467,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 117,
         h: 114,
         bearing_x: 4,
-        bearing_y: -47,
+        bearing_y: 102,
         advance: 128,
     }, // U+5C42 '层'
     Glyph {
@@ -84475,7 +84475,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 102,
         h: 115,
         bearing_x: 13,
-        bearing_y: -43,
+        bearing_y: 106,
         advance: 128,
     }, // U+5C71 '山'
     Glyph {
@@ -84483,7 +84483,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 110,
         h: 120,
         bearing_x: 12,
-        bearing_y: -40,
+        bearing_y: 109,
         advance: 128,
     }, // U+5E08 '师'
     Glyph {
@@ -84491,7 +84491,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 120,
         h: 119,
         bearing_x: 4,
-        bearing_y: -41,
+        bearing_y: 108,
         advance: 128,
     }, // U+5E8A '床'
     Glyph {
@@ -84499,7 +84499,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 124,
         h: 119,
         bearing_x: 2,
-        bearing_y: -40,
+        bearing_y: 109,
         advance: 128,
     }, // U+5F84 '径'
     Glyph {
@@ -84507,7 +84507,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 116,
         h: 111,
         bearing_x: 6,
-        bearing_y: -46,
+        bearing_y: 103,
         advance: 128,
     }, // U+601D '思'
     Glyph {
@@ -84515,7 +84515,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 119,
         h: 120,
         bearing_x: 5,
-        bearing_y: -40,
+        bearing_y: 109,
         advance: 128,
     }, // U+6545 '故'
     Glyph {
@@ -84523,7 +84523,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 85,
         h: 109,
         bearing_x: 22,
-        bearing_y: -49,
+        bearing_y: 100,
         advance: 128,
     }, // U+65E5 '日'
     Glyph {
@@ -84531,7 +84531,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 109,
         h: 115,
         bearing_x: 10,
-        bearing_y: -46,
+        bearing_y: 103,
         advance: 128,
     }, // U+660E '明'
     Glyph {
@@ -84539,7 +84539,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 121,
         h: 120,
         bearing_x: 4,
-        bearing_y: -40,
+        bearing_y: 109,
         advance: 128,
     }, // U+6625 '春'
     Glyph {
@@ -84547,7 +84547,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 120,
         h: 114,
         bearing_x: 4,
-        bearing_y: -46,
+        bearing_y: 103,
         advance: 128,
     }, // U+662F '是'
     Glyph {
@@ -84555,7 +84555,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 115,
         h: 119,
         bearing_x: 9,
-        bearing_y: -41,
+        bearing_y: 108,
         advance: 128,
     }, // U+6653 '晓'
     Glyph {
@@ -84563,7 +84563,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 118,
         h: 113,
         bearing_x: 6,
-        bearing_y: -47,
+        bearing_y: 102,
         advance: 128,
     }, // U+66F4 '更'
     Glyph {
@@ -84571,7 +84571,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 103,
         h: 113,
         bearing_x: 3,
-        bearing_y: -47,
+        bearing_y: 102,
         advance: 128,
     }, // U+6708 '月'
     Glyph {
@@ -84579,7 +84579,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 117,
         h: 116,
         bearing_x: 4,
-        bearing_y: -41,
+        bearing_y: 108,
         advance: 128,
     }, // U+671B '望'
     Glyph {
@@ -84587,7 +84587,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 120,
         h: 119,
         bearing_x: 4,
-        bearing_y: -41,
+        bearing_y: 108,
         advance: 128,
     }, // U+6765 '来'
     Glyph {
@@ -84595,7 +84595,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 122,
         h: 120,
         bearing_x: 3,
-        bearing_y: -40,
+        bearing_y: 109,
         advance: 128,
     }, // U+677E '松'
     Glyph {
@@ -84603,7 +84603,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 121,
         h: 120,
         bearing_x: 4,
-        bearing_y: -40,
+        bearing_y: 109,
         advance: 128,
     }, // U+697C '楼'
     Glyph {
@@ -84611,7 +84611,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 124,
         h: 120,
         bearing_x: 2,
-        bearing_y: -40,
+        bearing_y: 109,
         advance: 128,
     }, // U+6B32 '欲'
     Glyph {
@@ -84619,7 +84619,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 120,
         h: 118,
         bearing_x: 5,
-        bearing_y: -40,
+        bearing_y: 109,
         advance: 128,
     }, // U+6B64 '此'
     Glyph {
@@ -84627,7 +84627,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 118,
         h: 116,
         bearing_x: 5,
-        bearing_y: -42,
+        bearing_y: 107,
         advance: 128,
     }, // U+6C5F '江'
     Glyph {
@@ -84635,7 +84635,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 120,
         h: 117,
         bearing_x: 4,
-        bearing_y: -42,
+        bearing_y: 107,
         advance: 128,
     }, // U+6CB3 '河'
     Glyph {
@@ -84643,7 +84643,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 120,
         h: 119,
         bearing_x: 4,
-        bearing_y: -40,
+        bearing_y: 109,
         advance: 128,
     }, // U+6D41 '流'
     Glyph {
@@ -84651,7 +84651,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 120,
         h: 120,
         bearing_x: 5,
-        bearing_y: -40,
+        bearing_y: 109,
         advance: 128,
     }, // U+6D77 '海'
     Glyph {
@@ -84659,7 +84659,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 119,
         h: 118,
         bearing_x: 5,
-        bearing_y: -42,
+        bearing_y: 107,
         advance: 128,
     }, // U+6DF1 '深'
     Glyph {
@@ -84667,7 +84667,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 120,
         h: 113,
         bearing_x: 4,
-        bearing_y: -47,
+        bearing_y: 102,
         advance: 128,
     }, // U+706D '灭'
     Glyph {
@@ -84675,7 +84675,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 120,
         h: 120,
         bearing_x: 4,
-        bearing_y: -40,
+        bearing_y: 109,
         advance: 128,
     }, // U+72EC '独'
     Glyph {
@@ -84683,7 +84683,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 120,
         h: 119,
         bearing_x: 4,
-        bearing_y: -41,
+        bearing_y: 108,
         advance: 128,
     }, // U+7591 '疑'
     Glyph {
@@ -84691,7 +84691,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 122,
         h: 116,
         bearing_x: 3,
-        bearing_y: -41,
+        bearing_y: 108,
         advance: 128,
     }, // U+767B '登'
     Glyph {
@@ -84699,7 +84699,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 92,
         h: 120,
         bearing_x: 18,
-        bearing_y: -40,
+        bearing_y: 109,
         advance: 128,
     }, // U+767D '白'
     Glyph {
@@ -84707,7 +84707,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 88,
         h: 111,
         bearing_x: 20,
-        bearing_y: -48,
+        bearing_y: 101,
         advance: 128,
     }, // U+76EE '目'
     Glyph {
@@ -84715,7 +84715,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 117,
         h: 113,
         bearing_x: 9,
-        bearing_y: -46,
+        bearing_y: 103,
         advance: 128,
     }, // U+7720 '眠'
     Glyph {
@@ -84723,7 +84723,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 113,
         h: 119,
         bearing_x: 4,
-        bearing_y: -40,
+        bearing_y: 109,
         advance: 128,
     }, // U+77E5 '知'
     Glyph {
@@ -84731,7 +84731,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 110,
         h: 122,
         bearing_x: 9,
-        bearing_y: -39,
+        bearing_y: 110,
         advance: 128,
     }, // U+7A77 '穷'
     Glyph {
@@ -84739,7 +84739,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 118,
         h: 116,
         bearing_x: 5,
-        bearing_y: -40,
+        bearing_y: 109,
         advance: 128,
     }, // U+7AE5 '童'
     Glyph {
@@ -84747,7 +84747,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 118,
         h: 116,
         bearing_x: 3,
-        bearing_y: -40,
+        bearing_y: 109,
         advance: 128,
     }, // U+7B20 '笠'
     Glyph {
@@ -84755,7 +84755,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 119,
         h: 118,
         bearing_x: 4,
-        bearing_y: -39,
+        bearing_y: 110,
         advance: 128,
     }, // U+7EDD '绝'
     Glyph {
@@ -84763,7 +84763,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 120,
         h: 120,
         bearing_x: 4,
-        bearing_y: -40,
+        bearing_y: 109,
         advance: 128,
     }, // U+7FC1 '翁'
     Glyph {
@@ -84771,7 +84771,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 118,
         h: 119,
         bearing_x: 4,
-        bearing_y: -41,
+        bearing_y: 108,
         advance: 128,
     }, // U+8005 '者'
     Glyph {
@@ -84779,7 +84779,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 118,
         h: 120,
         bearing_x: 4,
-        bearing_y: -40,
+        bearing_y: 109,
         advance: 128,
     }, // U+821F '舟'
     Glyph {
@@ -84787,7 +84787,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 120,
         h: 120,
         bearing_x: 3,
-        bearing_y: -40,
+        bearing_y: 109,
         advance: 128,
     }, // U+82B1 '花'
     Glyph {
@@ -84795,7 +84795,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 114,
         h: 119,
         bearing_x: 7,
-        bearing_y: -40,
+        bearing_y: 109,
         advance: 128,
     }, // U+836F '药'
     Glyph {
@@ -84803,7 +84803,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 120,
         h: 120,
         bearing_x: 5,
-        bearing_y: -40,
+        bearing_y: 109,
         advance: 128,
     }, // U+843D '落'
     Glyph {
@@ -84811,7 +84811,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 120,
         h: 120,
         bearing_x: 4,
-        bearing_y: -40,
+        bearing_y: 109,
         advance: 128,
     }, // U+84D1 '蓑'
     Glyph {
@@ -84819,7 +84819,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 113,
         h: 119,
         bearing_x: 9,
-        bearing_y: -41,
+        bearing_y: 108,
         advance: 128,
     }, // U+89C9 '觉'
     Glyph {
@@ -84827,7 +84827,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 116,
         h: 112,
         bearing_x: 6,
-        bearing_y: -48,
+        bearing_y: 101,
         advance: 128,
     }, // U+8A00 '言'
     Glyph {
@@ -84835,7 +84835,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 121,
         h: 119,
         bearing_x: 3,
-        bearing_y: -41,
+        bearing_y: 108,
         advance: 128,
     }, // U+8E2A '踪'
     Glyph {
@@ -84843,7 +84843,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 120,
         h: 116,
         bearing_x: 4,
-        bearing_y: -43,
+        bearing_y: 106,
         advance: 128,
     }, // U+9047 '遇'
     Glyph {
@@ -84851,7 +84851,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 120,
         h: 118,
         bearing_x: 4,
-        bearing_y: -42,
+        bearing_y: 107,
         advance: 128,
     }, // U+91C7 '采'
     Glyph {
@@ -84859,7 +84859,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 116,
         h: 110,
         bearing_x: 6,
-        bearing_y: -46,
+        bearing_y: 103,
         advance: 128,
     }, // U+91CC '里'
     Glyph {
@@ -84867,7 +84867,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 116,
         h: 119,
         bearing_x: 4,
-        bearing_y: -40,
+        bearing_y: 109,
         advance: 128,
     }, // U+9493 '钓'
     Glyph {
@@ -84875,7 +84875,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 106,
         h: 118,
         bearing_x: 11,
-        bearing_y: -42,
+        bearing_y: 107,
         advance: 128,
     }, // U+95EE '问'
     Glyph {
@@ -84883,7 +84883,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 106,
         h: 118,
         bearing_x: 11,
-        bearing_y: -42,
+        bearing_y: 107,
         advance: 128,
     }, // U+95FB '闻'
     Glyph {
@@ -84891,7 +84891,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 113,
         h: 119,
         bearing_x: 10,
-        bearing_y: -41,
+        bearing_y: 108,
         advance: 128,
     }, // U+9690 '隐'
     Glyph {
@@ -84899,7 +84899,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 118,
         h: 120,
         bearing_x: 4,
-        bearing_y: -40,
+        bearing_y: 109,
         advance: 128,
     }, // U+96C0 '雀'
     Glyph {
@@ -84907,7 +84907,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 116,
         h: 110,
         bearing_x: 6,
-        bearing_y: -49,
+        bearing_y: 100,
         advance: 128,
     }, // U+96E8 '雨'
     Glyph {
@@ -84915,7 +84915,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 110,
         h: 114,
         bearing_x: 9,
-        bearing_y: -46,
+        bearing_y: 103,
         advance: 128,
     }, // U+96EA '雪'
     Glyph {
@@ -84923,7 +84923,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 116,
         h: 114,
         bearing_x: 4,
-        bearing_y: -46,
+        bearing_y: 103,
         advance: 128,
     }, // U+971C '霜'
     Glyph {
@@ -84931,7 +84931,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 119,
         h: 119,
         bearing_x: 5,
-        bearing_y: -40,
+        bearing_y: 109,
         advance: 128,
     }, // U+9759 '静'
     Glyph {
@@ -84939,7 +84939,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 120,
         h: 114,
         bearing_x: 5,
-        bearing_y: -46,
+        bearing_y: 103,
         advance: 128,
     }, // U+98CE '风'
     Glyph {
@@ -84947,7 +84947,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 115,
         h: 108,
         bearing_x: 8,
-        bearing_y: -48,
+        bearing_y: 101,
         advance: 128,
     }, // U+98DE '飞'
     Glyph {
@@ -84955,7 +84955,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 112,
         h: 119,
         bearing_x: 6,
-        bearing_y: -40,
+        bearing_y: 109,
         advance: 128,
     }, // U+9E1F '鸟'
     Glyph {
@@ -84963,7 +84963,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 118,
         h: 120,
         bearing_x: 4,
-        bearing_y: -40,
+        bearing_y: 109,
         advance: 128,
     }, // U+9E73 '鹳'
     Glyph {
@@ -84971,7 +84971,7 @@ pub const HERO_TABLE: [Glyph; 119] = [
         w: 115,
         h: 120,
         bearing_x: 7,
-        bearing_y: -40,
+        bearing_y: 109,
         advance: 128,
     }, // U+9EC4 '黄'
 ];

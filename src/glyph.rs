@@ -83,32 +83,55 @@ fn composite_glyph(
     scale_q8: u32,
     alpha: f32,
 ) {
-    let mul = scale_q8 as i32;
-    let bbox_x_q8 = fx + g.bearing_x as i32 * mul;
-    let bbox_y_q8 = fy - g.bearing_y as i32 * mul;
-    let bbox_w_q8 = g.w as i32 * mul;
-    let bbox_h_q8 = g.h as i32 * mul;
+    let mul = scale_q8 as i64;
+    if mul <= 0 {
+        return;
+    }
+    // Screen-space box in Q8 (256 = one screen pixel).
+    let bbox_x_q8 = fx as i64 + g.bearing_x as i64 * mul;
+    let bbox_y_q8 = fy as i64 - g.bearing_y as i64 * mul;
+    let bbox_w_q8 = g.w as i64 * mul;
+    let bbox_h_q8 = g.h as i64 * mul;
     if bbox_w_q8 <= 0 || bbox_h_q8 <= 0 {
         return;
     }
 
     let x0 = (bbox_x_q8 >> 8).max(0) as usize;
     let y0 = (bbox_y_q8 >> 8).max(0) as usize;
-    let x1 = ((bbox_x_q8 + bbox_w_q8) >> 8).min(w as i32).max(0) as usize;
-    let y1 = ((bbox_y_q8 + bbox_h_q8) >> 8).min(h as i32).max(0) as usize;
+    let x1 = (((bbox_x_q8 + bbox_w_q8) >> 8).min(w as i64).max(0)) as usize;
+    let y1 = (((bbox_y_q8 + bbox_h_q8) >> 8).min(h as i64).max(0)) as usize;
     if x0 >= x1 || y0 >= y1 {
         return;
     }
 
-    let (gw, gh) = (g.w as i32, g.h as i32);
+    // The coverage loop below divides by 256 to index *native source* rows.
+    // A destination pixel spans 256 screen-Q8 units, which is 256*256/mul
+    // source-Q8 units — so every bound has to be divided by `mul` before it
+    // can index the source bitmap. Skipping that made each destination pixel
+    // cover exactly one source row regardless of scale, so any glyph drawn
+    // below the bucket's native 128px em rendered as a stretched slice of its
+    // own top edge instead of the whole shape.
+    //
+    // Both bounds are kept as exact numerators over `mul` and divided once per
+    // edge, so the only rounding is a fraction of one 256th of a source pixel.
+    const DEST_STEP_NUM: i64 = 256 * 256; // numerator advance per dest pixel
+    let num_x = -bbox_x_q8 * 256;
+    let num_y = -bbox_y_q8 * 256;
+    let src_w_q8 = bbox_w_q8 * 256 / mul; // == g.w * 256
+    let src_h_q8 = bbox_h_q8 * 256 / mul; // == g.h * 256
+
+    let (gw, gh) = (g.w as i64, g.h as i64);
     let data_base = g.offset as usize;
 
     for sy in y0..y1 {
+        let y0_num = num_y + sy as i64 * DEST_STEP_NUM;
+        let y1_num = y0_num + DEST_STEP_NUM;
         for sx in x0..x1 {
-            let src_x0 = (sx as i32 * 256 - bbox_x_q8).max(0);
-            let src_y0 = (sy as i32 * 256 - bbox_y_q8).max(0);
-            let src_x1 = ((sx as i32 + 1) * 256 - bbox_x_q8).min(bbox_w_q8);
-            let src_y1 = ((sy as i32 + 1) * 256 - bbox_y_q8).min(bbox_h_q8);
+            let x0_num = num_x + sx as i64 * DEST_STEP_NUM;
+            let src_x0 = (x0_num / mul).max(0);
+            let src_y0 = (y0_num / mul).max(0);
+            let src_x1 = ((x0_num + DEST_STEP_NUM) / mul).min(src_w_q8);
+            let src_y1 = (y1_num / mul).min(src_h_q8);
             if src_x0 >= src_x1 || src_y0 >= src_y1 {
                 continue;
             }
@@ -126,14 +149,14 @@ fn composite_glyph(
                 if y_lo >= y_hi {
                     continue;
                 }
-                let ry = (y_hi - y_lo) as i64;
+                let ry = y_hi - y_lo;
                 for ix in ix0..ix1 {
                     let x_lo = src_x0.max(ix * 256);
                     let x_hi = src_x1.min((ix + 1) * 256);
                     if x_lo >= x_hi {
                         continue;
                     }
-                    let rx = (x_hi - x_lo) as i64;
+                    let rx = x_hi - x_lo;
                     let cov = data[data_base + iy as usize * gw as usize + ix as usize];
                     cov_sum += cov as i64 * rx * ry;
                     area += rx * ry;
@@ -169,5 +192,129 @@ mod tests {
     #[test]
     fn glyph_table_size_matches() {
         assert!(GLYPH_COUNT >= FONT_INDEX.len());
+    }
+
+    /// Bearings are "distance from the baseline UP to the top of the ink", so
+    /// a glyph's ink must sit *above* its baseline. A generator that emits the
+    /// negated layout offset instead flips the whole glyph below the baseline.
+    #[test]
+    fn bearing_y_places_ink_above_the_baseline() {
+        for &cp in &[0x8A00u32, 0x5C71, 0x677E, 0x5BFB] {
+            let g = &HERO_TABLE[index_for(cp) as usize];
+            assert!(
+                g.bearing_y > 0,
+                "U+{cp:04X}: bearing_y {} should be positive (up from baseline)",
+                g.bearing_y
+            );
+            assert!(g.bearing_y < HERO_EM_PX as i16);
+            assert!(g.h > 0 && g.w > 0);
+        }
+    }
+
+    const PROBE_W: usize = 400;
+    const PROBE_H: usize = 400;
+    const PROBE_BASELINE: i32 = 300;
+
+    /// Draw a glyph on a blank surface, returning the frame plus the bounding
+    /// box of everything it lit.
+    fn lit_bbox(glyph_idx: u8, scale_q8: u32) -> (Vec<u32>, [usize; 4]) {
+        let mut fb = vec![0u32; PROBE_W * PROBE_H];
+        draw_glyph(
+            &mut fb,
+            PROBE_W,
+            PROBE_H,
+            glyph_idx,
+            0xFF_FFFF,
+            0xFF_FFFF,
+            200 * 256,
+            PROBE_BASELINE * 256,
+            scale_q8,
+            1.0,
+        );
+        let (mut x0, mut y0, mut x1, mut y1) = (PROBE_W, PROBE_H, 0usize, 0usize);
+        for y in 0..PROBE_H {
+            for x in 0..PROBE_W {
+                if fb[y * PROBE_W + x] != 0 {
+                    x0 = x0.min(x);
+                    x1 = x1.max(x);
+                    y0 = y0.min(y);
+                    y1 = y1.max(y);
+                }
+            }
+        }
+        (fb, [x0, y0, x1, y1])
+    }
+
+    /// Every scale must render the *whole* glyph, not a slice of its top edge.
+    ///
+    /// The area sampler divides by 256 to index native source rows, so its
+    /// bounds have to be scaled into source space first. When they weren't, a
+    /// destination pixel always covered exactly one source row and anything
+    /// below the bucket's native em drew only its first `h * scale / 256`
+    /// rows — visibly a handful of horizontal bars instead of a character.
+    #[test]
+    fn scaled_glyphs_render_their_full_extent() {
+        const BANDS: usize = 4;
+        for &ch in &['言', '山', '云', '寻'] {
+            let idx = index_for(ch as u32);
+            let g = &HERO_TABLE[idx as usize];
+            for &scale_q8 in &[256u32, 128, 92, 72, 44] {
+                let mul = scale_q8 as i64;
+                let (fb, bb) = lit_bbox(idx, scale_q8);
+                let [x0, y0, x1, y1] = bb;
+                let n: usize = fb.iter().filter(|&&p| p != 0).count();
+                assert!(n > 0, "{ch} @ {scale_q8}: drew nothing");
+
+                // Ink height/width must track the scale factor, within a pixel
+                // of rounding at either end.
+                let want_h = ((g.h as i64 * mul) as f64 / 256.0).round() as i32;
+                let want_w = ((g.w as i64 * mul) as f64 / 256.0).round() as i32;
+                let got_h = (y1 - y0 + 1) as i32;
+                let got_w = (x1 - x0 + 1) as i32;
+                assert!(
+                    (got_h - want_h).abs() <= 2,
+                    "{ch} @ {scale_q8}: ink height {got_h}, want ~{want_h}"
+                );
+                assert!(
+                    (got_w - want_w).abs() <= 2,
+                    "{ch} @ {scale_q8}: ink width {got_w}, want ~{want_w}"
+                );
+
+                // Ink must sit above the baseline, starting one bearing above and
+                // ending `h - bearing_y` below it (CJK glyphs legitimately dip a
+                // little under the baseline).
+                let want_top =
+                    PROBE_BASELINE - ((g.bearing_y as i64 * mul) as f64 / 256.0).round() as i32;
+                assert!(
+                    (y0 as i32 - want_top).abs() <= 2,
+                    "{ch} @ {scale_q8}: ink top {y0}, want ~{want_top}"
+                );
+                let below = g.h as i64 - g.bearing_y as i64;
+                let want_bottom =
+                    PROBE_BASELINE + ((below.max(0) * mul) as f64 / 256.0).round() as i32;
+                assert!(
+                    (y1 as i32 - want_bottom).abs() <= 2,
+                    "{ch} @ {scale_q8}: ink bottom {y1}, want ~{want_bottom}"
+                );
+
+                // Ink has to reach every part of its own height. A render that
+                // stretched only the glyph's top rows still filled the whole
+                // box, so the extent checks above pass — what gives it away is
+                // that the lower bands come out empty.
+                let span = (y1 - y0 + 1) as f64;
+                for b in 0..BANDS {
+                    let lo = y0 as f64 + span * b as f64 / BANDS as f64;
+                    let hi = y0 as f64 + span * (b + 1) as f64 / BANDS as f64;
+                    let hit = (y0..=y1).any(|y| {
+                        let yf = y as f64;
+                        yf >= lo && yf < hi && (x0..=x1).any(|x| fb[y * PROBE_W + x] != 0)
+                    });
+                    assert!(
+                        hit,
+                        "{ch} @ {scale_q8}: vertical band {b}/{BANDS} of the ink is empty"
+                    );
+                }
+            }
+        }
     }
 }

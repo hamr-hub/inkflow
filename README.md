@@ -53,12 +53,18 @@ src/
 ## 常用
 
 ```bash
-cargo fmt && cargo clippy --release -- -D warnings && cargo build --release
-cargo test --release --lib
+# 全门（与 scripts/pre-push、.github/workflows/ci.yml 同一道）
+cargo fmt --check \
+  && cargo clippy --release --all-targets -- -D warnings \
+  && cargo test --release \
+  && cargo build --release
 
 ./target/release/inkflow --compose-test 12        # 入场→停留→触控→退场
 ./target/release/inkflow --works-gallery          # 五首作品逐句样张
 ./target/release/inkflow --drm-test               # 真机 live loop
+./scripts/refresh-samples.sh                      # 改动墨迹后刷新 README 样帧
 ```
+
+未知 flag 会打印帮助并以退出码 2 退出，不会静默跑一次默认 headless。
 
 `scripts/autoloop.sh`：无人值守周期轮（构建失败则跳过，绝不用旧二进制渲染）。

@@ -1,5 +1,13 @@
 # inkflow 生产验收标准（Production Readiness）
 
+> ⚠️ **本文档描述的是零依赖重写之前的架构**（含 telemetry、ollama、evdev、
+> `fontdata.rs`、五声部 `scene_anim`）。那些模块已移出 `src/`，归档在
+> `legacy/`，因此下文引用的文件、字段和实测数字**不再对应当前代码**。
+> 保留它是为了留住当初的验收口径，不是现状描述。
+>
+> 当前代码结构见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)，
+> 维护者约定见 [AGENTS.md](AGENTS.md)。这份文档待重写。
+
 工艺品本体必须 24h×7 无人值守运行。所有指标用真实证据验证，不接受口头结论。
 
 ## 性能（Jetson Orin Nano 8GB）
