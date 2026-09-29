@@ -18,7 +18,7 @@ pub enum Backend {
 pub struct Surface {
     pub width: u32,
     pub height: u32,
-    pub stride: u32, // pixels per row
+    pub stride: u32, // pixels per row in `pixels`
     pub pixels: Vec<u32>,
     pub backend: Backend,
     // native handle (kept for the lifetime of the surface)
@@ -26,6 +26,61 @@ pub struct Surface {
     pub drm_file: Option<File>,
     pub drm_handle: u32, // GEM handle for the dumb buffer
     pub fb_id: u32,      // DRM framebuffer id (for cleanup)
+    // Persistent write-side mapping. Held for the surface's whole lifetime so
+    // `present` is a plain memcpy instead of mmap+copy+munmap per frame; the
+    // kernel mapping is released in `Drop`.
+    map: Map,
+}
+
+/// A kernel mapping plus the row pitch it expects.
+struct Map {
+    ptr: *mut std::ffi::c_void,
+    len: usize,
+    /// Pixels per row in the mapped region — can exceed `width` when the
+    /// driver pads rows to an alignment boundary.
+    pitch: u32,
+}
+
+impl Map {
+    const NONE: Self = Self {
+        ptr: std::ptr::null_mut(),
+        len: 0,
+        pitch: 0,
+    };
+    fn is_armed(&self) -> bool {
+        !self.ptr.is_null()
+    }
+}
+
+impl Drop for Map {
+    fn drop(&mut self) {
+        if self.is_armed() {
+            unsafe { libc_munmap(self.ptr, self.len) };
+            self.ptr = std::ptr::null_mut();
+            self.len = 0;
+        }
+    }
+}
+
+impl Drop for Surface {
+    fn drop(&mut self) {
+        // Release the GEM dumb buffer so the driver reclaims the pages; the
+        // `Map` field's own `Drop` releases the mmap right after.
+        if self.backend == Backend::DrmDumb && self.drm_handle != 0 {
+            if let Some(d) = &self.drm_file {
+                let mut db: drm_mode_destroy_dumb = unsafe { std::mem::zeroed() };
+                db.handle = self.drm_handle;
+                unsafe {
+                    libc_ioctl(
+                        d.as_raw_fd(),
+                        DRM_IOCTL_MODE_DESTROY_DUMB,
+                        (&mut db as *mut drm_mode_destroy_dumb) as *mut std::ffi::c_void,
+                    )
+                };
+            }
+            self.drm_handle = 0;
+        }
+    }
 }
 
 impl Surface {
@@ -42,10 +97,11 @@ impl Surface {
             drm_file: None,
             drm_handle: 0,
             fb_id: 0,
+            map: Map::NONE,
         }
     }
 
-    pub fn try_framebuffer(width: u32, height: u32, path: &str) -> std::io::Result<Self> {
+    pub fn try_framebuffer(_width: u32, _height: u32, path: &str) -> std::io::Result<Self> {
         let f = OpenOptions::new().read(true).write(true).open(path)?;
         // Query screen info: vscreeninfo tells us xres/yres.
         let mut vinfo: libc_fb_vscreeninfo = unsafe { std::mem::zeroed() };
@@ -73,11 +129,32 @@ impl Surface {
         if r != 0 {
             return Err(std::io::Error::last_os_error());
         }
-        // We treat the fb as 32bpp regardless of what the driver says: re-mmap.
-        let bpp: u32 = 32;
-        let bytes_per_row = sw * (bpp / 8);
-        let map_bytes = (bytes_per_row * sh) as usize;
-        // mmap the framebuffer
+        // The paint path writes packed 0x00RRGGBB `u32`s, so the panel must be
+        // 32 bpp. Anything else (16/24 bpp, packed RGB565, …) has a different
+        // channel order and this renderer cannot drive it — fail loudly rather
+        // than scan out garbage.
+        if vinfo.bits_per_pixel != 32 {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::Unsupported,
+                format!(
+                    "{} is {}bpp; inkflow needs 32bpp",
+                    path, vinfo.bits_per_pixel
+                ),
+            ));
+        }
+        // Drivers pad rows to an alignment boundary, so the mapping pitch can
+        // be wider than `sw` pixels. Honour it instead of assuming contiguity.
+        if finfo.line_length < sw * 4 {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                format!(
+                    "{}: line_length {} shorter than {} px of 32bpp",
+                    path, finfo.line_length, sw
+                ),
+            ));
+        }
+        let pitch = finfo.line_length / 4;
+        let map_bytes = (finfo.line_length as usize) * (sh as usize);
         let ptr = unsafe {
             libc_mmap(
                 std::ptr::null_mut(),
@@ -91,16 +168,16 @@ impl Surface {
         if unsafe { map_failed(ptr) } {
             return Err(std::io::Error::last_os_error());
         }
-        // Copy pixels out of the fb into our Vec, then the caller renders, then we blit back.
+        // `Map` owns the mapping from here on; seed `pixels` from whatever the
+        // panel already shows so the first present blends into live content
+        // instead of flashing black.
+        let map = Map {
+            ptr,
+            len: map_bytes,
+            pitch,
+        };
         let mut pixels = vec![0u32; (sw * sh) as usize];
-        unsafe {
-            std::ptr::copy_nonoverlapping(
-                ptr as *const u8,
-                pixels.as_mut_ptr() as *mut u8,
-                map_bytes,
-            );
-        }
-        let _ = (width, height); // ignore requested dims on real fb
+        copy_rows_from_map(pixels.as_mut_slice(), sw, sh, &map);
         Ok(Self {
             width: sw,
             height: sh,
@@ -111,6 +188,7 @@ impl Surface {
             drm_file: None,
             drm_handle: 0,
             fb_id: 0,
+            map,
         })
     }
 
@@ -152,6 +230,19 @@ impl Surface {
                 );
                 return Err(std::io::Error::last_os_error());
             }
+            if pitch < width {
+                let mut db: drm_mode_destroy_dumb = std::mem::zeroed();
+                db.handle = handle;
+                libc_ioctl(
+                    fd,
+                    DRM_IOCTL_MODE_DESTROY_DUMB,
+                    (&mut db as *mut drm_mode_destroy_dumb) as *mut std::ffi::c_void,
+                );
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    format!("drm dumb pitch {pitch} narrower than width {width}"),
+                ));
+            }
             let map_bytes = (pitch as usize) * (height as usize);
             let ptr = libc_mmap(std::ptr::null_mut(), map_bytes, 3, 1, fd, mb.offset as i64);
             if map_failed(ptr) {
@@ -164,13 +255,14 @@ impl Surface {
                 );
                 return Err(std::io::Error::last_os_error());
             }
+            let map = Map {
+                ptr,
+                len: map_bytes,
+                pitch,
+            };
             // Copy current contents of the dumb buffer into our pixel vec.
             let mut pixels = vec![0u32; (width * height) as usize];
-            std::ptr::copy_nonoverlapping(
-                ptr as *const u8,
-                pixels.as_mut_ptr() as *mut u8,
-                map_bytes.min(pixels.len() * 4),
-            );
+            copy_rows_from_map(pixels.as_mut_slice(), width, height, &map);
             Ok(Self {
                 width,
                 height,
@@ -181,84 +273,77 @@ impl Surface {
                 drm_file: Some(drm),
                 drm_handle: handle,
                 fb_id: 0,
+                map,
             })
         }
     }
 
-    /// Push the in-memory pixels into the underlying framebuffer (if any).
+    /// Push the in-memory pixels into the underlying display (if any).
+    ///
+    /// A no-op for [`Backend::Memory`]. Both hardware backends share one
+    /// persistent mapping taken at open time, so this is a row-by-row memcpy
+    /// with no syscall in the frame loop.
     pub fn present(&self) -> std::io::Result<()> {
-        match self.backend {
-            Backend::Framebuffer => {
-                // Need to mmap again — simpler: write via mmap from our pixel vec back to /dev/fb0.
-                // Since we don't keep the mapping here, just do a one-off mmap+copy.
-                if let Some(f) = &self.fb_file {
-                    let fd = f.as_raw_fd();
-                    let bytes = (self.width * self.height * 4) as usize;
-                    let ptr = unsafe { libc_mmap(std::ptr::null_mut(), bytes, 3, 1, fd, 0) };
-                    if unsafe { map_failed(ptr) } {
-                        return Err(std::io::Error::last_os_error());
-                    }
-                    unsafe {
-                        std::ptr::copy_nonoverlapping(
-                            self.pixels.as_ptr() as *const u8,
-                            ptr as *mut u8,
-                            bytes,
-                        );
-                        libc_munmap(ptr, bytes);
-                    }
-                }
-                Ok(())
-            }
-            Backend::DrmDumb => {
-                // Similar: mmap and copy.
-                if let Some(d) = &self.drm_file {
-                    let fd = d.as_raw_fd();
-                    let mut mb = unsafe { std::mem::zeroed::<drm_mode_map_dumb>() };
-                    mb.handle = self.drm_handle;
-                    let r = unsafe {
-                        libc_ioctl(
-                            fd,
-                            DRM_IOCTL_MODE_MAP_DUMB,
-                            (&mut mb as *mut drm_mode_map_dumb) as *mut std::ffi::c_void,
-                        )
-                    };
-                    if r != 0 {
-                        return Err(std::io::Error::last_os_error());
-                    }
-                    let bytes = (self.stride * self.height * 4) as usize;
-                    let ptr = unsafe {
-                        libc_mmap(std::ptr::null_mut(), bytes, 3, 1, fd, mb.offset as i64)
-                    };
-                    if unsafe { map_failed(ptr) } {
-                        return Err(std::io::Error::last_os_error());
-                    }
-                    unsafe {
-                        std::ptr::copy_nonoverlapping(
-                            self.pixels.as_ptr() as *const u8,
-                            ptr as *mut u8,
-                            bytes,
-                        );
-                        libc_munmap(ptr, bytes);
-                    }
-                }
-                Ok(())
-            }
-            Backend::Memory => Ok(()),
+        if self.backend == Backend::Memory {
+            return Ok(());
         }
+        if !self.map.is_armed() {
+            return Err(std::io::Error::other("surface has no display mapping"));
+        }
+        copy_rows_to_map(&self.pixels, self.width, self.height, &self.map);
+        Ok(())
     }
 
     /// Write the pixels as 24-bit RGB to a PNG file at `path`.
     pub fn write_png(&self, path: &str) -> std::io::Result<()> {
-        let mut rgb = Vec::with_capacity(self.pixels.len() * 3);
-        for &p in &self.pixels {
-            rgb.push(((p >> 16) & 0xFF) as u8);
-            rgb.push(((p >> 8) & 0xFF) as u8);
-            rgb.push((p & 0xFF) as u8);
+        let mut rgb = vec![0u8; self.pixels.len() * 3];
+        for (src, dst) in self.pixels.iter().zip(rgb.chunks_exact_mut(3)) {
+            dst[0] = (src >> 16) as u8;
+            dst[1] = (src >> 8) as u8;
+            dst[2] = *src as u8;
         }
         let bytes = crate::png::encode_rgb(self.width, self.height, &rgb);
         let mut f = File::create(path)?;
         f.write_all(&bytes)?;
         f.flush()
+    }
+}
+
+/// Copy `h` rows of `w` pixels from the mapping into a packed row-major vec.
+/// A no-op when the mapping is unarmed or its pitch doesn't cover the rows.
+fn copy_rows_from_map(pixels: &mut [u32], w: u32, h: u32, map: &Map) {
+    if !map.is_armed() || map.pitch < w {
+        return;
+    }
+    let row_bytes = (w as usize) * 4;
+    let spare = ((map.pitch - w) as usize) * 4;
+    let base = map.ptr as *const u8;
+    for y in 0..h as usize {
+        // SAFETY: the mapping covers `map.len >= (pitch * h) * 4` bytes and
+        // `pixels` holds `w * h` u32s, so both row spans stay in bounds.
+        unsafe {
+            let src = base.add(y * (row_bytes + spare));
+            let dst = pixels.as_mut_ptr().add(y * w as usize);
+            std::ptr::copy_nonoverlapping(src, dst as *mut u8, row_bytes);
+        }
+    }
+}
+
+/// Copy `h` rows of `w` packed pixels out to the mapping, honouring its pitch.
+fn copy_rows_to_map(pixels: &[u32], w: u32, h: u32, map: &Map) {
+    if !map.is_armed() || map.pitch < w {
+        return;
+    }
+    let row_bytes = (w as usize) * 4;
+    let spare = ((map.pitch - w) as usize) * 4;
+    let base = map.ptr as *mut u8;
+    for y in 0..h as usize {
+        // SAFETY: same bound argument as `copy_rows_from_map`, reversed.
+        unsafe {
+            let dst = base.add(y * (row_bytes + spare));
+            let src = pixels.as_ptr().add(y * w as usize);
+            std::ptr::copy_nonoverlapping(src as *const u8, dst, row_bytes);
+        }
     }
 }
 

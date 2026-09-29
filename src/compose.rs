@@ -118,18 +118,18 @@ fn paint_supporting_slot(
     if alpha < 0.01 {
         return;
     }
-    let chars: Vec<char> = slot.phrase.text.chars().collect();
-    if chars.is_empty() {
+    let n_chars = slot.phrase.text.chars().count();
+    if n_chars == 0 {
         return;
     }
-    let (pen_x, baseline, scale_q8) = place_slot(&slot.def, w, h, chars.len());
+    let (pen_x, baseline, scale_q8) = place_slot(&slot.def, w, h, n_chars);
     let (dx, dy) = slot.drift(time);
     let (pen_x, baseline) = (pen_x + dx as i32, baseline + dy as i32);
     let breath = 1.0 + 0.25 * pulse * (1.0 - slot.def.shadow_mix);
     let alpha = (alpha * breath).clamp(0.0, 1.0);
     let ink = stroke_color(&slot.def, warmth);
 
-    for (i, &ch) in chars.iter().enumerate() {
+    for (i, ch) in slot.phrase.text.chars().enumerate() {
         let glyph_idx = glyph::index_for(ch as u32);
         let advance = glyph::HERO_TABLE[glyph_idx as usize].advance as i32 * scale_q8 as i32;
         glyph::draw_glyph(
@@ -159,11 +159,11 @@ pub fn paint_hero(
     time: f32,
     def: &SlotDef,
 ) {
-    let chars: Vec<char> = phrase.text.chars().collect();
-    if chars.is_empty() {
+    let n_chars = phrase.text.chars().count();
+    if n_chars == 0 {
         return;
     }
-    let (pen_x, baseline, base_scale) = place_slot(def, w, h, chars.len());
+    let (pen_x, baseline, base_scale) = place_slot(def, w, h, n_chars);
     let dx = def.drift_x * (time * def.drift_fx + def.drift_phase).sin();
     let dy = def.drift_y * (time * def.drift_fy + def.drift_phase * 1.3).cos();
     let (pen_x, baseline) = (pen_x + dx as i32, baseline + dy as i32);
@@ -204,10 +204,11 @@ pub fn paint_hero(
     let scale = ((base_scale as f32) * overshoot).round() as u32;
 
     let total_delay = 0.4_f32;
-    let per_char = (1.0 - total_delay) / chars.len() as f32;
-    for (i, &ch) in chars.iter().enumerate() {
+    let n_chars_f = n_chars as f32;
+    let per_char = (1.0 - total_delay) / n_chars_f;
+    for (i, ch) in phrase.text.chars().enumerate() {
         // Rest ghost stays a complete word; entrance/exit dissolve per char.
-        let stagger = total_delay * i as f32 / chars.len() as f32;
+        let stagger = total_delay * i as f32 / n_chars_f;
         let local = if matches!(beat.phase, Phase::Rest) {
             ep
         } else {
@@ -317,12 +318,12 @@ fn paint_work_title(
     pulse: f32,
     time: f32,
 ) {
-    let chars: Vec<char> = title.chars().collect();
-    if chars.is_empty() {
+    let n_chars = title.chars().count();
+    if n_chars == 0 {
         return;
     }
     let target_px = 22.0_f32;
-    let total_w = (target_px * 1.06) as i32 * (chars.len() as i32 - 1) + target_px as i32;
+    let total_w = (target_px * 1.06) as i32 * (n_chars as i32 - 1) + target_px as i32;
     let dx = 1.6 * (time * 0.11 + 3.7).sin();
     let dy = 1.0 * (time * 0.15 + 4.8).cos();
     let pen_x = (w as i32 - total_w) / 2 + dx as i32;
@@ -340,7 +341,7 @@ fn paint_work_title(
     let scale = ((target_px / glyph::HERO_EM_PX as f32) * 256.0).round() as u32;
 
     let mut pen = pen_x * 256;
-    for &ch in &chars {
+    for ch in title.chars() {
         let glyph_idx = glyph::index_for(ch as u32);
         if glyph_idx != 0 {
             glyph::draw_glyph(

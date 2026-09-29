@@ -31,16 +31,6 @@ fn crc32(buf: &[u8]) -> u32 {
     c ^ 0xffff_ffff
 }
 
-fn adler32(buf: &[u8]) -> u32 {
-    let mut a: u32 = 1;
-    let mut b: u32 = 0;
-    for &v in buf {
-        a = (a + v as u32) % 65_521;
-        b = (b + a) % 65_521;
-    }
-    (b << 16) | a
-}
-
 struct Writer {
     out: Vec<u8>,
 }
@@ -123,8 +113,19 @@ pub fn encode_rgb(width: u32, height: u32, pixels: &[u8]) -> Vec<u8> {
         }
         row += rows_this_block;
     }
-    // Adler32 checksum
-    let a = adler32(&zbuf[2..]);
+    // Adler32 over the *uncompressed* filtered scanlines only (no DEFLATE
+    // block headers — including them makes strict decoders fail the check).
+    let mut adler_a: u32 = 1;
+    let mut adler_b: u32 = 0;
+    for r in 0..height as usize {
+        adler_b = (adler_b + adler_a) % 65_521; // filter byte 0 still shifts b
+        let off = r * stride;
+        for &v in &pixels[off..off + stride] {
+            adler_a = (adler_a + v as u32) % 65_521;
+            adler_b = (adler_b + adler_a) % 65_521;
+        }
+    }
+    let a = (adler_b << 16) | adler_a;
     zbuf.extend_from_slice(&a.to_be_bytes());
 
     w.chunk(b"IDAT", &zbuf);

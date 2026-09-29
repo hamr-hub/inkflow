@@ -3,7 +3,9 @@
 //! Zero-dep Rust, designed to run either on a Linux DRM dumb buffer or as a
 //! headless harness that writes PNGs for verification.
 
+pub mod background;
 pub mod color;
+pub mod compose;
 pub mod glyph;
 #[allow(non_snake_case)]
 pub mod glyph_table;

@@ -6,7 +6,7 @@ set -uo pipefail
 
 REPO="$HOME/codespace/personal/inkflow"
 cd "$REPO" || exit 0
-export PATH="$HOME/.nvm/versions/node/v22.22.1/bin:$PATH"
+export PATH="$HOME/.cargo/bin:$HOME/.nvm/versions/node/v22.22.1/bin:$PATH"
 export CARGO_TARGET_DIR=/mnt/ssd/codespace/.cargo-target/inkflow-merge
 LOG=state/autoloop.log
 mkdir -p state
@@ -29,16 +29,21 @@ if ! flock -n 9; then echo "skip: locked" >> "$LOG"; exit 0; fi
 git fetch origin main >> "$LOG" 2>&1 || true
 git merge --ff-only origin/main >> "$LOG" 2>&1 || echo "note: not ff-only, agent resolves" >> "$LOG"
 
-# fresh render evidence for the agent to look at (build first so the
-# harness exists in the custom target dir)
-cargo build --release >> "$LOG" 2>&1 || true
+# Fresh render evidence. Never render with a stale binary: a failed build
+# skips the turn so old compositions can't overwrite current evidence.
+if ! cargo build --release >> "$LOG" 2>&1; then
+  echo "skip: build failed — no render, no agent turn" >> "$LOG"
+  exit 0
+fi
 "$CARGO_TARGET_DIR/release/inkflow" --compose-test 12 >> "$LOG" 2>&1 || true
 
 cat > state/claude_prompt.txt <<'EOF'
 You are the unattended curator of "inkflow" — a zero-dependency Rust binary
-that is also a generative art piece. Its current architecture is a small
-library (src/lib.rs: color / glyph / phrase / rhythm / scene / surface / png)
-plus a harness binary (src/main.rs) that renders compositions.
+that is also a generative art piece. Its architecture is a small library
+(src/lib.rs: background / color / compose / glyph / phrase / rhythm / scene /
+surface / png) plus a harness binary (src/main.rs) that renders compositions.
+Every theme is pinned to one complete five-char Tang quatrain (five works
+total in phrase::POEM_GROUPS); never break a work into fragment pools.
 
 Read in order each turn:
   1. ART_DIRECTION.md   ← binding visual intent; READ FIRST.
@@ -66,6 +71,12 @@ If the gate passes:
   git commit -m "art: <one line — how this makes the piece more like itself>"
 The outer loop pushes. If the gate fails, revert your edits
 (git checkout -- .) and append what failed to state/autoloop.log. Stay minimal.
+
+Discipline — violations must be reverted:
+  - one small change per turn; no sweeping rewrites;
+  - comments are short and factual. NEVER write multi-paragraph or
+    history-recapping comment blocks; never justify a change at length;
+  - commit message is one line only.
 EOF
 
 timeout 780 claude --dangerously-skip-permissions --print \
