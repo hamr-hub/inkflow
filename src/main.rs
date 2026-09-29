@@ -246,7 +246,10 @@ fn render_frame(
     let (w, h) = (surf.width, surf.height);
     let tempo = engine.current_tempo();
     let pulse = tempo.pulse;
-    let warmth = tempo.warmth;
+    // Slow ambient breath — the warmth lifts and falls on the engine's
+    // own ~15.7 s sine so the sky and halo warm and cool between phrases.
+    let breath = 0.06 * (engine.time * 0.4).sin();
+    let warmth = (tempo.warmth + breath).clamp(0.0, 1.0);
 
     // 1) advance rhythm first so we can detect a fresh beat.
     let beat = engine.advance(dt);

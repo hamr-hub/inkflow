@@ -120,6 +120,9 @@ pub struct Engine {
     pub beat: Option<Beat>,
     /// Total beats seen so far.
     pub beat_count: u64,
+    /// Total elapsed time in seconds; the harness can read this to drive
+    /// slow ambient cycles (the air around the focal line breathes on it).
+    pub time: f32,
 }
 
 impl Default for Engine {
@@ -134,6 +137,7 @@ impl Engine {
             tempo: Tempo::default(),
             beat: None,
             beat_count: 0,
+            time: 0.0,
         }
     }
 
@@ -148,6 +152,7 @@ impl Engine {
     /// rendered at a low "ghost" alpha between phrases — the page never
     /// loses its anchor.
     pub fn advance(&mut self, dt: f32) -> Option<Beat> {
+        self.time += dt;
         self.tempo.relax(dt);
         match self.beat {
             None => {

@@ -130,17 +130,45 @@ fn paint_moon(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f32) {
     let halo_peak = 0.14 * (1.0 + pulse * 0.05);
     let sky_peak = 0.085 * (1.0 + pulse * 0.03);
 
-    let extent = (SKY_SIGMA * 2.6) as i32;
+    // The glow is purely radial, so evaluate its profile once per frame instead
+    // of two exp() per pixel. GLOW_MIN is under half an 8-bit level at this
+    // depth of sky, where the early-out's step is otherwise a visible ring.
+    const GLOW_MIN: f32 = 0.0003;
+    const GLOW_R: usize = (SKY_SIGMA * 4.0) as usize + 2;
+    let win_lo = SKY_SIGMA * 2.0;
+    let win_hi = (GLOW_R - 1) as f32;
+    let mut glow_sky = [0.0_f32; GLOW_R];
+    let mut glow_halo = [0.0_f32; GLOW_R];
+    for (i, (sky, halo)) in glow_sky.iter_mut().zip(glow_halo.iter_mut()).enumerate() {
+        let d = i as f32;
+        let win = 1.0 - color::smootherstep((d - win_lo) / (win_hi - win_lo));
+        *sky = (-0.5 * (d / SKY_SIGMA).powi(2)).exp() * sky_peak * win;
+        *halo = (-0.5 * (d / HALO_SIGMA).powi(2)).exp() * halo_peak * win;
+    }
+    // Past the last ring that still carries light there is nothing to blend, so
+    // walk only that far — the window fades to zero well before the table ends.
+    let mut reach = 0usize;
+    for i in 0..GLOW_R {
+        if glow_sky[i] + glow_halo[i] > GLOW_MIN {
+            reach = i;
+        }
+    }
+    let extent = reach as i32;
+    let reach2 = (reach as f32 + 1.0) * (reach as f32 + 1.0);
+
     for oy in -extent..=extent {
         for ox in -extent..=extent {
             let (xx, yy) = (mcx_i + ox, mcy_i + oy);
             if xx < 0 || yy < 0 || xx >= w as i32 || yy >= h as i32 {
                 continue;
             }
-            let d = ((ox * ox + oy * oy) as f32).sqrt();
-
-            let sky = (-0.5 * (d / SKY_SIGMA).powi(2)).exp() * sky_peak;
-            let halo = (-0.5 * (d / HALO_SIGMA).powi(2)).exp() * halo_peak;
+            // Reject the far corners on the squared distance alone: most of
+            // the square is outside the disc, and this skips its sqrt.
+            let d2 = ox * ox + oy * oy;
+            if d2 as f32 >= reach2 {
+                continue;
+            }
+            let d = (d2 as f32).sqrt();
 
             // Limb-darkened body: k = 1 - (d/R)^2, zero smoothly at the edge.
             let u = d / BODY_R;
@@ -149,20 +177,31 @@ fn paint_moon(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f32) {
             let term = 1.0 + 0.12 * (oy as f32 / BODY_R).clamp(-1.0, 1.0);
             let body = body_k * body_peak * term;
             let body_warm = ((oy as f32 / BODY_R) * 0.10).max(0.0);
+            let body_cool = ((-oy as f32 / BODY_R) * 0.10).max(0.0);
+
+            // The table covers every d the loop can reach; the +2 in GLOW_R
+            // keeps the corner distances (up to extent*sqrt2) in range.
+            let di = d as usize;
+            let (sky, halo) = if di < GLOW_R {
+                (glow_sky[di], glow_halo[di])
+            } else {
+                (0.0, 0.0)
+            };
 
             let a = sky + halo + body;
-            if a <= 0.003 {
+            if a <= GLOW_MIN {
                 continue;
             }
             let idx = (yy as u32 * w + xx as u32) as usize;
-            if sky > 0.003 {
+            if sky > GLOW_MIN {
                 fb[idx] = blend_add_lin(fb[idx], color::star::COOL, sky);
             }
-            if halo > 0.003 {
+            if halo > GLOW_MIN {
                 fb[idx] = blend_add_lin(fb[idx], color::ink::WARM, halo);
             }
-            if body > 0.003 {
-                let body_color = mix(color::ink::WARM, color::drop::AMBER, body_warm);
+            if body > GLOW_MIN {
+                let mut body_color = mix(color::ink::WARM, color::drop::AMBER, body_warm);
+                body_color = mix(body_color, color::star::COOL, body_cool);
                 fb[idx] = blend_add_lin(fb[idx], body_color, body);
             }
         }
@@ -200,4 +239,81 @@ fn mix(a: u32, b: u32, t: f32) -> u32 {
         (color::g(a) as f32 + (color::g(b) as f32 - color::g(a) as f32) * t) as u8,
         (color::b(a) as f32 + (color::b(b) as f32 - color::b(a) as f32) * t) as u8,
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::color::{b, g, r};
+
+    fn luma(fb: &[u32], w: u32, x: i32, y: i32) -> f32 {
+        let p = fb[(y as u32 * w + x as u32) as usize];
+        (r(p) as f32 + g(p) as f32 + b(p) as f32) / 3.0
+    }
+
+    /// The anchor the painter actually uses, phase drift included.
+    fn anchor(scene: &Scene) -> (i32, i32) {
+        (
+            (scene.moon_x + scene.moon_phase.sin() * 3.0) as i32,
+            (scene.moon_y + (scene.moon_phase * 0.6).cos() * 1.5) as i32,
+        )
+    }
+
+    fn sky(w: u32, h: u32) -> (Scene, Vec<u32>) {
+        let scene = Scene::new(w, h);
+        let mut fb = vec![0u32; (w * h) as usize];
+        paint_background(&mut fb, w, h, &scene, 0.0, 0.0);
+        (scene, fb)
+    }
+
+    /// The module doc claims every falloff is smooth, with no hard circle
+    /// cutoff. The moon's glow used to break that: the early-out and the
+    /// per-layer guards cut at 0.003 of linear light, and where this sky sits
+    /// one 8-bit level is only ~0.0006, so the outermost painted ring was a
+    /// three-to-five level cliff and a circle appeared around the moon.
+    ///
+    /// Only the tail is checked. Just outside the disc the halo genuinely falls
+    /// off about two levels per pixel, which is the fall-off working; the seam
+    /// was a step *after* a long flat approach, so start past the halo.
+    #[test]
+    fn moon_glow_has_no_hard_circular_cutoff() {
+        let (w, h) = (640u32, 360u32);
+        let (scene, fb) = sky(w, h);
+        let (cx, cy) = anchor(&scene);
+
+        for r in 110..200 {
+            let step = (luma(&fb, w, cx - r, cy) - luma(&fb, w, cx - r - 1, cy)).abs();
+            assert!(
+                step < 2.0,
+                "glow jumps {step:.1} levels at r={r} — the disc is being cut, not faded"
+            );
+        }
+    }
+
+    /// The fix that removed the seam also shortened the tail. A moon whose glow
+    /// stopped early would pass the test above while losing the air it sits in,
+    /// so pin the reach: well outside the disc, the sky is still lifted.
+    #[test]
+    fn moon_glow_still_lights_the_air_around_itself() {
+        let (w, h) = (640u32, 360u32);
+        let (scene, fb) = sky(w, h);
+        let (cx, cy) = anchor(&scene);
+
+        // The same sky with the moon parked off-canvas, for reference.
+        let mut dark = Scene::new(w, h);
+        dark.moon_x = -10_000.0;
+        let mut plain = vec![0u32; (w * h) as usize];
+        paint_background(&mut plain, w, h, &dark, 0.0, 0.0);
+
+        let lit = luma(&fb, w, cx - 150, cy);
+        let unlit = luma(&plain, w, cx - 150, cy);
+        assert!(
+            lit > unlit,
+            "at r=150 the glow is no brighter than a moonless sky ({lit:.1} vs {unlit:.1})"
+        );
+        assert!(
+            luma(&fb, w, cx - 40, cy) > lit,
+            "glow does not fall off outward"
+        );
+    }
 }

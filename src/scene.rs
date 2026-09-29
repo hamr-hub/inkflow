@@ -165,16 +165,18 @@ impl Composition {
                 fade_out: 0.55,
                 stagger: 0.0,
             },
-            // Subtitle — closest echo, brightest of the supporting strokes.
+            // Closest echo to the hero, set at a quiet weight so the focal
+            // voice stands alone and the three supporting strokes read as
+            // whispers of the same poem rather than a title-and-subtitle pair.
             SlotDef {
                 role: SlotRole::Support,
                 x_frac: 0.50,
-                y_frac: 0.66,
+                y_frac: 0.58,
                 align: Align::Center,
                 em_scale: 0.369,
                 target_w_frac: 0.0,
                 max_chars: 7,
-                alpha: 0.62,
+                alpha: 0.30,
                 shadow_mix: 0.18,
                 drift_x: 3.0,
                 drift_y: 1.5,
@@ -208,15 +210,16 @@ impl Composition {
                 fade_out: 0.7,
                 stagger: 0.34,
             },
-            // Lower-left echo — faintest and stillest voice; paired with the
-            // upper-right echo in motion (both ±~1 px) so neither competes
-            // with the focal line for attention.
+            // Lower-left echo — faintest voice, paired with the upper-right
+            // echo in motion (both ±~1 px) so neither competes with the focal
+            // line for attention. Sized just large enough that the five
+            // characters hold together without raising the alpha.
             SlotDef {
                 role: SlotRole::Support,
                 x_frac: 0.18,
                 y_frac: 0.74,
                 align: Align::Left,
-                em_scale: 0.22,
+                em_scale: 0.245,
                 target_w_frac: 0.0,
                 max_chars: 5,
                 alpha: 0.4305,
@@ -552,7 +555,15 @@ mod tests {
         assert!(a1 > a0);
         c.step(20.0, 0, theme);
         let a2 = c.slots[1].alpha_now();
-        assert!(a2 > 0.3);
+        // After settling, alpha stays substantial relative to the slot's
+        // declared peak — the ramp settles around 50 % of lifetime in
+        // pinned mode, where both fade-in and fade-out are saturated.
+        let max = c.slots[1].def.alpha;
+        assert!(
+            a2 > max * 0.5,
+            "alpha settled to {a2} but expected > {} (half of max {max})",
+            max * 0.5
+        );
     }
 
     #[test]
