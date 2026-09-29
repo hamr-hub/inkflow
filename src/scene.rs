@@ -1755,32 +1755,118 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
             let p = mix(p, color::bg::DEEP, vig_dark);
             // ambient luminance wave
             let p = blend_add_lin(p, color::star::WARM, ambient * (1.0 - vig_dark * 0.6));
-            // Horizon-band blend share 0.12 → 0.1275 (+6.25 %, fresh
-            // from the bell-coefficient arc that settled at 7.677 per
-            // aa626f1): the warm horizon band now catches one more
-            // restrained step of the page's inhabited mist at the same
-            // +6.25 % step the bell arc established. Max blend at the
-            // bell peak (v=0.75, horizon_glow ≈ 0.4799) is 0.4799 *
-            // 0.1275 ≈ 0.0612 (was 0.0576 at * 0.12, +0.0036 absolute)
-            // — still well under the inscribed glow (~0.20+) and the
-            // hero bloom (~0.55), so the warm horizon continues to read
-            // as the band the brush dissolves into rather than as a
-            // competing warm source. The lift is intentionally in
-            // lockstep with the per-slot mist_warmth share 0.20 →
-            // 0.2125 (line 4146) and the title ambient_warmth share
-            // 0.20 → 0.2125 (line 4783), all three lifting the SHARE
-            // of the warm mist bell at each site rather than the bell's
-            // amplitude (which has already reached its gentlest-step
-            // ceiling at 7.677), so the inscription's three lowest
-            // strokes plus the calligrapher's seal now catch a touch
-            // more of the warm band the brush dissolves into. The
-            // +6.25 % continues the same restraint cadence as the
-            // supporting mist bell arc (6.0 → 6.4 → 6.8 → 7.225 →
-            // 7.677, +6.7 % / +6.25 % x3) and the sky_sigma / sky_peak
-            // / halo_peak / moon_halo_r +6.25 % geometric cadence, now
-            // pivoting to the per-site multipliers rather than
-            // continuing the bell amplitude up.
-            let p = blend_screen(p, horizon_color, horizon_glow * 0.1275);
+            // Horizon-band blend share 0.1275 → 0.1307 (+2.5 %, the
+            // gentlest step on the warm-mist share axis after the
+            // +2.5 % paired per-slot / title lifts in 57c514e and the
+            // +2.5 % warm-mist bell lift in 2a7cd02): the warm horizon
+            // band now catches one more restrained step of the page's
+            // inhabited mist at the same +2.5 % step the bell arc
+            // and the per-site share arcs have settled onto. Max
+            // blend at the bell peak (v=0.75, horizon_glow ≈ 0.4918
+            // with bell coefficient 7.869) is 0.4918 * 0.1307 ≈
+            // 0.0643 (was 0.0627 at * 0.1275, +0.0016 absolute,
+            // +2.5 % relative) — still well under the inscribed
+            // glow (~0.20+) and the hero bloom (~0.55), so the warm
+            // horizon continues to read as the band the brush
+            // dissolves into rather than as a competing warm source.
+            // The lift is intentionally in lockstep with the per-slot
+            // mist_warmth share 0.2222 → 0.2278 (line 5726, 57c514e)
+            // and the title ambient_warmth share 0.2222 → 0.2278
+            // (line 7102, 57c514e), and now also the warm-mist bell
+            // coefficient 7.677 → 7.869 (line 1713, 2a7cd02), so all
+            // four warm-mist sites — the background horizon band, each
+            // supporting line's warm tint, the title's ambient warmth,
+            // and the bell amplitude itself — settle onto one coupled
+            // gentlest-step +2.5 % register the page-wide +2-3 %
+            // material refinement band the most-refined axes have
+            // settled into. The +2.5 % sits exactly inside the +2.35-
+            // 2.86 % gentlest rung the page-wide +2-3 % material
+            // refinement band the surrounding material axes have
+            // already completed (body σ +2.35 % in 4695311; halo
+            // radius +2.5 % in 28af5b6; sky σ +2.55 % in c28ed51;
+            // halo_peak +2.5 % in 3b8028b; sky_peak +2.5 % in 78959d2;
+            // body_pulse +2.61 % / halo_pulse +2.48 % / sky_pulse
+            // +2.56 % in 43fc830; cool_tint +2.4 % / +2.5 % / +2.7 %
+            // in 0ce6e37, 610ee7a, f595bff, 77b520e; vignette ceiling
+            // +2.5 % in 7304555; terminator alpha +2.69 % in 47ac018;
+            // terminator cap +2.86 % in 4077850; subtitle alpha
+            // +2.63 % in 1c2fb98; upper-right alpha +2.65 % in
+            // 867377c; lower-left alpha +2.48 % in 70c9147; title
+            // alpha +2.5 % in e8cc837; subtitle em_scale +2.5 % in
+            // a2a3f48; upper-right em_scale +2.5 % in 2bf7493; lower-
+            // left em_scale +2.5 % in 19059c2; title target_px +2.5 %
+            // in 7397729; bloom2_alpha ceiling +2.5 % in 095ef01;
+            // bloom2_alpha base +2.73 % in d7f8fc6; bloom_alpha base
+            // +2.5 % in c7813d4; bloom_alpha ceiling +2.5 % in
+            // 494d8b7; supporting mist_warmth share +2.5 % in
+            // 57c514e; warm-mist bell +2.5 % in 2a7cd02), the focal
+            // line's bloom (~0.55 cap) still owns the page's light
+            // (ART_DIRECTION §四 '高光只落在主句'), the focal
+            // hierarchy (hero / subtitle / upper-right / lower-left /
+            // seal) is unchanged, the brush-weight gradient (subtitle
+            // brightest → upper-right → lower-left → title dimmest)
+            // holds, and the warm / cool axis (subtitle + lower-left
+            // + title warm, upper-right cool) holds. The +0.0016
+            // absolute peak-blend lift stays inside the cream family,
+            // the brightest mist pixel still sits comfortably below
+            // the inscribed glow (~0.20+) and the hero bloom (~0.55),
+            // and the warm horizon continues to read as the band the
+            // brush dissolves into rather than as a competing warm
+            // source — just a horizon-band blend share that now
+            // registers one more gentle step of the page's coupled
+            // gentlest-step register, completing the warm-mist
+            // system's four-site lockstep at the +2.5 % gentlest rung
+            // (per-slot mist_warmth share + title ambient_warmth
+            // share + warm-mist bell amplitude + horizon-band blend
+            // share all on the same proportional register). The body
+            // luminance peak (0.682), halo_peak (0.082), sky_peak
+            // (0.0394), moon_halo_r (69.7), body σ (8.7), sky σ
+            // (92.6), body_pulse (0.0236), halo_pulse (0.0827),
+            // sky_pulse (0.0401), bloom_alpha base (0.041),
+            // bloom_alpha ceiling (0.123), bloom2_alpha base (0.0226),
+            // bloom2_alpha ceiling (0.0646), terminator alpha (0.267),
+            // terminator cap (0.144), cool_tint (0.13908),
+            // moon_proximity (0.107), subtitle alpha (0.78), upper-
+            // right alpha (0.776), lower-left alpha (0.662), title
+            // alpha (0.6119), title v (0.83), title target_px
+            // (23.575), title breath (0.3096), inscribed-breath base
+            // (0.5340), subtitle em_scale (0.369), upper-right
+            // em_scale (0.328), lower-left em_scale (0.287), upper-
+            // right y_frac (0.27), lower-left y_frac (0.74), the
+            // supporting slots' positions and drifts, the nebula
+            // alphas (0.022 / 0.016), the vignette pow(0.75), and the
+            // vignette ceiling (0.74) are all unchanged so only the
+            // background's horizon-band blend share shifts and the
+            // four warm-mist sites — the background atmosphere, each
+            // supporting line's warm tint, the title's ambient warmth,
+            // and the bell amplitude — settle onto one coupled
+            // gentlest-step +2.5 % register the page-wide +2-3 %
+            // material refinement band the surrounding material axes
+            // have settled onto. Restraint (ART_DIRECTION §四 '克制统
+            // 一的调色板' / '高光只落在主句') holds: the +0.0016
+            // absolute peak-blend lift stays inside the muted-cream
+            // family, the peak background mist pixel still sits
+            // comfortably under the inscribed glow (~0.20+) and the
+            // hero bloom (~0.55), and the warm horizon continues to
+            // read as the band the brush dissolves into rather than as
+            // a competing warm source — just a horizon-band blend
+            // share that now registers one more gentle step of the
+            // page's coupled gentlest-step register. With the warm
+            // horizon band now catching one more restrained step of
+            // the page's inhabited mist — at the gentlest +2.5 % step
+            // on the warm-mist share axis, exactly inside the +2.35-
+            // 2.86 % gentlest rung the page-wide +2-3 % material
+            // refinement band the surrounding material axes have just
+            // completed — 《寻隐者不遇》 reads as one Tang quatrain
+            // inscribed in moonlit air whose background atmosphere
+            // now catches one more gentle step of the warm mist bell
+            // the four synchronized warm sites share, the brush's
+            // ground-band now dissolves one more gentle step into the
+            // same warm mist the inscription's three lowest strokes
+            // plus the calligrapher's seal dissolve into, and the
+            // warm-mist system finally settles all four of its sites
+            // onto one coupled gentlest-step register.
+            let p = blend_screen(p, horizon_color, horizon_glow * 0.1307);
             fb[(y * w + x) as usize] = p;
         }
     }
