@@ -337,7 +337,7 @@ fn paint_work_title(
     }
     let base = mix(color::ink::CREAM, color::ink::SHADOW, 0.4);
     let ink = mix(base, color::ink::WARM, warmth * 0.4);
-    let alpha = (0.5 * (1.0 + 0.2 * pulse)).clamp(0.0, 0.8);
+    let alpha = (0.5125 * (1.0 + 0.2 * pulse)).clamp(0.0, 0.8);
     let scale = ((target_px / glyph::HERO_EM_PX as f32) * 256.0).round() as u32;
 
     let mut pen = pen_x * 256;

@@ -40,12 +40,12 @@ pub fn lin_to_srgb(x: f32) -> u8 {
 /// `src` is treated as an emissive light source on top of `dst` (background).
 #[inline]
 pub fn blend_add_lin(dst: u32, src: u32, src_a: f32) -> u32 {
-    let dr = srgb_to_lin(r(dst)) as f32;
-    let dg = srgb_to_lin(g(dst)) as f32;
-    let db = srgb_to_lin(b(dst)) as f32;
-    let sr = srgb_to_lin(r(src)) as f32 * src_a;
-    let sg = srgb_to_lin(g(src)) as f32 * src_a;
-    let sb = srgb_to_lin(b(src)) as f32 * src_a;
+    let dr = srgb_to_lin(r(dst));
+    let dg = srgb_to_lin(g(dst));
+    let db = srgb_to_lin(b(dst));
+    let sr = srgb_to_lin(r(src)) * src_a;
+    let sg = srgb_to_lin(g(src)) * src_a;
+    let sb = srgb_to_lin(b(src)) * src_a;
     rgb(
         lin_to_srgb(dr + sr),
         lin_to_srgb(dg + sg),
@@ -74,12 +74,12 @@ pub fn blend_screen(dst: u32, src: u32, src_a: f32) -> u32 {
 #[inline]
 pub fn blend_over_lin(dst: u32, src: u32, src_a: f32) -> u32 {
     let a = src_a.clamp(0.0, 1.0);
-    let dr = srgb_to_lin(r(dst)) as f32;
-    let dg = srgb_to_lin(g(dst)) as f32;
-    let db = srgb_to_lin(b(dst)) as f32;
-    let sr = srgb_to_lin(r(src)) as f32;
-    let sg = srgb_to_lin(g(src)) as f32;
-    let sb = srgb_to_lin(b(src)) as f32;
+    let dr = srgb_to_lin(r(dst));
+    let dg = srgb_to_lin(g(dst));
+    let db = srgb_to_lin(b(dst));
+    let sr = srgb_to_lin(r(src));
+    let sg = srgb_to_lin(g(src));
+    let sb = srgb_to_lin(b(src));
     let o = |d: f32, s: f32| s * a + d * (1.0 - a);
     rgb(
         lin_to_srgb(o(dr, sr)),
