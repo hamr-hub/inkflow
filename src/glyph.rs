@@ -167,7 +167,9 @@ fn composite_glyph(
                 let cov_f = cov_sum as f32 / (area as f32 * 255.0);
                 if cov_f > 0.005 {
                     let px = &mut fb[sy * w + sx];
-                    *px = color::blend_over_lin(*px, color, alpha * cov_f);
+                    // Lift low-coverage pixels so every stroke carries a touch
+                    // more ink weight, while the dense centers stay unchanged.
+                    *px = color::blend_over_lin(*px, color, alpha * cov_f.powf(0.72));
                 }
             }
         }
