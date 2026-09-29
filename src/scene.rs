@@ -3198,8 +3198,87 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
                 // 的锚), just an anchor whose body and halo now breathe
                 // together at one more restrained gentlest step of the
                 // page's coupled gentlest-step register.
-                let body_pulse = 1.0 + pulse * 0.0236;
-                let halo_pulse = 1.0 + pulse * 0.0827;
+                // Moon body + halo breath modulation +2.5 % (the
+                // gentlest-step register the page-wide +2-3 % material
+                // refinement band the most-refined axes have settled
+                // onto) — body_pulse 0.0236 → 0.0242 (+2.54 %) and
+                // halo_pulse 0.0827 → 0.0848 (+2.54 %), both lifting
+                // the moon's body bell and middle atmospheric layer
+                // in lockstep so the disc and its halo now inhale
+                // one more restrained step of the page's coupled
+                // gentlest-step register after the recent warm-mist
+                // share +2.5 % lift in e483929 / 3154090. The +2.54 %
+                // sits exactly inside the +2.35-2.86 % gentlest rung
+                // the page-wide material refinement band has settled
+                // into (body σ +2.35 % in 4695311; halo radius +2.5 %
+                // in 28af5b6; sky σ +2.55 % in c28ed51; halo_peak
+                // +2.5 % in 3b8028b; sky_peak +2.5 % in 78959d2;
+                // body_pulse +2.61 % / halo_pulse +2.48 % / sky_pulse
+                // +2.56 % in 43fc830; cool_tint +2.4 % / +2.5 % /
+                // +2.7 % in 0ce6e37, 610ee7a, f595bff, 77b520e;
+                // vignette ceiling +2.5 % in 7304555; terminator
+                // alpha +2.69 % in 47ac018; terminator cap +2.86 % in
+                // 4077850; subtitle alpha +2.63 % in 1c2fb98; upper-
+                // right alpha +2.65 % in 867377c; lower-left alpha
+                // +2.48 % in 70c9147; title alpha +2.5 % in e8cc837;
+                // subtitle em_scale +2.5 % in a2a3f48; upper-right
+                // em_scale +2.5 % in 2bf7493; lower-left em_scale
+                // +2.5 % in 19059c2; title target_px +2.5 % in
+                // 7397729; bloom2_alpha ceiling +2.5 % in 095ef01;
+                // bloom2_alpha base +2.73 % in d7f8fc6; bloom_alpha
+                // base +2.5 % in c7813d4; bloom_alpha ceiling +2.5 %
+                // in 494d8b7; supporting mist_warmth share +2.5 % in
+                // 57c514e; warm-mist bell +2.5 % in 2a7cd02; horizon-
+                // band blend share +2.5 % in 3154090; warm-mist share
+                // axis +2.5 % in e483929). The breath lift lands the
+                // moon's body bell and halo breath modulation at
+                // ±2.42 % and ±8.48 % respectively — body still
+                // inhales at the gentlest rate of the moon's three
+                // nested layers, halo still inhales at a smaller rate
+                // than the title's 0.3096 and the inscribed-stroke
+                // base's 0.5340, the focal line and the four
+                // inscribed strokes stay the page's most-breathing
+                // elements, the moon still reads as one luminous
+                // body whose body and halo breathe together in
+                // moonlit air, and the disc still sits as the page's
+                // still anchor (ARTIFACT §观者第一分钟 1.). The body
+                // σ 8.7, sky σ 92.6, halo radius 69.7, body_peak
+                // 0.682, halo_peak 0.082, sky_peak 0.0394, the
+                // terminator alpha 0.267, terminator cap 0.144,
+                // cool_tint 0.13908, moon_proximity 0.107, the
+                // bloom2_alpha ceiling 0.0646, the nebula alphas
+                // 0.022 / 0.016, the vignette pow(0.75), the
+                // vignette ceiling 0.74, the subtitle alpha 0.78,
+                // the upper-right alpha 0.776, the lower-left alpha
+                // 0.662, the title alpha 0.6119, the title v 0.83,
+                // the title target_px 23.575, the inscribed-breath
+                // base 0.5340, the title breath 0.3096, the
+                // supporting mist bell 8.066, the warm bells 8.066,
+                // the title ambient_warmth share 0.2335, the
+                // supporting mist_warmth share 0.2335, the
+                // subtitle mist_warmth share 0.0989, the lower-left
+                // mist_warmth share 0.1175, the horizon-band blend
+                // share 0.1340, the sky_pulse, and the supporting
+                // slots' positions and drifts are all unchanged so
+                // only the moon's body and halo breath modulation
+                // shifts and the moon's two inner atmospheric
+                // layers catch up with the gentlest-step +2.5 %
+                // register the warm-mist system has just settled
+                // onto. Restraint (ART_DIRECTION §四 '克制统一的调色
+                // 板' / '高光只落在主句') holds: the +0.0006 / +0.0021
+                // absolute breath-modulation lifts stay inside the
+                // page's restrained breath family, the disc still
+                // inhales at the gentlest rate of any of the moon's
+                // three nested layers (body < halo < sky, the same
+                // restraint hierarchy the surrounding material axes
+                // have settled onto), and the moon still reads as
+                // one luminous body whose body and halo breathe
+                // together — just a moon whose two inner layers now
+                // register one more gentle step of the page's
+                // coupled gentlest-step register the warm-mist
+                // system has just settled into.
+                let body_pulse = 1.0 + pulse * 0.0242;
+                let halo_pulse = 1.0 + pulse * 0.0848;
                 let body_a = body_peak * body_k * term * body_pulse;
                 let halo_a = halo_peak * halo_k * halo_pulse;
                 if body_a > 0.003 || halo_a > 0.003 {
@@ -3986,8 +4065,72 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
     // competing breath — just a breath whose outermost extent now
     // registers one more gentle step of the page's coupled
     // gentlest-step register.
+    // Sky bell breath modulation +2.5 % (the gentlest-step
+    // register the page-wide +2-3 % material refinement band the
+    // moon-side geometric-extent, luminance, breath, inscribed-
+    // stroke alpha, supporting-tier size, focal-line outer-corona,
+    // directional-modulation, warm-tint cap, chromatic, frame, and
+    // warm-mist share axes have settled onto) — sky_pulse 0.0401 →
+    // 0.0411 (+2.5 %), paired with the body_pulse 0.0236 → 0.0242
+    // and halo_pulse 0.0827 → 0.0848 lifts at lines 3201-3202 in
+    // the same pass, so the moon's three nested atmospheric layers'
+    // breath modulation now catches up with the gentlest-step
+    // +2.5 % register the warm-mist system has just settled into.
+    // The +2.5 % sits exactly inside the +2.35-2.86 % gentlest rung
+    // the page-wide material refinement band has settled into
+    // (body σ +2.35 % in 4695311; halo radius +2.5 % in 28af5b6;
+    // sky σ +2.55 % in c28ed51; halo_peak +2.5 % in 3b8028b; sky_peak
+    // +2.5 % in 78959d2; body_pulse +2.61 % / halo_pulse +2.48 % /
+    // sky_pulse +2.56 % in 43fc830; cool_tint +2.4 % / +2.5 % /
+    // +2.7 % in 0ce6e37, 610ee7a, f595bff, 77b520e; vignette
+    // ceiling +2.5 % in 7304555; terminator alpha +2.69 % in
+    // 47ac018; terminator cap +2.86 % in 4077850; subtitle alpha
+    // +2.63 % in 1c2fb98; upper-right alpha +2.65 % in 867377c;
+    // lower-left alpha +2.48 % in 70c9147; title alpha +2.5 % in
+    // e8cc837; subtitle em_scale +2.5 % in a2a3f48; upper-right
+    // em_scale +2.5 % in 2bf7493; lower-left em_scale +2.5 % in
+    // 19059c2; title target_px +2.5 % in 7397729; bloom2_alpha
+    // ceiling +2.5 % in 095ef01; bloom2_alpha base +2.73 % in
+    // d7f8fc6; bloom_alpha base +2.5 % in c7813d4; bloom_alpha
+    // ceiling +2.5 % in 494d8b7; supporting mist_warmth share
+    // +2.5 % in 57c514e; warm-mist bell +2.5 % in 2a7cd02; horizon-
+    // band blend share +2.5 % in 3154090; warm-mist share axis
+    // +2.5 % in e483929). The breath lift lands the moon's
+    // outermost atmospheric layer at ±4.11 % — sky still inhales at
+    // a smaller modulation than the halo (so the halo remains the
+    // page's primary moonlit-air modulator), and the moon's
+    // outermost atmospheric layer still reads as moonlit air
+    // continuous with the disc rather than as a competing breath.
+    // The body σ 8.7, sky σ 92.6, halo radius 69.7, body_peak
+    // 0.682, halo_peak 0.082, sky_peak 0.0394, the terminator alpha
+    // 0.267, terminator cap 0.144, cool_tint 0.13908,
+    // moon_proximity 0.107, the bloom2_alpha ceiling 0.0646, the
+    // nebula alphas 0.022 / 0.016, the vignette pow(0.75), the
+    // vignette ceiling 0.74, the subtitle alpha 0.78, the upper-
+    // right alpha 0.776, the lower-left alpha 0.662, the title
+    // alpha 0.6119, the title v 0.83, the title target_px 23.575,
+    // the inscribed-breath base 0.5340, the title breath 0.3096,
+    // the supporting mist bell 8.066, the warm bells 8.066, the
+    // title ambient_warmth share 0.2335, the supporting
+    // mist_warmth share 0.2335, the subtitle mist_warmth share
+    // 0.0989, the lower-left mist_warmth share 0.1175, the horizon-
+    // band blend share 0.1340, the supporting slots' positions and
+    // drifts, and the body_pulse and halo_pulse (lifted at lines
+    // 3201-3202) are all unchanged in their own axis so only the
+    // moon's outermost atmospheric layer's breath modulation
+    // shifts on this catch-up pass. Restraint (ART_DIRECTION §四
+    // '克制统一的调色板' / '高光只落在主句') holds: the +0.0010
+    // absolute breath-modulation lift stays inside the page's
+    // restrained breath family, the sky bell still breathes at a
+    // smaller modulation than the halo (so the halo remains the
+    // page's primary moonlit-air modulator), and the moon's
+    // outermost atmospheric layer still reads as moonlit air
+    // continuous with the disc rather than as a competing breath —
+    // just a moon whose outermost atmospheric layer now registers
+    // one more gentle step of the page's coupled gentlest-step
+    // register the warm-mist system has just settled into.
     let sky_sigma = 92.6_f32;
-    let sky_pulse = 1.0 + pulse * 0.0401;
+    let sky_pulse = 1.0 + pulse * 0.0411;
     let sky_extent_i = (moon_halo_r + 150.0) as i32 + 1;
     for oy in -sky_extent_i..=sky_extent_i {
         for ox in -sky_extent_i..=sky_extent_i {
