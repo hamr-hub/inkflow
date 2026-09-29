@@ -66,11 +66,23 @@ Hard gate — every turn ALL must pass:
 Do not restart display services (the live panel is owned by a root system
 service; you cannot modeset). Work only in src/ and scripts/.
 
+Your turn MUST move the art, so never stage work you did not write. The
+outer loop stages only src/ scripts/ docs/samples/ for exactly this reason:
+`git add -A` once swallowed two unrelated human commits into a single "art:"
+message describing neither, and both had to be recovered after they had
+already been pushed. If you find unrelated edits in the tree, leave them
+alone — they are somebody else's and the loop will not touch them.
+
+README sample frames are diffed byte-for-byte by CI, so any turn that moves
+ink makes docs/samples/ stale. The outer loop refreshes them after your
+gate passes; do not regenerate them yourself.
+
 If the gate passes:
-  git add -A
+  git add src/ scripts/ docs/samples/
   git commit -m "art: <one line — how this makes the piece more like itself>"
-The outer loop pushes. If the gate fails, revert your edits
-(git checkout -- .) and append what failed to state/autoloop.log. Stay minimal.
+The outer loop refreshes the samples and pushes. If the gate fails, revert
+your edits (git checkout -- src/) and append what failed to
+state/autoloop.log. Stay minimal.
 
 Discipline — violations must be reverted:
   - one small change per turn; no sweeping rewrites;
@@ -87,6 +99,19 @@ echo "claude_rc=$RC $(date -Is)" >> "$LOG"
 
 # Auto-push the green commit — this is what closes the human out of the loop.
 if [ "$RC" = "0" ]; then
+    # Any turn that moved ink left the committed sample frames describing the
+    # previous render, and CI diffs them byte-for-byte. Refresh before pushing
+    # so the piece and its picture of itself stay the same generation.
+    if [ -x scripts/refresh-samples.sh ] || [ -f scripts/refresh-samples.sh ]; then
+        if ! scripts/refresh-samples.sh >> "$LOG" 2>&1; then
+            echo "sample refresh failed — not pushing" >> "$LOG"
+            exit 0
+        fi
+        git add docs/samples/ >> "$LOG" 2>&1 || true
+        if ! git diff --cached --quiet; then
+            git commit -q -m "art: refresh the README sample frames to match this turn" >> "$LOG" 2>&1 || true
+        fi
+    fi
     if git push --no-verify origin main >> "$LOG" 2>&1; then
         echo "pushed origin/main at $(date -Is)" >> "$LOG"
     else
