@@ -43,6 +43,7 @@ lib.rs            → 模块声明
 
 - **每次改动前读 ARTIFACT.md**：commit message 写「这一改如何让作品更像自己主张的样子」，不是「修了一个 bug」。
 - **每次改动跑全门**：`cargo fmt && cargo clippy --release --all-targets -- -D warnings && cargo test --release && cargo build --release`。clippy lint 集合随 rust 版本变化，rust 升级后必重跑。`scripts/pre-push` 与 `.github/workflows/ci.yml` 是同一道门。
+- **本地 rustc 会比 CI 旧**：本机默认 1.92，CI 跟 `stable`（发稿时 1.98）。clippy 每个版本加新 lint，所以「本地全绿」不等于「CI 全绿」——2026-09-29 首次推 CI 就被 1.98 的 `unnecessary_cast` 打回 12 处。升级 rustc 后除了跑本地全门，最好也跑一次 `rustup run stable cargo clippy --release --all-targets -- -D warnings`。
 - **改了墨迹就刷样帧**：`scripts/refresh-samples.sh`。README 里的样帧由 CI 逐字节比对，渲染器一动样帧就过期。
 - **零依赖测试**：所有单元测试走 std test，不允许加测试用 deps（`#[test]` 在 std 内）。
 - **改字体必须重新生成**：`python3 scripts/build_font.py` 重写 `src/glyph_table.rs`。字形度量（尤其 `bearing_y`，定义是「基线向上到墨顶」）由生成器单方面定义，改了生成器就要同步 `glyph.rs` 的消费约定。
@@ -67,6 +68,9 @@ lib.rs            → 模块声明
 | 2026-09-29 | 判断「渲染是否退化」不能只看输出 bbox——错误实现同样填满整个 bbox。真正暴露问题的是**纵向分布**：把墨迹高度四等分，每段都必须有像素 | 回归测试设计 |
 | 2026-09-29 | 提交样帧前先确认渲染器是对的：`docs/samples/` 里的图可能是旧管线产出的，README 引用它们就会静默撒谎。CI 现在逐字节比对样帧 | samples gate |
 | 2026-09-29 | rtk 的 hook 会吞掉 `ls` / `cargo test` 的部分输出（返回空）。要看原始输出用 `rtk proxy "<cmd>"`，或重定向到文件再读 | 工具输出过滤 |
+| 2026-09-29 | rtk 还会**改写** `git diff` 之类的多行输出再交给管道——粘进 `git checkout -- $(...)` 的文件列表会掉首字符（`docs/...` → `ocs/...`）。凡是 git 多行输出要喂给别的命令，一律走 `rtk proxy` | 工具输出过滤 |
+| 2026-09-29 | 本地 rustc 1.92 < CI 的 stable 1.98，clippy 新增的 `unnecessary_cast` 让本地全绿的代码在 CI 挂 12 处。CI 跟 `stable` 是有价值的（它抓的就是本地抓不到的），代价是升级期要重跑一次 `rustup run stable cargo clippy` | 首次 CI 跑挂 |
+| 2026-09-29 | `scripts/autoloop.sh` 会在你没提交时把在途改动 commit 走**并 push**。本轮它把两个 commit 的内容一次性吞掉，其中一个描述完全不符实；只能在 push 之后用 `git diff A B > delta` + `git checkout B -- files` 在远端 commit 之上补一个 delta commit 来救（非 force 路线） | autoloop 抢跑 |
 <!-- LEARNING_END -->
 
 ---
