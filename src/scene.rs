@@ -208,8 +208,9 @@ impl Composition {
                 fade_out: 0.7,
                 stagger: 0.34,
             },
-            // Lower-left echo — faintest; lifted from the floor so the poem's
-            // quietest voice still reads as a fourth line, not a margin note.
+            // Lower-left echo — faintest and stillest voice; paired with the
+            // upper-right echo in motion (both ±~1 px) so neither competes
+            // with the focal line for attention.
             SlotDef {
                 role: SlotRole::Support,
                 x_frac: 0.18,
@@ -220,10 +221,10 @@ impl Composition {
                 max_chars: 5,
                 alpha: 0.4305,
                 shadow_mix: 0.46,
-                drift_x: 3.0,
-                drift_y: 2.0,
+                drift_x: 1.2,
+                drift_y: 0.9,
                 drift_fx: 0.13,
-                drift_fy: 0.21,
+                drift_fy: 0.16,
                 drift_phase: 2.8,
                 lifetime: 12.0,
                 fade_in: 0.6,
