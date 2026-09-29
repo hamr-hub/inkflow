@@ -92,6 +92,10 @@ pub struct Beat {
     pub enter: f32, // snapshot of the phase length when the beat started
     pub hold: f32,
     pub exit: f32,
+    /// Length of the post-exit silence, set when this beat transitions into
+    /// the Rest phase. Hush-modulated so the quietest line's ghost lingers
+    /// in the air before the next focal line enters.
+    pub rest: f32,
 }
 
 impl Beat {
@@ -158,7 +162,6 @@ impl Engine {
                 let e = b.enter;
                 let h = b.hold;
                 let x = b.exit;
-                let r = self.tempo.rest;
                 match b.phase {
                     Phase::Entrance if b.t_in_phase >= e => {
                         b.phase = Phase::Hold;
@@ -173,10 +176,17 @@ impl Engine {
                         // low-alpha "ghost rest" instead of dropping the
                         // focal line entirely. The next beat will replace
                         // it via start_beat() once the breath elapses.
+                        //
+                        // Hush lengthens this silence so the quietest line's
+                        // ghost lingers in the air before the next focal line
+                        // enters. Range ≈ 1.18× at hush=0.6 to ≈ 1.46× at
+                        // hush=0.95, on top of the breath the tempo's rest
+                        // baseline already gives.
+                        b.rest = self.tempo.rest * (0.7 + b.phrase.mood.hush * 0.8);
                         b.phase = Phase::Rest;
                         b.t_in_phase = 0.0;
                     }
-                    Phase::Rest if b.t_in_phase >= r => {
+                    Phase::Rest if b.t_in_phase >= b.rest => {
                         // Ghost rest complete — start the next beat.
                         self.start_beat();
                         return self.beat;
@@ -204,6 +214,9 @@ impl Engine {
             enter: self.tempo.enter,
             hold: self.tempo.hold * hush_breath,
             exit: self.tempo.exit,
+            // Initial value; the real hush-modulated rest is filled in when
+            // this beat transitions into the Rest phase.
+            rest: self.tempo.rest,
         });
         // Each new beat pulses.
         self.tempo.pulse = (self.tempo.pulse + 0.55).clamp(0.0, 1.0);
@@ -252,6 +265,53 @@ mod tests {
         assert!(
             h3 > h0,
             "hush=0.95 ({h3}) should hold longer than hush=0.75 ({h0})"
+        );
+    }
+
+    /// The same hush must also stretch the post-exit silence so the
+    /// quietest line's ghost lingers in the air before the next focal line
+    /// enters. Drive a beat all the way through Entrance → Hold → Exit →
+    /// Rest, then read back the rest duration it settled on.
+    #[test]
+    fn hush_modulates_rest_per_phrase() {
+        // Drive a less-hushy line (line 0, hush=0.75) into Rest.
+        let mut less = Engine::new();
+        less.beat_count = 0;
+        less.force_beat();
+        for _ in 0..60 {
+            less.advance(0.1);
+        }
+        let less_beat = less.beat.unwrap();
+        assert_eq!(less_beat.phase, Phase::Rest);
+        let less_rest = less_beat.rest;
+
+        // And the hushiest line (line 3, hush=0.95) into Rest.
+        let mut hushy = Engine::new();
+        hushy.beat_count = 3;
+        hushy.force_beat();
+        for _ in 0..60 {
+            hushy.advance(0.1);
+        }
+        let hushy_beat = hushy.beat.unwrap();
+        assert_eq!(hushy_beat.phase, Phase::Rest);
+        let hushy_rest = hushy_beat.rest;
+
+        // Both must match the formula at their respective hush.
+        let less_expected = 1.5_f32 * (0.7 + 0.75 * 0.8);
+        let hushy_expected = 1.5_f32 * (0.7 + 0.95 * 0.8);
+        assert!(
+            (less_rest - less_expected).abs() < 1e-3,
+            "hush=0.75: rest={less_rest} expected≈{less_expected}"
+        );
+        assert!(
+            (hushy_rest - hushy_expected).abs() < 1e-3,
+            "hush=0.95: rest={hushy_rest} expected≈{hushy_expected}"
+        );
+        // And the hushiest ghost must outlast the less-hushy ghost, even
+        // though both share the same resting tempo baseline.
+        assert!(
+            hushy_rest > less_rest,
+            "hushy ghost ({hushy_rest}) must outlast less-hushy ghost ({less_rest})"
         );
     }
 }

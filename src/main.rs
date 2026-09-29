@@ -423,6 +423,7 @@ fn run_works_gallery(w: u32, h: u32, out_dir: &str) {
                 enter: 0.55,
                 hold: 2.65,
                 exit: 0.8,
+                rest: 1.5,
             };
             scene::paint_background(&mut surf.pixels, w, h, &scene, pulse, warmth);
             scene::paint_composition(
