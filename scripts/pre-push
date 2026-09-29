@@ -3,9 +3,12 @@
 #   - Linux/Jetson (real deployment host): fmt + clippy + test +
 #     build. The build gate is what catches Linux-only link errors
 #     (inotify_*, __errno_location, etc.) before they reach main.
-#   - macOS dev box: fmt + clippy + test (skip build — Linux-only
-#     symbols don't link here, but the Jetson autoloop has already
-#     built the same commit so the production binary is fine).
+#   - macOS dev box: fmt + clippy + test (skip build — see L4 in
+#     AGENTS.md; the build does link now, but the Jetson is still
+#     the deployment target so we let CI be the judge there).
+#   - both: the autoloop self-test and the doc check. The loop decides,
+#     unattended, what gets published, and the generated docs once described
+#     an architecture that no longer exists — both fail silently.
 set -euo pipefail
 export CARGO_TARGET_DIR=/mnt/ssd/codespace/.cargo-target/inkflow
 cargo fmt --check
@@ -14,3 +17,5 @@ cargo test --release
 if [ "$(uname)" = "Linux" ]; then
     cargo build --release
 fi
+bash scripts/autoloop-selftest.sh
+bash scripts/check-docs.sh

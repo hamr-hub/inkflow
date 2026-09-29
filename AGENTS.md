@@ -43,7 +43,7 @@ lib.rs            → 模块声明
 
 - **每次改动前读 ARTIFACT.md**：commit message 写「这一改如何让作品更像自己主张的样子」，不是「修了一个 bug」。
 - **每次改动跑全门**：`cargo fmt && cargo clippy --release --all-targets -- -D warnings && cargo test --release && cargo build --release`。clippy lint 集合随 rust 版本变化，rust 升级后必重跑。`scripts/pre-push` 与 `.github/workflows/ci.yml` 是同一道门。
-- **本地 rustc 会比 CI 旧**：本机默认 1.92，CI 跟 `stable`（发稿时 1.98）。clippy 每个版本加新 lint，所以「本地全绿」不等于「CI 全绿」——2026-09-29 首次推 CI 就被 1.98 的 `unnecessary_cast` 打回 12 处。升级 rustc 后除了跑本地全门，最好也跑一次 `rustup run stable cargo clippy --release --all-targets -- -D warnings`。
+- **本地 rustc 曾比 CI 旧**（2026-09-29 起两者都是 1.98，此条仅作历史）：clippy 每个版本加新 lint，所以「本地全绿」不等于「CI 全绿」——2026-09-29 首次推 CI 就被 1.98 的 `unnecessary_cast` 打回 12 处。升级 rustc 后除了跑本地全门，最好也跑一次 `rustup run stable cargo clippy --release --all-targets -- -D warnings`。
 - **改了墨迹就刷样帧**：`scripts/refresh-samples.sh`。README 里的样帧由 CI 逐字节比对，渲染器一动样帧就过期。
 - **零依赖测试**：所有单元测试走 std test，不允许加测试用 deps（`#[test]` 在 std 内）。
 - **改字体必须重新生成**：`python3 scripts/build_font.py` 重写 `src/glyph_table.rs`。字形度量（尤其 `bearing_y`，定义是「基线向上到墨顶」）由生成器单方面定义，改了生成器就要同步 `glyph.rs` 的消费约定。
@@ -70,6 +70,22 @@ lib.rs            → 模块声明
 | 2026-09-29 | rtk 的 hook 会吞掉 `ls` / `cargo test` 的部分输出（返回空）。要看原始输出用 `rtk proxy "<cmd>"`，或重定向到文件再读 | 工具输出过滤 |
 | 2026-09-29 | rtk 还会**改写** `git diff` 之类的多行输出再交给管道——粘进 `git checkout -- $(...)` 的文件列表会掉首字符（`docs/...` → `ocs/...`）。凡是 git 多行输出要喂给别的命令，一律走 `rtk proxy` | 工具输出过滤 |
 | 2026-09-29 | 本地 rustc 1.92 < CI 的 stable 1.98，clippy 新增的 `unnecessary_cast` 让本地全绿的代码在 CI 挂 12 处。CI 跟 `stable` 是有价值的（它抓的就是本地抓不到的），代价是升级期要重跑一次 `rustup run stable cargo clippy` | 首次 CI 跑挂 |
+| 2026-09-29 | **样帧 gate 曾在 main 上红了好几轮而没人发现**：`refresh-samples.sh` 用 `cargo build` 往 `$CARGO_TARGET_DIR` 构建，却拿硬编码的 `./target/release/inkflow` 去渲染——autoloop 导出了 `CARGO_TARGET_DIR`，所以那是**另一个（陈旧的或根本不存在的）二进制**。刷新静默产出旧帧 → `git diff --cached` 为空 → 不提交样帧 → 照常 push。写脚本时凡是自己 build 再执行的，一律用同一个 `$CARGO_TARGET_DIR/release/inkflow` 解析结果，别硬编码 `./target` | samples gate 红 |
+| 2026-09-29 | autoloop 推 main 前的样帧提交是 `git commit ... \|\| true` 的尽力而为，失败也照推。又是一个独立的洞：即使刷新成功，样帧 commit 挂了照样 push 出一个红 main。现在推之前跑 `scripts/verify-samples.sh`（就是 CI 那套逐字节比对），不过就不推 | push 前验证 |
+| 2026-09-29 | **别用「射线取最陡曲率」的直方图当圆环检测**。我据此宣称月亮周围有 r=171 的相干硬边，其实是噪声分布的众数：逐角度半径实际跨 66–272，sd=38。改用干净单射线 + 开关对照实验（关掉 paint_moon 看还在不在）才定论 | 图像判读 |
+| 2026-09-29 | 月亮那圈「盘状硬边」= **`continue` 阈值本身**。这片天空 1 个 8-bit 色阶只有 ~0.0006 线性光，而 `paint_moon` 的早退是 `a <= 0.003`、每层还有 `sky/halo/body > 0.003`——等于 3-5 个色阶的悬崖，最后一圈画完就断。**加平滑窗函数救不了**：C2 窗只是把台阶搬到 alpha 穿过阈值的那一圈（实测 2.67@r=172 → 3.00@r=155）。正解是把阈值降到半个色阶以下（0.0003）并让径向 profile 真的归零。顺带：辉光是纯径向的，每帧建一张 LUT 把每像素两次 `exp` 去掉，再按平方距离提前 reject 看不见的环——不但修好缝，还让 headless 120 帧从 7.26s 掉到 2.98s | 辉光硬边真因 |
+| 2026-09-29 | 让 agent 自己 `git add src/ scripts/` 是**无法收敛的设计**：路径级 add 根本分不清「这轮我写的」和「别人早就在那的」。改成外层 loop 全权负责 staging——开跑前先 `git status --porcelain` 快照 preexisting，收尾只 stage 这轮新增变脏的文件，`state/` 一律排除；agent 改写自己的改动、把一句话理由写进 `state/art_message.txt` 供外层当 commit message。外层还要自己重跑 gate、自己判断、verify-samples 过了才 push。**谁发布谁验证** | loop 越权 |
+| 2026-09-29 | `color.rs` / `png.rs` 之前是 0 测试，但每个像素都过 color、README 和样帧都由 png 生成。补测试时抓到一条假注释：`srgb_to_lin` 注释写 gamma 2.2，代码其实是 `x*x`（2.0）——两边是匹配的一对，往返精确，别真去改成 2.2（会重排整个画面）。png 用**未压缩的 stored DEFLATE**，所以测试里手写解 stored block 就能做完整往返，不用 inflate：注入「每个 block 都标 final」的 bug 后，所有单 block 用例照样全绿，只有跨 block 那个抓到——这就是之前完全没有的覆盖 | 补测试 |
+| 2026-09-29 | `place_slot` 的收缩循环写死 `for _ in 0..6`，但 320px 屏上 8 个字要缩 **8** 次才塞得下，于是那行字直接跑出屏幕 23px。改成「缩到塞下或触到 14px 下限为止」。**改完必须验样帧没变**：6 张全部逐字节相同——真实构图本来第一次就塞得下，受影响的只有本来就坏的那些。写这类「保险」循环时，固定次数的保险往往就不够 | place_slot 溢出 |
+| 2026-09-29 | **无人值守且会往真远端推的控制流，必须有 hermetic 自测进 gate**。loop 的 staging/判断/推送逻辑重写后，`bash -n` 和人眼看都没发现它把 commit 标题写成 `art: art: ...`——是 `scripts/autoloop-selftest.sh` 第一次真跑才暴露的。做法：临时目录 + 本地 bare origin + stub 掉 flock/timeout/cargo/claude，跑真脚本，断言五种结局（正常提交 / 纯数值微调被拒且回滚改动 / 人的在途改动不被 stage / 空转不提交 / 样帧校验不过不 push）。自测本身也要能自证没坏：先断言「被测脚本确实装进去了」且「post-turn 分支确实执行了」，否则空跑也是绿的 | loop 自测 |
+| 2026-09-29 | 这个仓的 `scripts/autoloop.sh` 每 20 分钟一轮且**会跟人抢工作树**：它 `git add src/ scripts/ docs/samples/` 一把梭，所以任何放在 `scripts/` 的未提交改动都会被下一轮裹进一条 `art:` 提交里。改脚本前先想好怎么交付 | 并发写入 |
+| 2026-09-30 | **重构过的 loop 第一次真跑就证明它是对的**：日志里出现 `left unstaged (pre-existing, not ours): AGENTS.md docs/...`——外层快照机制把人的在途改动挡在了提交之外，而同一轮它正常提交了 rhythm.rs 的一处真改动并刷了样帧。重构前这正是吃掉人类提交的那条路径 |
+| 2026-09-30 | **`--model MiniMax-M3[1m]` 一直没生效**。每一轮日志都打 `[claude-code:unrecognized_model]`（含成功的几轮），CLI 不认这个名字，直接静默回落到默认模型。所以别把轮与轮之间的时间差、或 `Token Plan` 429 归因到脚本里写的那个模型——它压根没被选中。已抽成 `TURN_MODEL` 变量并把这件事写在脚本里，换名字后先确认警告消失 |
+| 2026-09-30 | **turn 之间没有记忆，loop 会重踏**。01:41「lengthens its hold」和 02:17「lengthens its rest」隔 36 分钟各改一次 `src/rhythm.rs`，都在拉长句子之间的停顿，谁也不知道对方做过——7 次有效迭代里有 2 次花在同一个念头上。对一件写着「克制是它最贵的部分」的作品，这就是在一个维度上过饱和。现在 loop 每次成功后把 subject + 触过的文件追加到 `state/iterations.md`，prompt 要求先读它 |
+| 2026-09-30 | **我给 loop 打的补丁差点让它再也不会提交**。为保护人的在途改动，我把 staging 改成「快照 preexisting，只 stage 本轮新增变脏的文件」——但这个卷把每个文件都报成 755，于是快照里 83 个路径全是 preexisting（本该 21 个），turn 改的那个文件自然也在里面，于是被判成「本轮没有改动」而丢弃。日志只有一行 `turn produced no changes of its own`，白白扔掉一次改了字幕 alpha 0.62→0.30 的好 turn。三处 `git status` 都加了 `-c core.fileMode=false`。教训：**按「脏」判断归属之前，先确认这个文件系统到底什么叫脏**；自测也要 churn turn 自己的目标文件，churn 邻居是测不出来的 |
+| 2026-09-30 | **被超时杀掉的轮次会永久毒化那个文件**。turn 中途被 `timeout` 杀，工作树里留着写了一半的改动；下一轮开跑时它已经是 preexisting，于是外层按设计拒绝 stage 那个文件——一轮失败就能让某条路径再也提交不了。现在 RC != 0 时按本轮快照回滚（只回滚本轮弄脏的，别人原有的不动）。发现路径：给 self-test 加「超时」场景时，紧随其后的场景被污染而失败 |
+| 2026-09-30 | **定时器的空闲时间就是浪费的产能**。调度约 21 分钟一轮，而 `timeout 780` 只给 13 分钟，每轮白扔 8 分钟；`claude_rc=124`（中途被杀）和 `rc=0` 一样常见。提到 1080（留 3 分钟余量），并抽成 `TURN_TIMEOUT`。`flock` 会在重叠时跳过而不是搞坏工作树，所以宁可贴着节奏上限设 |
+| 2026-09-30 | **`.git` 写不了是沙箱策略，不是盘的问题**。曾怀疑 `/Volumes/ssd` 掉盘导致 `index.lock: Operation not permitted`，掉盘后复验：盘回来、`.git` 依旧只读。排查环境问题别把「权限」和「硬件」混为一谈，先各自单独复验 |
 | 2026-09-29 | `scripts/autoloop.sh` 会在你没提交时把在途改动 commit 走**并 push**。本轮它把两个 commit 的内容一次性吞掉，其中一个描述完全不符实；只能在 push 之后用 `git diff A B > delta` + `git checkout B -- files` 在远端 commit 之上补一个 delta commit 来救（非 force 路线） | autoloop 抢跑 |
 <!-- LEARNING_END -->
 
@@ -133,9 +149,11 @@ let src_x0 = ((num_x + sx as i64 * DEST_STEP_NUM) / mul).max(0);
 ### L4: build / test 分离
 
 - `cargo check --release`：macOS dev 机器通过（只编不链）
-- `cargo build --release`：macOS 误链（缺 Linux extern）；**真机 Linux/aarch64 才走**
+- `cargo build --release`：~~macOS 误链（缺 Linux extern）~~ ——**此条已过期**。
+  零依赖重写之后 macOS 能正常链接并产出可执行文件（2026-09-29 复验），本地全门
+  可以跑满四步。CI 仍固定 `ubuntu-latest`，因为那才是真机部署目标。
 - `cargo test --release`：任何平台通过（单元测试不碰 Linux syscall）
 - `cargo clippy --release --all-targets -- -D warnings`：通过
 
-代码 review 时不要被 macOS `cargo build` 报错吓到，那是预期的。CI 因此固定
-`ubuntu-latest`——只有 Linux 能真正链接。
+曾经代码 review 时要提防 macOS `cargo build` 误链报错；现在本地四步都能跑通，
+CI 固定 `ubuntu-latest` 只是因为那才是部署目标。

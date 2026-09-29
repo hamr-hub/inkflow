@@ -56,8 +56,20 @@ jobs:
       - name: Build (release)
         run: cargo build --release
 
+      # The loop publishes unattended. Its staging / judging / push decisions
+      # are the ones most likely to break silently, so drive them here against
+      # a scratch repo with a local origin.
+      - name: Autoloop self-test
+        run: bash scripts/autoloop-selftest.sh
+
       # A committed sample that no longer matches the renderer is a silent lie
       # in the README, so regenerate and diff it.
+      # The generated docs once described a dozen modules that now live in
+      # legacy/, with LOC counts off by 5x. Nothing caught it, because a
+      # wrong doc looks exactly like a right one.
+      - name: Docs reference real files
+        run: bash scripts/check-docs.sh
+
       - name: Samples are up to date
         run: |
           cargo run --release -- --works-gallery --out=/tmp/ci-samples >/dev/null
