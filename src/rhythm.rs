@@ -191,6 +191,10 @@ impl Engine {
 
     fn start_beat(&mut self) {
         let p = crate::phrase::phrase_for_beat(self.beat_count);
+        // Hush lengthens the read so the quietest line of the quatrain
+        // breathes longer before the next one enters. Range ≈ 1.12× at
+        // hush=0.6 to ≈ 1.28× at hush=0.95, so the cycle still paces cleanly.
+        let hush_breath = 0.85 + p.mood.hush * 0.45;
         self.beat = Some(Beat {
             index: self.beat_count,
             phase: Phase::Entrance,
@@ -198,7 +202,7 @@ impl Engine {
             t_in_beat: 0.0,
             phrase: p,
             enter: self.tempo.enter,
-            hold: self.tempo.hold,
+            hold: self.tempo.hold * hush_breath,
             exit: self.tempo.exit,
         });
         // Each new beat pulses.
@@ -231,5 +235,23 @@ mod tests {
         let b = e.beat.unwrap();
         assert_eq!(b.phase, Phase::Entrance);
         assert!(b.entrance_progress() >= 0.0);
+    }
+
+    /// Each phrase's hush modulates its read time so the quietest line of the
+    /// quatrain lingers. PHRASES[3] ("云深不知处") is hushier than PHRASES[0]
+    /// ("松下问童子"), so it must take a longer breath on screen.
+    #[test]
+    fn hush_modulates_hold_per_phrase() {
+        let mut e = Engine::new();
+        e.beat_count = 0;
+        e.force_beat();
+        let h0 = e.beat.unwrap().hold;
+        e.beat_count = 3;
+        e.force_beat();
+        let h3 = e.beat.unwrap().hold;
+        assert!(
+            h3 > h0,
+            "hush=0.95 ({h3}) should hold longer than hush=0.75 ({h0})"
+        );
     }
 }
