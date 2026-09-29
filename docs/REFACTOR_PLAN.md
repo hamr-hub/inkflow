@@ -9,17 +9,17 @@
 
 | 模块 | 行数 | 测试 |
 |---|---:|---:|
-| `background.rs` | 329 | 2 **over 300** |
-| `color.rs` | 372 | 10 **over 300** |
-| `compose.rs` | 564 | 7 **over 300** |
-| `glyph.rs` | 321 | 5 **over 300** |
-| `lib.rs` | 17 | — |
-| `main.rs` | 483 | — **over 300** |
-| `phrase.rs` | 224 | 5 |
-| `png.rs` | 301 | 6 **over 300** |
-| `rhythm.rs` | 236 | 2 |
-| `scene.rs` | 568 | 4 **over 300** |
-| `surface.rs` | 491 | — **over 300** |
+| `background.rs` | 245 | 2 |
+| `color.rs` | 222 | 10 |
+| `compose.rs` | 428 | 7 |
+| `glyph.rs` | 322 | 5 |
+| `lib.rs` | 16 | — |
+| `main.rs` | 486 | — |
+| `phrase.rs` | 223 | 5 |
+| `png.rs` | 138 | 6 |
+| `rhythm.rs` | 322 | 4 |
+| `scene.rs` | 581 | 4 |
+| `surface.rs` | 490 | — |
 
 `src/glyph_table.rs` 是 `scripts/build_font.py` 的生成产物（85,456 行），不计入
 「每个 mod < 300 行」的约束，也不该手工编辑。
@@ -28,19 +28,12 @@
 
 ## 超预算的模块
 
-以下模块超过 300 行的约定，需要拆：
-
-- `src/background.rs` — 329 行
-- `src/color.rs` — 372 行
-- `src/compose.rs` — 564 行
-- `src/glyph.rs` — 321 行
-- `src/main.rs` — 483 行
-- `src/png.rs` — 301 行
-- `src/scene.rs` — 568 行
-- `src/surface.rs` — 491 行
-
-拆分的判据不是行数本身，而是「能不能单独测」。拆开之后才有意义：
-单独 lint、单独替换、单独写测试。
+- `src/compose.rs` — 428 行
+- `src/glyph.rs` — 322 行
+- `src/main.rs` — 486 行
+- `src/rhythm.rs` — 322 行
+- `src/scene.rs` — 581 行
+- `src/surface.rs` — 490 行
 
 ## 真正待办的事
 
