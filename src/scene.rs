@@ -216,7 +216,7 @@ impl Composition {
                 em_scale: 0.28,
                 target_w_frac: 0.0,
                 max_chars: 5,
-                alpha: 0.42,
+                alpha: 0.4305,
                 shadow_mix: 0.46,
                 drift_x: 3.0,
                 drift_y: 2.0,
