@@ -103,7 +103,7 @@ fn stroke_color(def: &SlotDef, warmth: f32) -> u32 {
     let base = mix(color::ink::CREAM, color::ink::SHADOW, def.shadow_mix);
     // Upper strokes can catch a breath of cool moonlight; lower strokes and
     // touch warmth push the ink toward the warm register.
-    let height_cool = ((0.40 - def.y_frac).max(0.0) / 0.40).clamp(0.0, 1.0) * 0.1025;
+    let height_cool = ((0.40 - def.y_frac).max(0.0) / 0.40).clamp(0.0, 1.0) * 0.30;
     let warm_tint = (warmth * (1.0 - def.shadow_mix) * 0.25
         + ((def.y_frac - 0.55).max(0.0) * 0.35))
         .clamp(0.0, 0.5);
