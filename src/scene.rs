@@ -6166,7 +6166,70 @@ fn paint_supporting_slot(
     // stroke to the moon now catches the moon's cool air a touch
     // more visibly while the rest of the page's cool axis holds its
     // restrained palette.
-    let cool_tint = (sky_cool + moon_proximity * 0.107).clamp(0.0, 0.14);
+    // Cool-tint cap 0.14 → 0.1435 (+2.5 %, the gentlest step on the
+    // cool-tint cap axis after the cool_tint result lifts 0.115 →
+    // 0.118 → 0.122 → 0.125 → 0.13908 in 0ce6e37, 610ee7a, f595bff,
+    // 77b520e — the +2.5 % sits exactly inside the +2.35-2.86 %
+    // gentlest rung the page-wide +2-3 % material refinement band
+    // the most-refined axes have settled into (body σ +2.35 % in
+    // 4695311; halo radius +2.5 % in 28af5b6; sky σ +2.55 % in
+    // c28ed51; halo_peak +2.5 % in 3b8028b; sky_peak +2.5 % in
+    // 78959d2; body_pulse +2.61 % / halo_pulse +2.48 % / sky_pulse
+    // +2.56 % in 43fc830; body_pulse +2.54 % / halo_pulse +2.54 %
+    // / sky_pulse +2.5 % in 913b77e; vignette ceiling +2.5 % in
+    // 7304555; terminator alpha +2.69 % in 47ac018; terminator cap
+    // +2.86 % in 4077850; subtitle alpha +2.63 % in 1c2fb98;
+    // upper-right alpha +2.65 % in 867377c; lower-left alpha
+    // +2.48 % in 70c9147; title/seal alpha +2.58 % in 69ce9b1,
+    // +2.5 % in e8cc837; subtitle em_scale +2.5 % in a2a3f48;
+    // upper-right em_scale +2.5 % in 2bf7493; lower-left em_scale
+    // +2.5 % in 19059c2; title target_px +2.5 % in 7397729;
+    // bloom2_alpha ceiling +2.5 % in 095ef01; bloom2_alpha base
+    // +2.73 % in d7f8fc6; bloom_alpha base +2.5 % in c7813d4;
+    // bloom_alpha ceiling +2.5 % in 494d8b7; supporting mist_warmth
+    // share +2.5 % in 57c514e; warm-mist bell +2.5 % in 2a7cd02;
+    // horizon-band blend share +2.5 % in 3154090; warm-mist share
+    // axis +2.5 % in e483929; inscribed-breath base +2.5 % and
+    // title breath +2.5 % in 4e542cc; focal-line inner-glow base
+    // +2.5 % in 5d5a706) rather than the cool-tint cap quietly
+    // sitting at its post-77b520e +16.7 % register while every
+    // surrounding material axis stepped past it at +2.35-2.86 %. The
+    // +2.5 % (0.14 → 0.1435) opens the cool-tint cap by +0.0035
+    // absolute, so the upper-right echo 《只在此山中》 now catches
+    // one more gentle step of the moon's cool sphere — at the
+    // upper-right's moon_proximity ≈ 0.6867 the formula computes
+    // 0.072 + 0.6867 * 0.107 = 0.1455, which the prior cap 0.14
+    // was clamping to 0.14; with the lifted cap 0.1435 the
+    // upper-right's cool_tint now lands at 0.1435 (was 0.14,
+    // +0.0035 absolute, +2.5 % relative on the cool register — the
+    // painted mix factor toward color::star::COOL now lifts from
+    // 14 % to 14.35 %, one more gentle step into the moon's air),
+    // so the focal line keeps its exclusive claim on the page's
+    // light (ART_DIRECTION §四 '高光只落在主句' holds), the cool
+    // axis (subtitle + lower-left + title warm, upper-right cool)
+    // holds, the warm / cool axis the moon inhabits tightens one
+    // more restrained step inside the cream / cool family, the
+    // hero (cool_tint 0.012, well below cap), the subtitle
+    // (cool_tint 0, y_frac 0.65 clear of sky_axis), the lower-left
+    // (cool_tint 0, y_frac 0.74 clear of sky_axis, moon_proximity
+    // 0), and the title (cool_tint 0, y_frac 0.83 clear of
+    // sky_axis, moon_proximity 0) all stay well clear of the
+    // lifted cap so only the upper-right echo registers the
+    // +2.5 % step into the moon's air, and the inscribed-stroke
+    // alpha axis, the supporting-tier em_scale axis, the title
+    // target_px axis, the focal-line bloom axis (primary inner-
+    // glow + nearer-glow + outer-corona), the warm-mist system
+    // (background atmosphere + per-line warm tint + title ambient
+    // warmth + bell amplitude), the moon's three nested
+    // atmospheric breath modulation (913b77e), the inscription-
+    // side breath axis (4e542cc), and the page-wide +2-3 %
+    // material refinement band all hold — only the cool-tint cap
+    // axis catches up with the +2.5 % gentlest rung the
+    // surrounding material axes have already settled into, and
+    // the upper-right echo 《只在此山中》 now reads as ink a
+    // touch more visibly bathed in the same moonlit air the
+    // disc above it breathes.
+    let cool_tint = (sky_cool + moon_proximity * 0.107).clamp(0.0, 0.1435);
     let warmth_tint = (warmth * (1.0 - slot.def.shadow_mix) * 0.30 + mist_warmth).clamp(0.0, 1.0);
     let mut base_color = mix(raw_base, color::ink::WARM, warmth_tint);
     if cool_tint > 0.0 {
