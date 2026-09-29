@@ -186,7 +186,8 @@ impl Composition {
                 fade_out: 0.7,
                 stagger: 0.18,
             },
-            // Upper-right echo — anchors the diagonal under the moon.
+            // Upper-right echo — shares the moon's stillness so the
+            // upper-right reads as one constellation (moon + echo).
             SlotDef {
                 role: SlotRole::Support,
                 x_frac: 0.82,
@@ -197,10 +198,10 @@ impl Composition {
                 max_chars: 5,
                 alpha: 0.533,
                 shadow_mix: 0.30,
-                drift_x: 3.0,
-                drift_y: 2.0,
-                drift_fx: 0.15,
-                drift_fy: 0.19,
+                drift_x: 1.2,
+                drift_y: 0.9,
+                drift_fx: 0.13,
+                drift_fy: 0.16,
                 drift_phase: 1.4,
                 lifetime: 12.0,
                 fade_in: 0.6,
