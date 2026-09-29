@@ -168,6 +168,10 @@ impl Composition {
             // Closest echo to the hero, set at a quiet weight so the focal
             // voice stands alone and the three supporting strokes read as
             // whispers of the same poem rather than a title-and-subtitle pair.
+            // Drift is half the hero's, so the supporting line settles into
+            // its place as the calmest of the voices still close enough to
+            // the hero to feel like its echo (upper-right / lower-left are
+            // even calmer, at ±~1 px).
             SlotDef {
                 role: SlotRole::Support,
                 x_frac: 0.50,
@@ -178,8 +182,8 @@ impl Composition {
                 max_chars: 7,
                 alpha: 0.30,
                 shadow_mix: 0.18,
-                drift_x: 3.0,
-                drift_y: 1.5,
+                drift_x: 1.5,
+                drift_y: 0.75,
                 drift_fx: 0.21,
                 drift_fy: 0.17,
                 drift_phase: 0.7,
