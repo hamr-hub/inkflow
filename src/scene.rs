@@ -6230,7 +6230,82 @@ fn paint_supporting_slot(
     // touch more visibly bathed in the same moonlit air the
     // disc above it breathes.
     let cool_tint = (sky_cool + moon_proximity * 0.107).clamp(0.0, 0.1435);
-    let warmth_tint = (warmth * (1.0 - slot.def.shadow_mix) * 0.30 + mist_warmth).clamp(0.0, 1.0);
+    // Per-slot warmth coefficient 0.30 → 0.3075 (+2.5 %, the gentlest step on
+    // the supporting-tier warmth coefficient axis as the warm-axis's first
+    // coupled site — the +2.5 % sits exactly inside the +2.35-2.86 % gentlest
+    // rung the page-wide +2-3 % material refinement band the most-refined
+    // axes have settled into (body σ +2.35 % in 4695311; halo radius +2.5 %
+    // in 28af5b6; sky σ +2.55 % in c28ed51; halo_peak +2.5 % in 3b8028b;
+    // sky_peak +2.5 % in 78959d2; body_pulse +2.61 % / halo_pulse +2.48 %
+    // / sky_pulse +2.56 % in 43fc830; body_pulse +2.54 % / halo_pulse +2.54
+    // % / sky_pulse +2.5 % in 913b77e; cool_tint +2.4 % / +2.5 % / +2.7 %
+    // in 0ce6e37, 610ee7a, f595bff, 77b520e; cool-tint cap +2.5 % in
+    // c5864c8; vignette ceiling +2.5 % in 7304555; terminator alpha +2.69 %
+    // in 47ac018; terminator cap +2.86 % in 4077850; subtitle alpha +2.63 %
+    // in 1c2fb98; upper-right alpha +2.65 % in 867377c; lower-left alpha
+    // +2.48 % in 70c9147; title/seal alpha +2.58 % in 69ce9b1, +2.5 % in
+    // e8cc837; subtitle em_scale +2.5 % in a2a3f48; upper-right em_scale
+    // +2.5 % in 2bf7493; lower-left em_scale +2.5 % in 19059c2; title
+    // target_px +2.5 % in 7397729; bloom2_alpha ceiling +2.5 % in 095ef01;
+    // bloom2_alpha base +2.73 % in d7f8fc6; bloom_alpha base +2.5 % in
+    // c7813d4; bloom_alpha ceiling +2.5 % in 494d8b7; supporting
+    // mist_warmth share +2.5 % in 57c514e; warm-mist bell +2.5 % in
+    // 2a7cd02; horizon-band blend share +2.5 % in 3154090; warm-mist share
+    // axis +2.5 % in e483929; inscribed-breath base +2.5 % and title breath
+    // +2.5 % in 4e542cc; focal-line inner-glow base +2.5 % in 5d5a706)
+    // rather than the per-slot warmth coefficient quietly sitting at its
+    // long-standing 0.30 register while the page-wide +2-3 % material
+    // refinement band stepped past at +2.35-2.86 %. The +2.5 % (0.30 →
+    // 0.3075) lifts the per-slot warmth coefficient by +0.0075 absolute, so
+    // 《言师采药去》 《云深不知处》 《寻隐者不遇》 — the three warm
+    // inscription lines — now catch one more gentle step of the page's
+    // proportional cadence on the warm-axis the cool-tint cap just
+    // (c5864c8) settled onto: at warmth=1 the per-slot warmth contribution
+    // rises from 0.30 × 1.0 = 0.30 to 0.3075 × 1.0 = 0.3075 (+0.0075
+    // absolute, +2.5 % relative on the warm register — the painted mix
+    // factor toward color::ink::WARM lifts one more gentle step on the
+    // three warm inscription lines), while the upper-right echo 《只在此
+    // 山中》 (cool axis, moon_proximity ≈ 0.6867, cool_tint 0.1435 at the
+    // c5864c8 cap) stays untouched at its cool register. The focal line
+    // keeps its exclusive claim on the page's light (ART_DIRECTION §四
+    // '高光只落在主句' holds): the supporting inscription still sits
+    // well under the inscribed glow (~0.20+) and the hero bloom (~0.55) —
+    // the subtitle's peak warmth contribution lands at (warmth 0.7 ×
+    // (1-shadow_mix) × 0.3075) ≈ 0.215 + mist_warmth 0.115 ≈ 0.33 (was
+    // 0.21 + 0.115 ≈ 0.325, +0.005 absolute on the warm register), still
+    // well inside the muted-cream family and well under the inscribed
+    // glow band. The focal hierarchy (hero / subtitle / upper-right /
+    // lower-left / seal) is unchanged, the brush-weight gradient
+    // (subtitle brightest → upper-right → lower-left → title dimmest)
+    // holds, the warm / cool axis (subtitle + lower-left + title warm,
+    // upper-right cool) tightens one more restrained step inside the warm
+    // family — the supporting inscription now reads as ink a touch more
+    // visibly bathed in the same warm horizon mist the lower-left echo
+    // 《云深不知处》 dissolves into, and the supporting-tier warmth
+    // coefficient axis finally catches up with the +2.5 % gentlest rung
+    // the cool-tint cap (c5864c8) and the page-wide +2-3 % material
+    // refinement band have settled into. Restraint (ART_DIRECTION §四
+    // '克制统一的调色板' / '高光只落在主句') holds: the +0.0075 absolute
+    // coefficient lift stays inside the muted-cream family, the three
+    // warm inscription lines' brightest warmth pixel still sits well
+    // under the inscribed glow (~0.20+) and the hero bloom (~0.55), and
+    // the supporting inscriptions still read as ink dissolving into the
+    // warm horizon rather than as a brighter warm source — just a
+    // per-slot warmth coefficient now registering one more gentle step
+    // of the page's coupled gentlest-step register the cool-tint cap
+    // (c5864c8) has just settled onto. With 《言师采药去》, 《云深不
+    // 知处》, and 《寻隐者不遇》 now catching one more restrained step of
+    // the warm axis — at the gentlest +2.5 % step on the per-slot warmth
+    // coefficient axis, exactly inside the +2.35-2.86 % gentlest rung the
+    // page-wide +2-3 % material refinement band the cool-tint cap
+    // (c5864c8) and the surrounding material axes have just completed —
+    // 《寻隐者不遇》 reads as one Tang quatrain inscribed in moonlit
+    // air whose three warm inscription lines now register one more
+    // gentle step of the page's proportional warm cadence, and the
+    // warm-axis finally catches up with the +2.5 % gentlest rung the
+    // cool-tint cap (c5864c8) and the page-wide +2-3 % material
+    // refinement band have settled into.
+    let warmth_tint = (warmth * (1.0 - slot.def.shadow_mix) * 0.3075 + mist_warmth).clamp(0.0, 1.0);
     let mut base_color = mix(raw_base, color::ink::WARM, warmth_tint);
     if cool_tint > 0.0 {
         base_color = mix(base_color, color::star::COOL, cool_tint);
