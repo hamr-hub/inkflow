@@ -208,11 +208,12 @@ impl Composition {
                 fade_out: 0.7,
                 stagger: 0.34,
             },
-            // Lower-left echo — faintest, dissolving toward the horizon mist.
+            // Lower-left echo — faintest; lifted from the floor so the poem's
+            // quietest voice still reads as a fourth line, not a margin note.
             SlotDef {
                 role: SlotRole::Support,
                 x_frac: 0.18,
-                y_frac: 0.78,
+                y_frac: 0.74,
                 align: Align::Left,
                 em_scale: 0.22,
                 target_w_frac: 0.0,
