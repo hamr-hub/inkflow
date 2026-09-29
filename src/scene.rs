@@ -5750,7 +5750,7 @@ fn paint_supporting_slot(
     // point where future turns should consider shifting to a different
     // axis (moon's own breath, supporting mist bell, page frame) rather
     // than climbing the same breath coefficient again.
-    let breath = 1.0 + 0.5340 * pulse * (1.0 - slot.def.shadow_mix);
+    let breath = 1.0 + 0.5474 * pulse * (1.0 - slot.def.shadow_mix);
     let alpha = (base_alpha * breath).clamp(0.0, 1.0);
     let chars: Vec<char> = slot.phrase.text.chars().collect();
     let n = chars.len();
@@ -8208,7 +8208,7 @@ fn paint_poem_title(
     // lower-left echo's exact breathing rate. The +4.76 % continues the
     // gentlest-step cadence so the title's breath never strays from the
     // page's settled rhythm.
-    let breath = 1.0 + 0.3096 * pulse;
+    let breath = 1.0 + 0.3173 * pulse;
     // Title alpha 0.504 → 0.529 (+5 %, the fifth lift in this quiet arc —
     // 0.40 → 0.44 → 0.46 → 0.48 → 0.504 → 0.529, +10 % / +4.5 % / +4.3 %
     // / +5 % / +5 %): the calligrapher's seal sits one more visible step
