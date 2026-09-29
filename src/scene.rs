@@ -213,7 +213,7 @@ impl Composition {
                 x_frac: 0.18,
                 y_frac: 0.78,
                 align: Align::Left,
-                em_scale: 0.28,
+                em_scale: 0.22,
                 target_w_frac: 0.0,
                 max_chars: 5,
                 alpha: 0.4305,
