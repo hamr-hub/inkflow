@@ -126,7 +126,7 @@ fn paint_moon(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f32) {
     const BODY_R: f32 = 19.0;
     const HALO_SIGMA: f32 = 26.0;
     const SKY_SIGMA: f32 = 66.0;
-    let body_peak = 0.50 * (1.0 + pulse * 0.02);
+    let body_peak = 0.5125 * (1.0 + pulse * 0.02);
     let halo_peak = 0.14 * (1.0 + pulse * 0.05);
     let sky_peak = 0.085 * (1.0 + pulse * 0.03);
 
