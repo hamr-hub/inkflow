@@ -54,14 +54,9 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
     let ambient = (0.015 * scene.ambient_pulse.sin() + pulse * 0.05) * 0.5;
 
     // The vignette and the aura are both separable sums of a per-column and a
-    // per-row term, so precompute each axis once instead of re-deriving
-    // `nx * nx` and `dy * dy` for every one of the w*h pixels.
-    let mut col_nx2 = vec![0.0_f32; w as usize];
-    for (x, slot) in col_nx2.iter_mut().enumerate() {
-        let nx = (x as f32 / w_f - 0.5) * 2.0;
-        *slot = nx * nx;
-    }
-
+    // per-row term, so each axis is precomputed once. `col_nx2` is built when
+    // the scene is constructed (depends only on width), and `ny2` is the per-
+    // row equivalent we compute here, so neither is rebuilt for every pixel.
     for y in 0..h {
         let v = y as f32 / (h_f - 1.0).max(1.0);
         let base = stops(&sky, v);
@@ -82,7 +77,7 @@ pub fn paint_background(fb: &mut [u32], w: u32, h: u32, scene: &Scene, pulse: f3
             p = blend_screen(p, aura_color, aura * aura_gain);
 
             // Vignette — darken the corners smoothly toward deepest shadow.
-            let vig = (col_nx2[x] + ny2).powf(1.25);
+            let vig = (scene.col_nx2[x] + ny2).powf(1.25);
             p = mix(p, color::bg::DEEP, (vig * 0.55).clamp(0.0, 0.78));
 
             p = blend_add_lin(p, color::star::WARM, ambient);

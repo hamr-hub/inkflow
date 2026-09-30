@@ -4,372 +4,29 @@
 //! area plus three supporting lines from the same poem in reading order.
 //! Painting lives in [`crate::background`] and [`crate::compose`].
 
+mod composition;
+mod particles;
+mod rng;
+
+pub use composition::{Align, Composition, Slot, SlotDef, SlotRole, BEATS_PER_LINE};
+pub use particles::{Dust, Spark, SPARK_CAP};
+pub use rng::Lcg;
+
 use crate::color;
-use crate::phrase::{self, Phrase};
+use crate::phrase;
 
-/// Deterministic LCG so the scene looks "natural" but stable across runs.
-pub struct Lcg(u64);
-impl Lcg {
-    pub fn new(seed: u64) -> Self {
-        Self(
-            seed.wrapping_mul(6364136223846793005)
-                .wrapping_add(1442695040888963407),
-        )
-    }
-    #[inline]
-    #[allow(clippy::should_implement_trait)]
-    pub fn next(&mut self) -> u32 {
-        self.0 = self
-            .0
-            .wrapping_mul(6364136223846793005)
-            .wrapping_add(1442695040888963407);
-        (self.0 >> 33) as u32
-    }
-    #[inline]
-    pub fn unit(&mut self) -> f32 {
-        (self.next() & 0xFFFFFF) as f32 / 16_777_216.0
-    }
-}
-
-/// Slow drifting dust mote.
-#[derive(Clone, Copy)]
-pub struct Dust {
-    pub x: f32,
-    pub y: f32,
-    pub r: f32,
-    pub a: f32,
-    pub phase: f32,
-    pub speed: f32,
-    pub hue: u32,
-}
-
-/// Touch burst particle.
-#[derive(Clone, Copy)]
-pub struct Spark {
-    pub x: f32,
-    pub y: f32,
-    pub vx: f32,
-    pub vy: f32,
-    pub life: f32,
-    pub max_life: f32,
-    pub hue: u32,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Align {
-    Left,
-    Center,
-    Right,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum SlotRole {
-    Hero,
-    Support,
-}
-
-/// Fixed geometry of one inscription slot.
-#[derive(Clone, Copy, Debug)]
-pub struct SlotDef {
-    pub role: SlotRole,
-    pub x_frac: f32,
-    pub y_frac: f32,
-    pub align: Align,
-    pub em_scale: f32,
-    pub target_w_frac: f32,
-    pub max_chars: usize,
-    pub alpha: f32,
-    pub shadow_mix: f32,
-    pub drift_x: f32,
-    pub drift_y: f32,
-    pub drift_fx: f32,
-    pub drift_fy: f32,
-    pub drift_phase: f32,
-    pub lifetime: f32,
-    pub fade_in: f32,
-    pub fade_out: f32,
-    pub stagger: f32,
-}
-
-/// A live slot: geometry plus the current phrase and lifecycle age.
-pub struct Slot {
-    pub def: SlotDef,
-    pub phrase: &'static Phrase,
-    pub age: f32,
-    pub last_idx: u16,
-    pub primed: bool,
-}
-
-impl Slot {
-    fn new(def: SlotDef) -> Self {
-        Self {
-            def,
-            phrase: phrase::phrase_for_beat(0),
-            age: -def.stagger,
-            last_idx: u16::MAX,
-            primed: false,
-        }
-    }
-
-    pub fn alpha_now(&self) -> f32 {
-        if self.age < 0.0 {
-            return 0.0;
-        }
-        let ramp_in = (self.age / self.def.fade_in.max(0.001)).clamp(0.0, 1.0);
-        let ramp_out =
-            ((self.def.lifetime - self.age) / self.def.fade_out.max(0.001)).clamp(0.0, 1.0);
-        color::smootherstep(ramp_in) * color::smootherstep(ramp_out) * self.def.alpha
-    }
-
-    pub fn drift(&self, t: f32) -> (f32, f32) {
-        let dx = (t * self.def.drift_fx + self.def.drift_phase).sin() * self.def.drift_x;
-        let dy = (t * self.def.drift_fy + self.def.drift_phase * 1.3).cos() * self.def.drift_y;
-        (dx, dy)
-    }
-}
-
-/// One hero plus three supporting slots.
-pub struct Composition {
-    pub slots: Vec<Slot>,
-    pub hero_idx: usize,
-    pub beats_since_theme: u32,
-    next_support_to_refresh: usize,
-    first_pinned_beat_done: bool,
-}
-
-/// Beats spent on one poem line before the hero advances to the next.
-pub const BEATS_PER_LINE: u64 = 4;
-/// Beats for one full pass of a four-line poem; then the work rotates.
-const BEATS_PER_WORK: u32 = 16;
-
-impl Composition {
-    pub fn default_layout() -> Self {
-        let defs: Vec<SlotDef> = vec![
-            SlotDef {
-                role: SlotRole::Hero,
-                x_frac: 0.50,
-                y_frac: 0.42,
-                align: Align::Center,
-                em_scale: 0.0,
-                target_w_frac: 0.58,
-                max_chars: 8,
-                alpha: 1.0,
-                shadow_mix: 0.0,
-                drift_x: 3.0,
-                drift_y: 2.0,
-                drift_fx: 0.18,
-                drift_fy: 0.13,
-                drift_phase: 0.0,
-                lifetime: f32::INFINITY,
-                fade_in: 0.45,
-                fade_out: 0.55,
-                stagger: 0.0,
-            },
-            // Closest echo to the hero, set at a quiet weight so the focal
-            // voice stands alone and the three supporting strokes read as
-            // whispers of the same poem rather than a title-and-subtitle pair.
-            // Drift is half the hero's, so the supporting line settles into
-            // its place as the calmest of the voices still close enough to
-            // the hero to feel like its echo (upper-right / lower-left are
-            // even calmer, at ±~1 px).
-            SlotDef {
-                role: SlotRole::Support,
-                x_frac: 0.50,
-                y_frac: 0.58,
-                align: Align::Center,
-                em_scale: 0.369,
-                target_w_frac: 0.0,
-                max_chars: 7,
-                alpha: 0.30,
-                shadow_mix: 0.18,
-                drift_x: 1.5,
-                drift_y: 0.75,
-                drift_fx: 0.21,
-                drift_fy: 0.17,
-                drift_phase: 0.7,
-                lifetime: 12.0,
-                fade_in: 0.55,
-                fade_out: 0.7,
-                stagger: 0.18,
-            },
-            // Upper-right echo — shares the moon's stillness so the
-            // upper-right reads as one constellation (moon + echo).
-            SlotDef {
-                role: SlotRole::Support,
-                x_frac: 0.82,
-                y_frac: 0.27,
-                align: Align::Right,
-                em_scale: 0.32,
-                target_w_frac: 0.0,
-                max_chars: 5,
-                alpha: 0.533,
-                shadow_mix: 0.30,
-                drift_x: 1.2,
-                drift_y: 0.9,
-                drift_fx: 0.13,
-                drift_fy: 0.16,
-                drift_phase: 1.4,
-                lifetime: 12.0,
-                fade_in: 0.6,
-                fade_out: 0.7,
-                stagger: 0.34,
-            },
-            // Lower-left echo — faintest voice, paired with the upper-right
-            // echo in motion (both ±~1 px) so neither competes with the focal
-            // line for attention. Sized just large enough that the five
-            // characters hold together without raising the alpha.
-            SlotDef {
-                role: SlotRole::Support,
-                x_frac: 0.18,
-                y_frac: 0.74,
-                align: Align::Left,
-                em_scale: 0.245,
-                target_w_frac: 0.0,
-                max_chars: 5,
-                alpha: 0.4305,
-                shadow_mix: 0.46,
-                drift_x: 1.2,
-                drift_y: 0.9,
-                drift_fx: 0.13,
-                drift_fy: 0.16,
-                drift_phase: 2.8,
-                lifetime: 12.0,
-                fade_in: 0.6,
-                fade_out: 0.7,
-                stagger: 0.50,
-            },
-        ];
-        let slots: Vec<Slot> = defs.into_iter().map(Slot::new).collect();
-        Self {
-            slots,
-            hero_idx: 0,
-            beats_since_theme: 0,
-            next_support_to_refresh: 1,
-            first_pinned_beat_done: false,
-        }
-    }
-
-    /// Age supporting slots. Pinned works hold the strokes near peak alpha;
-    /// unpinned pools swap phrases at end of life.
-    pub fn step(&mut self, dt: f32, rng: u32, theme_idx: usize) {
-        let pinned = phrase::POEM_BY_THEME
-            .get(theme_idx)
-            .map(|&g| !phrase::poem_group_line_indices(g).is_empty())
-            .unwrap_or(false);
-        for slot in self.slots.iter_mut() {
-            if slot.def.role == SlotRole::Hero {
-                continue;
-            }
-            slot.age += dt;
-            if pinned {
-                if slot.age > slot.def.lifetime * 0.8 {
-                    slot.age = slot.def.lifetime * 0.5;
-                }
-                continue;
-            }
-            if slot.primed && slot.age >= slot.def.lifetime {
-                slot.phrase = phrase::pick_from_theme_by_len(
-                    rng,
-                    theme_idx,
-                    slot.def.max_chars,
-                    &[slot.last_idx],
-                );
-                slot.last_idx = phrase_index_of(slot.phrase);
-                slot.age = 0.0;
-            }
-            if !slot.primed && slot.age >= 0.0 {
-                slot.primed = true;
-            }
-        }
-    }
-
-    /// Place the hero phrase for this beat; for pinned works lay the other
-    /// poem lines into the supporting slots in reading order. Returns the
-    /// (possibly rotated) theme index.
-    pub fn on_hero_beat(
-        &mut self,
-        beat_index: u64,
-        rng: u32,
-        hero_phrase: &'static Phrase,
-        theme_idx: usize,
-    ) -> usize {
-        let lines = phrase::POEM_BY_THEME
-            .get(theme_idx)
-            .map(|&g| phrase::poem_group_line_indices(g))
-            .filter(|l| !l.is_empty());
-
-        let hero_line = lines.map(|l| {
-            let pos = ((beat_index / BEATS_PER_LINE) as usize) % l.len();
-            l[pos]
-        });
-        let (hero_idx, hero_static) = match hero_line {
-            Some(i) => (i, &phrase::PHRASES[i as usize]),
-            None => (phrase_index_of(hero_phrase), hero_phrase),
-        };
-        let hero_slot = &mut self.slots[self.hero_idx];
-        hero_slot.phrase = hero_static;
-        hero_slot.last_idx = hero_idx;
-
-        let support_indices: Vec<usize> = self
-            .slots
-            .iter()
-            .enumerate()
-            .filter(|(_, s)| s.def.role == SlotRole::Support)
-            .map(|(i, _)| i)
-            .collect();
-
-        if let Some(poem_lines) = lines {
-            let hero_pos = ((beat_index / BEATS_PER_LINE) as usize) % poem_lines.len();
-            for (cursor, &slot_idx) in support_indices.iter().enumerate() {
-                let line_pos = (hero_pos + 1 + cursor) % poem_lines.len();
-                let line_idx = poem_lines[line_pos];
-                let slot = &mut self.slots[slot_idx];
-                slot.phrase = &phrase::PHRASES[line_idx as usize];
-                slot.last_idx = line_idx;
-                slot.primed = true;
-                if self.first_pinned_beat_done {
-                    slot.age = slot.def.lifetime * 0.5;
-                }
-            }
-            self.first_pinned_beat_done = true;
-        } else if let Some(&slot_idx) = support_indices.get(self.next_support_to_refresh) {
-            self.next_support_to_refresh =
-                (self.next_support_to_refresh + 1) % support_indices.len();
-            let slot = &mut self.slots[slot_idx];
-            slot.phrase = phrase::pick_from_theme_by_len(
-                rng,
-                theme_idx,
-                slot.def.max_chars,
-                &[slot.last_idx],
-            );
-            slot.last_idx = phrase_index_of(slot.phrase);
-            slot.age = slot.def.lifetime * 0.5;
-            slot.primed = true;
-        }
-
-        self.beats_since_theme += 1;
-        if self.beats_since_theme >= BEATS_PER_WORK {
-            self.beats_since_theme = 0;
-            ((beat_index as usize) / BEATS_PER_WORK as usize) % phrase::THEMES.len()
-        } else {
-            theme_idx
-        }
-    }
-}
-
-fn phrase_index_of(p: &Phrase) -> u16 {
-    let base = phrase::PHRASES.as_ptr() as usize;
-    let off = (p as *const Phrase as usize - base) / core::mem::size_of::<Phrase>();
-    off as u16
-}
-
-/// Whole scene state.
+/// Whole scene state. Owns one composition plus the per-frame atmospheric
+/// particles and a screen-size vignette scratch buffer the background paints
+/// reuse every frame.
 pub struct Scene {
     pub width: u32,
     pub height: u32,
     pub rng: Lcg,
     pub dust: Vec<Dust>,
     pub sparks: Vec<Spark>,
+    /// `nx * nx` for every screen column — depends only on width, so it is
+    /// built once in `new` and read every frame by the vignette loop.
+    pub col_nx2: Vec<f32>,
     pub ambient_pulse: f32,
     pub warmth: f32,
     pub theme_idx: usize,
@@ -435,12 +92,22 @@ impl Scene {
             }
         }
 
+        // Per-column vignette scalar lives for the scene's whole life; the
+        // background loop reads it every frame instead of rebuilding a `Vec`.
+        let mut col_nx2 = vec![0.0_f32; width as usize];
+        let w_f = width as f32;
+        for (x, slot) in col_nx2.iter_mut().enumerate() {
+            let nx = (x as f32 / w_f - 0.5) * 2.0;
+            *slot = nx * nx;
+        }
+
         Self {
             width,
             height,
             rng,
             dust,
-            sparks: Vec::with_capacity(64),
+            sparks: Vec::with_capacity(SPARK_CAP),
+            col_nx2,
             ambient_pulse: 0.0,
             warmth: 0.0,
             theme_idx: initial_theme,
@@ -480,8 +147,8 @@ impl Scene {
                 hue,
             });
         }
-        if self.sparks.len() > 64 {
-            let extra = self.sparks.len() - 64;
+        if self.sparks.len() > SPARK_CAP {
+            let extra = self.sparks.len() - SPARK_CAP;
             self.sparks.drain(..extra);
         }
     }
@@ -525,61 +192,3 @@ impl Scene {
 
 pub use crate::background::paint_background;
 pub use crate::compose::paint_composition;
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn default_layout_has_one_hero_and_supporting() {
-        let c = Composition::default_layout();
-        assert_eq!(c.slots.len(), 4);
-        assert_eq!(c.slots[0].def.role, SlotRole::Hero);
-        assert!(c.slots[1..].iter().all(|s| s.def.role == SlotRole::Support));
-    }
-
-    #[test]
-    fn slots_fit_screen() {
-        let c = Composition::default_layout();
-        for s in &c.slots {
-            assert!(s.def.x_frac > 0.05 && s.def.x_frac < 0.95);
-            assert!(s.def.y_frac > 0.1 && s.def.y_frac < 0.9);
-            assert!(s.def.alpha <= 1.0);
-        }
-    }
-
-    #[test]
-    fn alpha_ramps_in_and_out() {
-        let mut c = Composition::default_layout();
-        let theme = 1; // pinned theme — strokes hold near peak
-        c.step(0.016, 0, theme);
-        let a0 = c.slots[1].alpha_now();
-        c.step(1.0, 0, theme);
-        let a1 = c.slots[1].alpha_now();
-        assert!(a1 > a0);
-        c.step(20.0, 0, theme);
-        let a2 = c.slots[1].alpha_now();
-        // After settling, alpha stays substantial relative to the slot's
-        // declared peak — the ramp settles around 50 % of lifetime in
-        // pinned mode, where both fade-in and fade-out are saturated.
-        let max = c.slots[1].def.alpha;
-        assert!(
-            a2 > max * 0.5,
-            "alpha settled to {a2} but expected > {} (half of max {max})",
-            max * 0.5
-        );
-    }
-
-    #[test]
-    fn pinned_beats_walk_the_poem_in_order() {
-        let mut c = Composition::default_layout();
-        c.on_hero_beat(0, 0, &phrase::PHRASES[0], 0);
-        assert_eq!(c.slots[0].phrase.text, "松下问童子");
-        c.on_hero_beat(4, 0, &phrase::PHRASES[0], 0);
-        assert_eq!(c.slots[0].phrase.text, "言师采药去");
-        c.on_hero_beat(8, 0, &phrase::PHRASES[0], 0);
-        assert_eq!(c.slots[0].phrase.text, "只在此山中");
-        c.on_hero_beat(12, 0, &phrase::PHRASES[0], 0);
-        assert_eq!(c.slots[0].phrase.text, "云深不知处");
-    }
-}
